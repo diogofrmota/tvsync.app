@@ -1,0 +1,12 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:base", "group:all"],
+  "major": {
+    "enabled": false
+  },
+  "updatePinnedDependencies": false,
+  "rangeStrategy": "bump",
+  "stabilityDays": 2,
+  "timezone": "Europe/Lisbon",
+  "schedule": ["before 1am on the first day of the month"]
+}

@@ -1,0 +1,75 @@
+{
+  "name": "tvsync-app",
+  "version": "1.3.5",
+  "private": true,
+  "author": "Diogo Mota",
+  "engines": {
+    "node": "^24.14.0"
+  },
+  "packageManager": "pnpm@11.7.0",
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "24.16.0",
+      "onFail": "download"
+    }
+  },
+  "scripts": {
+    "dev": "next dev",
+    "lint": "biome check .",
+    "turbo": "turbo",
+    "build": "next build",
+    "build:turbo": "pnpm turbo build",
+    "db:migrate": "node database/migrate.mjs",
+    "db:migrate:record-existing": "node database/migrate.mjs --record-existing",
+    "postbuild": "next-sitemap --config next-sitemap.config.js",
+    "ultracite:check": "ultracite check --error-on-warnings",
+    "ultracite:fix": "ultracite fix --error-on-warnings",
+    "biome:ci": "biome ci",
+    "start": "next start",
+    "type:check": "tsc --noEmit",
+    "check:turbo": "pnpm turbo ultracite:check type:check",
+    "up-interactive": "pnpm up -i",
+    "up-latest": "pnpm up-interactive -L",
+    "release": "cross-env HUSKY=0 standard-version",
+    "push-release": "git push --follow-tags origin main",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "@bprogress/next": "^3.2.12",
+    "@chakra-ui/react": "^3.35.0",
+    "@emotion/react": "^11.14.0",
+    "@neondatabase/serverless": "^1.1.0",
+    "better-all": "^0.0.7",
+    "framer-motion": "^12.40.0",
+    "ky": "^1.14.3",
+    "lodash": "^4.18.1",
+    "next": "^16.2.6",
+    "next-auth": "^4.24.14",
+    "next-themes": "^0.4.6",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-icons": "^5.6.0",
+    "server-only": "^0.0.1",
+    "swr": "^2.4.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.4",
+    "@commitlint/config-conventional": "^20.5.3",
+    "@commitlint/cz-commitlint": "^20.5.3",
+    "@types/lodash": "^4.17.24",
+    "@types/node": "^25.9.1",
+    "@types/react": "^19.2.15",
+    "commitizen": "^4.3.1",
+    "commitlint": "^20.5.3",
+    "cross-env": "^10.1.0",
+    "husky": "^9.1.7",
+    "knip": "^5.88.1",
+    "lint-staged": "^16.4.0",
+    "next-sitemap": "^4.2.3",
+    "standard-version": "^9.5.0",
+    "turbo": "2.6.3",
+    "typescript": "^5.9.3",
+    "ultracite": "7.2.3"
+  }
+}
