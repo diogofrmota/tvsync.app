@@ -1,6 +1,8 @@
+import { authOptions } from 'lib/services/auth/index.server';
 import type { Metadata, Viewport } from 'next';
 import { Outfit as FontBody } from 'next/font/google';
 import Script from 'next/script';
+import { getServerSession } from 'next-auth/next';
 
 import 'lib/styles/globals.css';
 import { Provider } from 'lib/components/ui/provider';
@@ -57,16 +59,18 @@ export const viewport: Viewport = {
   width: 'device-width, shrink-to-fit=no, viewport-fit=cover',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await getServerSession(authOptions);
+
   return (
     <html className={fontBody.className} lang="en" suppressHydrationWarning>
       <head />
       <body>
-        <Provider>
+        <Provider session={session}>
           <Layout>{children}</Layout>
         </Provider>
         {umamiWebsiteId && umamiScriptSrc ? (

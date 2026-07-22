@@ -1,6 +1,9 @@
 import 'server-only';
 
-import { getAuthRateLimitKeyDigests } from 'lib/services/auth/security';
+import {
+  getAuthRateLimitKeyDigests,
+  parseTrustedClientIp,
+} from 'lib/services/auth/security';
 import { consumeAuthRateLimit } from 'lib/services/database/auth.server';
 import { headers } from 'next/headers';
 
@@ -46,9 +49,7 @@ export const getClientIp = (
   }
   const value = Array.isArray(forwarded) ? forwarded.at(0) : forwarded;
 
-  return typeof value === 'string'
-    ? (value.split(',').at(0)?.trim() ?? 'unknown')
-    : 'unknown';
+  return typeof value === 'string' ? parseTrustedClientIp(value) : 'unknown';
 };
 
 export const checkAuthRateLimit = (input: {

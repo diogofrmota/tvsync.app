@@ -2,6 +2,7 @@
 
 import {
   Button,
+  CloseButton,
   Dialog,
   Field,
   Input,
@@ -400,7 +401,9 @@ export const DeleteAccountDialog = ({
               Permanently Delete Account
             </Button>
           </Dialog.Footer>
-          <Dialog.CloseTrigger />
+          <Dialog.CloseTrigger asChild>
+            <CloseButton disabled={isPending} size="sm" />
+          </Dialog.CloseTrigger>
         </Dialog.Content>
       </Dialog.Positioner>
     </Dialog.Root>

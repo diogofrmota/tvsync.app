@@ -129,6 +129,22 @@ export const isRecentAuthentication = (
 export const digestRateLimitKey = (value: string, secret: string) =>
   createHmac('sha256', secret).update(value).digest('hex');
 
+/**
+ * x-forwarded-for is append-only across hops: each proxy adds the IP it
+ * observed to the end of the list. The left-most entry is whatever the
+ * client itself sent and is fully attacker-controlled (trivially spoofed to
+ * defeat per-IP rate limiting); the right-most entry is the one appended by
+ * the nearest trusted hop (the platform's own edge network), so it is the
+ * only entry that reflects the real connecting client.
+ */
+export const parseTrustedClientIp = (forwardedForValue: string | undefined) => {
+  if (!forwardedForValue) {
+    return 'unknown';
+  }
+
+  return forwardedForValue.split(',').at(-1)?.trim() || 'unknown';
+};
+
 export const getAuthRateLimitKeyDigests = (input: {
   discriminator: string;
   ipAddress: string;
