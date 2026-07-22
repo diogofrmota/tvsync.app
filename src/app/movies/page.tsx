@@ -6,11 +6,11 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
 
 export const metadata: Metadata = {
-  title: 'Your movies | TVSync',
-  description: 'Review and manage your personal movie library in TVSync.',
+  title: 'Your movies | TvSync',
+  description: 'Review and manage your personal movie library in TvSync.',
   openGraph: {
-    title: 'Your movies | TVSync',
-    description: 'Review and manage your personal movie library in TVSync.',
+    title: 'Your movies | TvSync',
+    description: 'Review and manage your personal movie library in TvSync.',
     url: '/movies',
   },
 };

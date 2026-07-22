@@ -17,7 +17,7 @@ const appUrl = new URL(
 );
 
 export const metadata: Metadata = {
-  title: 'TVSync',
+  title: 'TvSync',
   description: 'Discover movies and TV shows',
   manifest: '/manifest.json',
   icons: {
@@ -26,15 +26,15 @@ export const metadata: Metadata = {
   metadataBase: appUrl,
   openGraph: {
     url: appUrl.toString(),
-    title: 'TVSync',
+    title: 'TvSync',
     description: 'Discover movies and TV shows',
     images: [
       {
         url: '/popcorn.png',
-        alt: 'TVSync',
+        alt: 'TvSync',
       },
     ],
-    siteName: 'TVSync',
+    siteName: 'TvSync',
   },
   twitter: {
     card: 'summary_large_image',
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'TVSync',
+    title: 'TvSync',
   },
   other: {
     'mobile-web-app-capable': 'yes',

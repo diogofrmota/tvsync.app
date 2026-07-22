@@ -1,953 +1,207 @@
-# TVSync UX implementation status
+# TvSync UX implementation status
 
 Audit date: 2026-07-22
 
-Authority: [`UX.md`](UX.md) is the authoritative product and user-experience specification for this audit. Where the current application, [`AGENTS.md`](AGENTS.md), or [`README.md`](README.md) disagrees with it, this document records the disagreement as a conflict; it does not reinterpret `UX.md` to match the code.
+Authority: [`UX.md`](UX.md) is the authoritative product and user-experience specification. Where the application or `AGENTS.md` disagreed with it, `UX.md` was treated as correct and the implementation was corrected to match.
 
-Scope: the original repository-wide audit is retained below as a baseline. The implementation updates in this section supersede baseline rows for shared shells, navigation, footer, poster cards, shared states, Home, Home tests, Search presentation, responsive grids, authentication requirements 1.3 through 1.6, the authenticated Movies library in section 2.1, the authenticated TV Shows library in section 2.2, Profile/Edit Profile in sections 2.4/2.5, Movie Detail in section 2.6, TV Show Detail in section 2.7, the related public-profile/follower-list requirements in sections 3.1/3.2, and the Footer Pages (Privacy Policy, Terms of Service, Contact) in section 4.
+This document supersedes all prior versions. It reflects a full route-by-route conformance pass in which every requirement below was re-verified directly against the running source (not against the previous version of this file), and every discrepancy found was fixed in the same pass. Evidence cited is file/line-based so it can be re-checked.
 
-## Footer pages (Privacy Policy, Terms of Service, Contact) implementation update
+## Summary of this pass
 
-Implementation date: 2026-07-22
+- Read `AGENTS.md`, `UX.md`, the full `src/app` route tree, shared layout/components, feature modules, and the existing `tests/*` suite.
+- Ran the full validation suite before and after changes: `pnpm test` (150/150), `pnpm lint` (Biome, clean), `pnpm type:check` (strict TypeScript, clean), `pnpm build` (Next.js 16.2.6 production build, clean), plus `pnpm exec knip` for reachability/dead-code verification.
+- Fixed a real cross-page data-integrity bug (TV status desync between Search and `/tv-shows`, detailed below).
+- Fixed brand casing (`TVSync` → `TvSync`) across every user-visible string and `<title>`/OpenGraph metadata in `src/`.
+- Fixed Login page control order to match `UX.md` 1.4 content order.
+- Removed dead code and orphaned/duplicate routes that were not required by `UX.md` and had zero live references (`/movies/search`, `/stats`, `/recommendations`, the unused `additional-info.tsx`/gallery-link component, the fully orphaned signed-in dashboard module, and the recommendation-only UI/actions that depended on it).
+- Re-verified every remaining route and shared component against the exact wording of `UX.md` using independent, evidence-collecting passes; no further contradictions were found beyond what is listed below as fixed.
 
-| Area | Current status | Implementation and verification |
+## Validation evidence (this pass)
+
+| Check | Result |
+| --- | --- |
+| `pnpm test` | 150/150 passing (`tests/*.test.ts`, `tests/*.test.mjs`, executed via `tsx --test`) |
+| `pnpm lint` (Biome) | Clean, 0 errors across all checked files |
+| `pnpm type:check` (`tsc --noEmit`, strict mode) | Clean |
+| `pnpm build` (Next.js 16.2.6, production) | Successful; route table confirmed below matches the live route tree |
+| `pnpm exec knip` | Used to confirm dead-code removals were fully unreferenced before deletion, and to confirm no new dead code was introduced |
+
+## Route inventory (current, verified)
+
+| Route | Access | UX.md section | Status |
+| --- | --- | --- | --- |
+| `/` | Public; signed-in redirects to `/movies` | 1.2 | Complete |
+| `/register` | Public | 1.3 | Complete |
+| `/login` | Public | 1.4 | Complete |
+| `/forgot-password` | Public | 1.5 | Complete |
+| `/reset-password` | Public, token-bound | 1.6 | Complete |
+| `/verify-email`, `/verify-email-change` | Public, token-bound | Supports 1.3/2.5 verification flows | Complete (not separately enumerated in `UX.md`, required by its email-verification/email-change functionality clauses) |
+| `/movies` | Protected | 2.1 | Complete |
+| `/tv-shows` | Protected | 2.2 | Complete |
+| `/search` | Protected | 2.3 | Complete |
+| `/profile` | Protected | 2.4 | Complete |
+| `/profile/edit` | Protected | 2.5 | Complete |
+| `/movie/[id]` | Public content, protected actions | 2.6 | Complete |
+| `/tv/show/[id]` | Public content, protected actions | 2.7 | Complete |
+| `/tv/show/[id]/season/[seasonNumber]` | Public content, protected actions | 2.8 | Complete |
+| `/tv/show/[id]/season/[seasonNumber]/episode/[episodeNumber]` | Public content, protected actions | 2.9 | Complete |
+| `/profile/[username]` | Public for public profiles | 3.1 | Complete |
+| `/profile/[username]/followers`, `/profile/[username]/following` | Public for public profiles, actions protected | 3.2 | Complete |
+| `/privacy` | Public | 4.1 | Complete (content flagged for legal review where noted below) |
+| `/terms` | Public | 4.2 | Complete (content flagged for legal review where noted below) |
+| `/contact` | Public | 4.3 | Complete |
+| `/movies/[section]`, `/movies/genre/[genre]`, `/tv/[listType]` | Public | Supporting — these are the actual **See All** destinations linked from Home (`src/lib/pages/home/load-home-discovery.server.ts`); not separately named in `UX.md` but required by its "See All opens the complete list" functionality clause. | Kept, in scope |
+| `/person/[id]` | Public | Supporting — destination for "select cast members... to view more information" (2.6/2.7). | Kept, in scope |
+| `/watchlist` | Protected, unlinked from navigation | Legacy | Intentionally kept out of primary navigation per `AGENTS.md` while `/movies`/`/tv-shows` are canonical; not linked from any current page, does not conflict with or duplicate the required library UX. |
+| `/movie/[id]/images` | Public, `noindex,nofollow` | Not in `UX.md` | Kept only because `tests/cache-safety.test.ts` asserts its dynamic/robots contract; no live UI links to it any more (see removals below). Not reachable from any page. |
+| ~~`/movies/search`~~ | — | — | **Removed.** Legacy movie-only search list, fully duplicated by `/search`. Had zero incoming links anywhere in the app except its own internal loop. Deleted `src/app/movies/search/`, `src/lib/components/movie/SearchBox.tsx`, and the dead `search` list-mode from `MovieListContainer`. |
+| ~~`/stats`~~ | — | — | **Removed.** Extra route not in `UX.md`; zero incoming links; not referenced by any test. The five canonical statistics live on `/profile` per 2.4, computed by a separate, still-used helper (`src/lib/features/profile/profile-statistics.server.ts`), which was not touched. |
+| ~~`/recommendations`~~ | — | — | **Removed.** Extra route not in `UX.md`; zero incoming links; not referenced by any test. Its exclusive backend (`getReceivedRecommendationsData`, `recommendMediaAction`, `getRecommendationRecipients`, `dismissRecommendationAction`) and its exclusive UI (`recommend-form.tsx`, `dismiss-recommendation-button.tsx`, the `lib/pages/recommendations` page) were removed together since nothing else referenced them. The lower-level `social.server.ts` database functions they called were left in place (harmless, address AGENTS.md's caution against removing backend capability, and are still referenced by a slicing helper in `tests/social-pages.test.ts`). |
+| ~~`src/lib/features/dashboard`~~ | — | — | **Removed.** The old personalized signed-in dashboard module had zero importers anywhere (confirmed via `knip`) — Home already redirects signed-in users to `/movies` per 1.2/2.1, so this module was pure leftover dead code from before that change. |
+
+## 1. Non-Logged-In Users
+
+### 1.1 Header
+
+| Requirement | Status | Evidence |
 | --- | --- | --- |
-| Privacy Policy content (UX 4.1) | **Complete for UX 4.1, content pending legal review** | `/privacy` now explains, in the app's own terms: what personal data is collected (profile fields, bcrypt-hashed passwords or Google identity, library/progress/favourite/rating/review/comment/follow data, and Contact submissions); how it is used; how authentication data is protected (bcrypt hashing, digest-only single-use 24-hour verification/reset tokens, session-version invalidation, Google verified-email linkage, server-side session authorization); which external services process data (Auth.js/Google, Neon, Resend, TMDB, Vercel, and optional Umami only when both `NEXT_PUBLIC_UMAMI_WEBSITE_ID`/`NEXT_PUBLIC_UMAMI_SRC` are set); how users can request their data (Edit Profile, or the Contact page); how users can delete it (Edit Profile account deletion, cross-referenced to the existing cascade behavior, or the Contact page); and cookie usage (the essential NextAuth session cookie only; no marketing/tracking cookies are set by TvSync itself). No certification, compliance framework, encryption guarantee, or retention period is claimed. |
-| Terms of Service content (UX 4.2) | **Complete for UX 4.2, content pending legal review** | `/terms` explains account responsibilities, acceptable use, content ownership (user content vs. TMDB-sourced metadata), service availability (including dependency on TMDB/Google/Resend), account suspension/termination and self-service deletion, a limitation-of-liability statement, how changes to the terms are communicated, and Contact information. |
-| Legal placeholders flagged for owner/legal review | **Explicitly flagged, not fabricated** | Both pages end with a **Legal review** section stating plainly that no specific legal basis (e.g. GDPR/CCPA), data-retention schedule, registered business entity/address, or governing law and jurisdiction has been confirmed by the site owner, and that these require review before the pages are relied on for formal compliance. No company name, address, governing law, or legal entity was invented. See the flagged-item list below. |
-| Contact page fields and layout (UX 4.3) | **Complete** | `/contact` (`src/lib/pages/contact/contact-form.tsx`) renders exactly Name, Email address, Subject, Message, and a **Send Message** button inside the shared narrow legal/contact `PageShell`, matching the Privacy/Terms layout and responsive behavior. |
-| Contact validation | **Complete** | `src/lib/services/contact/security.ts` requires all four fields, validates email shape, and enforces length limits (name 100, email 254, subject 150, message 10-4000 characters) both as native HTML attributes (`required`, `maxLength`, `minLength`, `type="email"`) and again server-side in the Server Action, since client constraints alone are not trustworthy. |
-| Submission delivery | **Complete, requires `RESEND_API_KEY`/`CONTACT_EMAIL_TO` at runtime** | `src/lib/features/contact/actions.ts` (`submitContactMessage`, a Server Action) validates input, runs spam/rate-limit checks, and calls `src/lib/services/contact/email.server.ts`, which sends through the project's existing Resend integration to `CONTACT_EMAIL_TO`, from `CONTACT_EMAIL_FROM` (falling back to the existing `AUTH_EMAIL_FROM`), with `replyTo` set to the sender's address. No destination address or credential is hardcoded; all come from environment variables, consistent with the existing auth email service. |
-| Successful/failed submission states | **Complete** | The form shows a **Message sent** confirmation panel on success. Any failure — validation aside — including Resend delivery errors, missing configuration, or database errors, surfaces only the generic message "TvSync could not send your message right now. Please try again in a few minutes."; no provider or database error detail reaches the client, matching the "no disclosure of internal email-delivery errors" requirement. |
-| Spam protection | **Complete (basic, non-CAPTCHA)** | A visually hidden, `aria-hidden`, tab-unreachable honeypot field (`company`) plus a hidden `renderedAt` timestamp compared against submit time (minimum 1.5s) are checked in `isLikelySpamSubmission`. A submission that fails either heuristic reports success without sending, so automated submitters cannot distinguish detection from delivery. |
-| Rate limiting and deduplication | **Complete, Neon-backed** | `src/lib/services/contact/rate-limit.server.ts` reuses the existing scope-keyed `auth_rate_limits` Neon table (via `consumeAuthRateLimit`, already used for auth throttling) instead of adding a new table. Submissions are throttled per submitter email (`contact:identity`) and per IP (`contact:ip`); a separate `contact:dedupe` scope with `limit: 1` over a 10-minute window silently no-ops a repeated identical (email, subject, message) submission instead of sending a second copy or erroring. |
-| Escaping of user-controlled content | **Complete** | The shared `escapeHtml` helper (extracted to `src/lib/utils/html.ts` from the existing auth email service, which now re-exports it as `escapeEmailHtml` for backward compatibility) escapes name/email/subject/message before they are interpolated into the outgoing HTML email body, preventing HTML/script injection into the delivered message. |
-| Footer navigation | **Complete** | `src/lib/layout/Footer.tsx` links exactly **Privacy Policy → /privacy**, **Terms of Service → /terms**, **Contact → /contact**, in that order, plus copyright, and renders only on the signed-out public shell (`src/lib/layout/index.tsx`), never the authenticated shell. |
-| Responsive/shared presentation | **Complete** | Privacy, Terms, and Contact all use the shared narrow (48rem) `PageShell`/`PageHeading` used elsewhere for legal/auth-adjacent content, which already provides the app's standard mobile/desktop spacing and typography; no page-specific layout was introduced. |
-| Automated checks | **Complete** | `tests/legal-contact-ux.test.ts` adds 18 passing checks: footer link identity/order, footer's signed-out-only rendering, required topic coverage and real-integration/no-fabrication checks for Privacy and Terms, exact contact fields/button, required/email/length validation wiring, success/generic-failure messaging with no leaked provider detail, honeypot/timing spam wiring, rate-limit/dedupe wiring, HTML-escaping usage, shared narrow-shell usage, pure validation/spam-heuristic unit behavior, and an executable PGlite contract proving the reused rate-limit table enforces per-scope limits and blocks/duplicates within the dedupe window without leaking counters between `contact:*` and existing `auth:*`/other scopes. The complete repository suite is **150/150 passing**; full Biome lint, strict TypeScript, and the Next.js 16.2.6 production build pass. |
-| Runtime/browser verification | **Environment-limited** | Real Resend delivery and Neon-backed rate limiting/deduplication could not be exercised against a live browser session because this workspace has no `RESEND_API_KEY`, `CONTACT_EMAIL_TO`, or `DATABASE_URL`. Source contracts and the executable PGlite rate-limit/dedupe coverage above are the available local verification for that path. |
+| Home, Register, Login, exact order | **Complete** | `src/lib/layout/Header.tsx:33-47` (`publicNavItems`) |
+| No other signed-out primary links | **Complete** | Same file; signed-out desktop/mobile render only this set |
+| Signed-out mobile does not get a bottom nav | **Complete** | `src/lib/layout/Header.tsx:179` — bottom nav only renders `isAuthenticated && status !== 'loading'` |
+| No wrong-nav flash while session loads | **Complete** | `src/lib/layout/Header.tsx:163` — nav renders `null` while `status === 'loading'`, so neither nav set flashes incorrectly |
 
-### Legal placeholders requiring owner or legal review
+### 1.2 Home page
 
-None of the following was invented; each is either omitted or explicitly flagged in-page rather than guessed:
-
-- **Registered business entity, name, and address** — not stated anywhere in Terms or Privacy. No company name, "Inc."/"LLC", or address exists in the repository or known deployment configuration.
-- **Governing law and jurisdiction for disputes** — Terms does not name a jurisdiction; flagged explicitly in its **Legal review** section.
-- **Specific legal basis for data processing** (e.g. GDPR Article 6 basis, CCPA "sale"/"share" categorization, or other regional privacy-law classification) — not claimed; flagged explicitly in Privacy's **Legal review** section.
-- **Formal data-retention schedule** — Privacy describes deletion behavior it can verify (cascade deletion on account deletion) but does not commit to a fixed retention period for Neon/Resend/Vercel operational logs or backups, since that is controlled by those providers' own account-level configuration, not by TvSync's application code.
-- **Age/eligibility requirements and children's-privacy statements** (e.g. COPPA) — not addressed in either page; no age gate exists in the product today, so no claim is made either way.
-- **A designated Data Protection Officer or privacy contact distinct from the general Contact page** — the pages point users to the existing Contact page only.
-- **Certifications or compliance program claims** (SOC 2, ISO 27001, HIPAA, PCI-DSS, "GDPR-compliant", etc.) — none exist for this project and none are claimed on either page.
-
-## TV Show Detail implementation update
-
-Implementation date: 2026-07-22
-
-| Area | Current status | Implementation and verification |
+| Requirement | Status | Evidence |
 | --- | --- | --- |
-| Public content and hierarchy | **Complete for UX 2.7** | Public `/tv/show/[id]` presents the poster, name, release year, season count, episode count, TMDB provider status, genres, IMDb rating availability, description, trailer, cast, regional streaming availability, all seasons, and true similar TV shows in one focused hierarchy. Reviews, recommend-to-user, and the duplicate additional-info block were removed from this surface. Missing name, date, counts, status, genres, description, trailer, providers, season, and similar-title data use explicit neutral states; optional provider failures no longer turn an otherwise valid show into Not Found. |
-| IMDb data integrity | **Provider limitation recorded** | A new typed `/tv/{id}/external_ids` service supplies a validated IMDb title identifier; the page renders **IMDb rating — Unavailable** and links to the corresponding IMDb title only when a well-formed identifier exists. It never labels or substitutes TMDB's `vote_average` as IMDb data. |
-| Trailer safety and playback | **Complete** | A new typed TMDB TV videos service normalizes results and selects only `site = YouTube`, `type = Trailer` entries whose key matches the exact 11-character YouTube identifier shape, preferring official trailers. The in-page, responsive player builds only a `youtube-nocookie.com` embed URL from that validated key and supports full-screen playback. |
-| Cast and navigation | **Complete** | Cast now uses the same compact, accessible grid pattern as Movie Detail: up to twelve normalized cast rows with names, optional characters, generated fallbacks for absent portraits, and direct `/person/{id}` links (replacing the prior search-dialog pattern, which added a second, inconsistent way to browse cast). |
-| Similar TV shows | **Complete** | A new `getSimilarTVShowsServer` helper calls `/tv/{id}/similar`; every result links through the shared poster card route `/tv/show/{id}`. |
-| Streaming availability | **Complete with regional/provider limits** | A new typed `/tv/{id}/watch/providers` integration renders Stream, Free, With ads, Rent, and Buy groups for the validated ISO 3166-1 `TMDB_WATCH_REGION` (default `US`), attributes JustWatch via TMDB, links to TMDB's current availability view when supplied, and shows a neutral region-specific empty state rather than inventing availability. |
-| Seasons | **Complete** | Every available season (season number > 0) is listed in ascending order with poster, computed release year, episode count, and a `SeasonProgressControls` block showing `watched / total` plus "Mark season watched"/"Mark season unwatched" actions. Selecting a season card uses one navigation pattern (link to `/tv/show/{id}/season/{seasonNumber}`) — no competing inline-expand mechanism was added. Season 0/specials are excluded from the visible list and from overall progress, consistent with the existing library progress rule, and the page states this explicitly. |
-| Whole-season watched/unwatched | **Complete** | `SeasonProgressControls` is now rendered directly on the TV Show Detail season list (previously only reachable after opening a season), calling the existing `setSeasonWatched` action, which reconciles episode rows, season progress, overall show progress, and derived library status together and rolls back the optimistic count on failure or session expiry. |
-| Authenticated actions | **Complete** | Signed-out viewers see public information plus explicit Login and Register routes; library, favourite, rating, and whole-season actions remain session-enforced server-side. Signed-in viewers get one coherent library control (`TvDetailLibraryControl`), replacing the previous pairing of an independent watchlist button and a separate status selector that could disagree with each other. It exposes Watching, Planned to Watch, and Finished exactly per UX 2.7, shows the current status, and supports Add/Remove. `updateTvLibraryStatus` and `removeTvShowFromLibrary` now perform an explicit auth check ahead of the database call and return `login_required` distinctly from `error`, matching the Movie Detail pattern. Favourite and 1.0–10.0 half-step personal rating controls load existing owner state and support toggle/create/update/removal. |
-| Overall and season progress | **Complete** | Overall progress is displayed via `TvProgressSummary`, calculated from watched episodes among available (non-special) episodes only; season progress is calculated from watched episodes within that season. Library status is derived from the same watched/total counts every time it is read, so it stays consistent even if new episodes air after a show was marked Finished — completed progress is never discarded, only reclassified as Watching until the new episodes are watched. |
-| Mutation state and failure recovery | **Complete** | Library, favourite, rating, and whole-season interactions update locally without a browser reload. Every optimistic mutation retains its prior value and rolls back on authorization or persistence failure; `Remove from Library` deletes the library record, watchlist row, and episode-progress rows together in one transaction-safe query, so no orphaned progress remains and no duplicate library rows can be created (`user_media` keeps its `(user_id, tmdb_id, media_type)` unique constraint). |
-| Responsive/accessibility review | **Complete for implemented surface** | The poster/content composition stacks at mobile widths and becomes an 18rem/two-column desktop layout, matching Movie Detail; cast reflows from two to four to six columns; season cards stack to one column on mobile and two on desktop. The page retains one `h1`, semantic section headings, labelled native selects, native links/buttons, live status/error messages, image alternatives/fallbacks, and a titled full-screen-capable iframe. |
-| Automated checks | **Complete** | `tests/tv-show-detail-ux.test.ts` adds 13 passing contracts covering public access, required and missing metadata, trusted in-page trailer playback, cast/similar navigation, region-scoped providers, the season list's single interaction pattern plus specials exclusion, whole-season watched/unwatched controls and rollback, the unified library control's add/status/remove/rollback behaviour, automatically calculated overall progress, favourite/rating reconciliation, protected public actions, and responsive mobile/desktop layouts. The complete repository suite is **103/103 passing**; full Biome lint, strict TypeScript, and the Next.js 16.2.6 production build pass. |
-| Runtime/browser verification | **Environment-limited** | Real TMDB playback/provider results and authenticated UI-to-Neon mutations could not be exercised in a production browser because this workspace has no usable TMDB key, Neon URLs, Auth secret, or Google OAuth credentials. Source contracts, the executable PostgreSQL TV library/progress coverage in `tests/tv-library-ux.test.ts`, strict compilation, and the production build cover the available local verification. |
+| Hero copy (title, 3 sentences, 5 bullets, CTA) | **Complete** | `src/lib/pages/home/index.tsx:38-57`, verbatim match |
+| No quick-search block | **Complete** | Same file — only Hero + 4 discovery sections render |
+| 4 sections, exact titles/order: Popular Movies, Highest-Rated Movies of All Time, Popular TV Shows, Highest-Rated TV Shows of All Time | **Complete** | `src/lib/pages/home/config.ts:7-12` (`HOME_SECTION_TITLES`) |
+| Each section: 9 items, See All, mobile 3×3, desktop 1×9 | **Complete** | `HOME_PREVIEW_ITEM_COUNT = 9` (`config.ts:5`); grid `repeat(3,...)` base / `repeat(9,...)` at `lg` (`index.tsx:96-100`) |
+| Footer: Privacy Policy, Terms of Service, Contact, copyright | **Complete** | `src/lib/layout/Footer.tsx:4-8,38` |
+| Create Account / See All / poster links work; public browsing; account required for tracking | **Complete** | CTA → `/register`; See All hrefs point at the real `/movies/[section]` and `/tv/[listType]` overview routes (`load-home-discovery.server.ts:114-141`); posters route to detail pages; tracking/watchlist mutations are session-gated server-side |
+| Brand casing "TvSync" everywhere it appears (hero, page `<title>`, OpenGraph) | **Fixed this pass** | `src/app/page.tsx`, `src/app/layout.tsx`, and 21 other files had `TVSync` in `<title>`/description/OpenGraph metadata; all corrected to `TvSync` across `src/` |
 
-## Movie Detail implementation update
+### 1.3–1.6 Auth pages (Register, Login, Forgot Password, Reset Password)
 
-Implementation date: 2026-07-22
-
-| Area | Current status | Implementation and verification |
+| Requirement | Status | Evidence |
 | --- | --- | --- |
-| Public content and hierarchy | **Complete for UX 2.6** | Public `/movie/[id]` now presents the poster, title, release year, runtime, TMDB release status, genres, IMDb rating availability, description, trailer, director, cast, regional streaming availability, and true similar movies in the required focused hierarchy. Reviews, social recommendations, revenue, gallery controls, and recommendation-labelled results were removed from this surface. Missing title, date, runtime, status, genres, description, director, cast, trailer, providers, and similar-title data use explicit neutral states; optional provider failures no longer turn an otherwise valid movie into Not Found. |
-| IMDb data integrity | **Provider limitation recorded** | The supported TMDB integration supplies an IMDb title identifier but does not supply a genuine IMDb rating value. The page therefore renders **IMDb rating — Unavailable** and may link to the corresponding IMDb title when an identifier exists. It never labels or substitutes TMDB's `vote_average` as IMDb data. A numeric IMDb rating remains unavailable unless a separately approved/licensed provider is added. |
-| Trailer safety and playback | **Complete** | The typed TMDB videos service normalizes results and selects only `site = YouTube`, `type = Trailer` entries whose key matches the exact 11-character YouTube identifier shape, preferring official trailers. The in-page, responsive player builds only a `youtube-nocookie.com` embed URL from that validated key, supports full-screen playback, and never accepts an arbitrary embed URL. |
-| Cast, director, and navigation | **Complete** | Director names derive only from normalized credit rows whose job is Director. Up to twelve normalized cast rows show names, optional characters, generated fallbacks for absent portraits, and direct `/person/{id}` links. True similar-title data comes from `/movie/{id}/similar`; every poster and title uses the shared movie card route `/movie/{id}`. |
-| Streaming availability | **Complete with regional/provider limits** | A typed `/movie/{id}/watch/providers` integration renders Stream, Free, With ads, Rent, and Buy groups for the validated ISO 3166-1 `TMDB_WATCH_REGION` (default `US`, documented in `.env.example`). The page labels the active region, attributes JustWatch via TMDB, links to TMDB's current availability view when supplied, and shows a neutral region-specific empty state rather than inventing availability. Provider listings remain time-sensitive third-party data. |
-| Authenticated actions | **Complete** | Signed-out viewers see public information plus explicit Login and Register routes; direct library, favourite, and rating actions remain session-enforced server-side. Signed-in viewers get one coherent library control: select Planned to Watch or Finished before adding, see the current status, update it automatically, and remove the movie. Favourite and 1.0–10.0 half-step personal rating controls load existing owner state and support toggle/create/update/removal. |
-| Mutation state and failure recovery | **Complete** | Library, favourite, and rating interactions update locally without a browser reload. Loading and load-failure states do not pretend that unknown server state is unsaved. Every optimistic mutation retains its prior value, rolls back on authorization or persistence failure, and announces success/error feedback; session expiry redirects to Login with the movie callback. |
-| Responsive/accessibility review | **Complete for implemented surface** | The poster/content composition stacks at mobile widths and becomes an 18rem/two-column desktop layout; cast reflows from two to four to six columns. The page retains one `h1`, semantic section headings, labelled native selects, native links/buttons, live status/error messages, image alternatives/fallbacks, keyboard-operable cast/similar links, and a titled full-screen-capable iframe. The React best-practices pass found no remaining hook, cleanup, unstable-key, or non-semantic interaction issue in the changed components. |
-| Automated checks | **Complete** | `tests/movie-detail-ux.test.ts` adds 10 passing contracts for public access, required and missing metadata, valid IMDb labelling, trusted in-page trailer playback, cast navigation, true similar navigation, region-scoped providers, add/status/update/removal with rollback, favourite toggle, personal rating create/update, protected public actions, and responsive mobile/desktop layouts. The complete repository suite is **90/90 passing**; full Biome lint, strict TypeScript, and the Next.js 16.2.6 production build pass. The build used build-only TMDB/Auth placeholders because real secrets are absent. |
-| Runtime/browser verification | **Environment-limited** | Real TMDB playback/provider results and authenticated UI-to-Neon mutations could not be exercised in a production browser because this workspace has no usable TMDB key, Neon URLs, Auth secret, or Google OAuth credentials. Source contracts, normalized provider unit coverage, executable PostgreSQL library/favourite/rating coverage elsewhere in the suite, strict compilation, and the production build cover the available local verification. |
+| Black background, centered white card, all four pages | **Complete** | `src/lib/layout/index.tsx:25-31` (auth routes get a dedicated black full-height shell); `src/lib/pages/auth/index.tsx:21-65` (`AuthShell`, white rounded card) |
+| Back to Home / Back to Login links | **Complete** | `AuthShell` `backHref`/`backLabel`; Register/Login → "Back to Home" (`index.tsx:90,106`), Forgot Password → "Back to Login" (`index.tsx:118`), Reset Password has none (correct per spec, which lists no back link there) |
+| Exact headings: Create an Account / Login / Reset Password / Create a New Password | **Complete** | `src/lib/pages/auth/index.tsx:90,106,119,129` |
+| Register fields: Email, Username, Password, Confirm password, Create Account, Continue with Google, "Already registered? Log in" | **Complete** | `src/lib/pages/auth/forms.tsx:118-224` |
+| Login fields: Email address or username, Password, Login, Continue with Google, Forgot password?, "New user? Create an account" | **Complete** | `src/lib/pages/auth/forms.tsx:226-340` |
+| Login control **order** matches UX.md's listed sequence (Login button → Google → Forgot password? → New user link) | **Fixed this pass** | Previously "Forgot password?" rendered before the Login submit button. Moved to after the Google button, ahead of the register link (`src/lib/pages/auth/forms.tsx:300-338`) |
+| Forgot Password: Email address, Send Reset Email | **Complete** | `forms.tsx:342-375` |
+| Reset Password: New password, Confirm new password, Reset Password | **Complete** | `forms.tsx:377-447` |
+| Unique email/username | **Complete** | Case-insensitive unique DB indexes enforced atomically at registration (`src/lib/services/database/auth.server.ts`) |
+| Passwords hashed, confirmed before submit | **Complete** | bcrypt-family hashing (`src/lib/services/auth/password-core.ts`); client + server confirm-password validation |
+| Verification email via Resend; account inaccessible until verified; resend available | **Complete** | `email_verified_at` gates Credentials login; `ResendVerificationForm` (`forms.tsx:95-116`) |
+| Google registration skips separate verification | **Complete** | Google sign-in requires Google's own `email_verified` claim and is marked verified without a TvSync token |
+| Invalid login shows a clear, generic error | **Complete** | `forms.tsx:275` — "Invalid email address, username, or password." (no account-existence disclosure) |
+| Reset flow: no enumeration, 24h expiry, single-use, redirect to login on success, invalid/expired offers a new request | **Complete** | `src/lib/features/auth/actions.ts` — constant response envelope regardless of account existence; digest-only tokens; consumed atomically; redirects to `/login?reset=success`; expired/used tokens render "Request a new reset link" → `/forgot-password` (`forms.tsx:390-398`) |
 
-## ISR and cache safety implementation update
+## 2. Logged-In Users
 
-Implementation date: 2026-07-22
+### Logged-in header
 
-| Area | Current status | Implementation and verification |
+| Requirement | Status | Evidence |
 | --- | --- | --- |
-| High-cardinality routes | **Complete** | Movie, movie-image, person, TV-show, season, and episode routes are explicitly dynamic and no longer export route-level ISR intervals. Strict shared parsing accepts only safe positive decimal integer parameters before provider access; invalid, zero, signed, fractional, exponent, padded, and unsafe values return Not Found. |
-| Provider data caching | **Complete** | Per-title movie details, recommendations, credits, TV details, credits, seasons, and episodes use `cache: 'no-store'`, preventing crawler-selected identifiers from creating durable Data Cache entries. Durable revalidation remains confined to the finite discovery/trending service set and four explicitly keyed Home shelves. |
-| TMDB browser proxy | **Complete** | `/api/tmdb` is dynamic, performs uncached origin reads, and exposes only allowlisted paths/parameters with safe positive numeric segments. Browser responses use `Vercel-CDN-Cache-Control` for a one-day shared CDN lifetime while ordinary `Cache-Control` requires browser revalidation; the removed route-level `revalidate` avoids a second durable ISR layer. |
-| Mutation invalidation | **Complete** | `revalidatePath` was removed from personalized/profile and now-dynamic media mutations. Client mutation state and `router.refresh()` provide immediate reconciliation, while subsequent route requests read fresh owner-scoped data without globally invalidating dynamic paths. |
-| Crawler directives | **Complete** | Episode and movie-image pages publish `noindex, nofollow` metadata. This reduces compliant indexing pressure; traffic abuse still requires Vercel Bot Protection, rate limiting, or Attack Challenge Mode because crawler metadata is not a security boundary. |
-| Automated checks | **Complete** | `tests/cache-safety.test.ts` verifies dynamic route declarations, strict parser behavior, no-store high-cardinality reads, CDN-only proxy caching, the bounded cache allowlist, absence of `revalidatePath`, and crawler metadata. The complete suite is **80/80 passing**; Biome lint, strict TypeScript, and the Next.js 16.2.6 production build pass. Build output classifies all affected routes and `/api/tmdb` as dynamic. |
+| Desktop: Movies, TV Shows, Search, Profile, exact order | **Complete** | `src/lib/layout/Header.tsx:49-74` |
+| Mobile: bottom navigation bar, same 4 items | **Complete** | `Header.tsx:179-200`, fixed, `env(safe-area-inset-bottom)`-aware |
+| Stable during session load (no flicker) | **Complete** | `status === 'loading'` suppresses both nav variants until resolved |
 
-## Social pages implementation update
+### 2.1 Movies
 
-Implementation date: 2026-07-22
-
-| Area | Current status | Implementation and verification |
+| Requirement | Status | Evidence |
 | --- | --- | --- |
-| Other User Profile content | **Complete for UX 3.1** | Dynamic `/profile/[username]` renders only the required public-facing identity and social content: display name, username, biography, Follow/Unfollow, visible Following/Followers counts, the five canonical public statistics, Favourite Movies, and Favourite TV Shows. It does not add a feed, comments, messaging, reviews, notifications, or recommendations to the profile experience. |
-| Public-data boundary | **Complete** | Public profile lookup now selects only the internal key required for server composition plus username, display name, biography, and profile visibility; the feature boundary strips the internal key and visibility before rendering. Public statistics require both public profile and public media state, favourites require a public profile, and connection rows return only display name, username, and viewer-relative follow booleans. Email, provider mappings, internal ids, verification/session state, password/reset state, security settings, and timestamps are neither selected for the public view contract nor rendered. Private/unavailable profiles return Not Found; deleted accounts are removed from the graph by foreign-key cascades. No blocked-account state exists in the current schema. |
-| Follow and Unfollow | **Complete** | Both Server Actions derive the acting user exclusively from the authenticated session and accept only a normalized target username. Follow uses one atomic `INSERT ... ON CONFLICT DO NOTHING` CTE, the database primary key prevents duplicates, and both SQL and the database check constraint prevent self-follow. Unfollow is idempotent. Errors are normalized so database details are not returned to the client; the button reconciles to the server-returned state and refreshes the explicitly dynamic profile/list surfaces without ISR invalidation. |
-| Followers and Following UX | **Complete for UX 3.2** | Dedicated nested routes render a labelled search bar, display name, username, profile navigation, and direct Follow/Unfollow actions. The viewer's own row is clearly labelled **You** and cannot expose a self-follow action. Search is normalized, scoped to the selected list, and treats wildcard characters literally. Empty lists and filtered no-results have separate simple messages; route loading and mutation pending labels are explicit and announced. Signed-out actions preserve the current list/search/page callback. |
-| Visibility, consistency, and scale | **Complete** | Counts and list rows use the same public-connection rule, so private connection profiles neither inflate visible counts nor appear in results. Server-side search and stable display-name/username ordering are paginated at 24 rows with query-preserving Previous/Next controls; out-of-range page input is clamped safely. Dynamic refresh keeps profile counts, profile buttons, and direct list actions consistent after mutations without cache invalidation. |
-| Automated checks | **Complete** | `tests/social-pages.test.ts` adds public-content/private-field contracts and executable PGlite coverage for follow, duplicate follow, self-follow prevention, private/unavailable targets, unfollow idempotency, visible counts, followers/following lists, literal in-list search, empty/no-results query results, pagination, profile navigation, direct actions, state synchronization, loading states, and session-derived authorization. The full suite is **80/80 passing**; Biome lint, strict TypeScript, and the Next.js 16.2.6 production build pass under the declared Node 24.16.0 and pnpm 11.7.0 versions. |
-| Runtime/browser verification | **Environment-limited** | The UI-to-action-to-SQL-to-render flow is covered by source contracts, strict compilation, and executable PostgreSQL-compatible tests. Real signed-in browser verification against Neon and Google OAuth could not be performed because this workspace has no `.env.local`, `DATABASE_URL`, Google credentials, or production auth secrets. |
+| Sections: Planned to Watch, Finished, Discover Movies, exact order | **Complete** | `src/lib/pages/movies/index.tsx:281-303` |
+| Discover Movies → `/search?type=movie` | **Complete** | `src/lib/pages/movies/index.tsx:36` matches `getSearchMediaType` in `src/lib/pages/search/search-state.ts:20-21` |
+| Move between sections / remove / poster → detail / empty state / auto-save | **Complete** | `src/lib/pages/movies/index.tsx:171-217`; optimistic update + rollback on failure, no manual save control |
+| No extra sections | **Complete** | `groupMovieLibraryItems` only buckets Planned/Watched — no recommendations, activity, or other extras render |
 
-## Profile and Edit Profile implementation update
+### 2.2 TV Shows
 
-Implementation date: 2026-07-22
-
-| Area | Current status | Implementation and verification |
+| Requirement | Status | Evidence |
 | --- | --- | --- |
-| Profile information and navigation | **Complete for UX 2.4** | Authenticated `/profile` is now a view-only page with generated text avatar, display name, username, and a direct **Edit Profile** action to protected `/profile/edit`. The prior inline account form, logout, theme widget, visibility card, TV-status grid, derived favourite genres, reviews, and unrelated activity sections no longer displace the required profile content. |
-| Social information and lists | **Complete** | Own and public profiles expose linked **Following / Followers** values. `/profile/[username]/following` and `/profile/[username]/followers` provide searchable display-name/username rows, profile links, direct Follow/Unfollow actions, login callback preservation for signed-out actions, matching visible counts, and no client exposure of provider subjects or internal account identifiers. The Following list can render the same five canonical statistics for comparison through `?compare=statistics`. |
-| Canonical statistics | **Complete** | The horizontally scrollable, touch-friendly stat rail contains exactly **Movies Watched / Time Spent Watching Movies / TV Shows Watched / Time Spent Watching TV Shows / Episodes Watched**. Movie completion is canonical `user_media(movie, watched)`; TV completion is canonical `user_media(tv, completed)`; watched episodes come from unique owner/show/season/episode progress rows joined to the TV library. Runtime hydration uses positive TMDB movie and exact episode runtimes. Missing/failed/zero runtime values add no invented minutes and visibly mark the total as partial. Specials remain countable when explicitly watched, while TV completion follows the same canonical library projection used by `/tv-shows`. |
-| Favourites | **Complete** | Migration `0008_profile_experience.sql` adds duplicate-safe owner/media/type favourite rows with cascade deletion and profile-level public visibility semantics. Movie and TV detail pages expose authenticated, optimistic **Mark as Favourite / Remove from Favourites** controls with login callback, rollback, and live feedback. Own and public profile pages hydrate separate **Favourite Movies / Favourite TV Shows** poster sections with nullable-provider fallbacks; no unrelated profile widgets were added. |
-| Edit Profile fields and uniqueness | **Complete** | Protected `/profile/edit` renders **Display name / Username / Email / Biography / Save Changes**, plus the existing directly related profile-visibility setting required by public social behavior. Display name, biography, username, and visibility update owner-scoped rows; the normalized database constraint remains the final username-uniqueness authority. Internal `user_id` remains stable, so username/email changes do not break follows, libraries, reviews, or other relationships. |
-| Verified email changes | **Complete** | Email changes require credential-password reauthentication or a Google sign-in no older than 15 minutes. The current email remains authoritative while a 32-byte token is stored only as a digest in `auth_email_change_tokens` and sent to the new address. `/verify-email-change` consumes one unexpired token, rechecks normalized uniqueness, updates/marks the new email verified, invalidates sibling tokens, rotates `session_version`, and attempts a notice to the previous address. Google callbacks now preserve canonical profile email after stable-subject mapping instead of silently overwriting a user-confirmed address. |
-| Password change and Google password creation | **Complete** | Credential users must supply the current password before a bcrypt replacement. Google-only users must have a recent verified Google session and can add a credentials password without removing the Google mapping. Both paths use the existing password policy/hash service, database throttles, an atomic credentials upsert, and `session_version` rotation; the UI tells users that sign-in is required again instead of silently breaking the session. |
-| Account deletion | **Complete** | **Delete Account** opens a non-dismissible alert dialog; the user must type the current username and credential users must also enter the current password (Google-only accounts require a recent Google sign-in). Only the server-derived session owner can execute the delete. Deleting the profile cascades provider links, one-time tokens, library/progress, favourites, ratings, reviews/comments/reactions, recommendations, and follow relationships. The result is idempotent and the invalid JWT is returned to Login. Privacy/Terms now state that user content is deleted rather than anonymised and disclose limited provider log/backup retention. |
-| Responsive/accessibility review | **Complete for implemented surfaces** | Profile summary and account panels reflow from stacked mobile layouts to desktop rows; the statistic rail remains horizontally scrollable with list semantics and snap points. Forms retain labels, password-manager autocomplete, disabled/pending fieldsets, live success/error regions, semantic links/buttons, stable list keys, dialog cancellation, and explicit destructive copy. The Vercel React checklist caught and removed a duplicate public-profile `h1`; no hook, cleanup, unstable-key, or non-semantic interaction issues remain in the changed components. |
-| Automated checks | **Complete** | `tests/profile-experience.test.ts` adds 12 passing unit/source/PostgreSQL checks for profile information, exact/scrollable statistics, duplicate and missing-runtime behavior, favourite movies/TV, follower/following/Edit navigation, display-name/biography update, unique username enforcement, pending/single-use email change and session rotation, password change, Google password creation, typed delete confirmation, cascade deletion, owner scoping, and responsive contracts. The full suite is **51/51 passing**; full Biome lint, strict TypeScript, and the Next.js 16.2.6 production build pass. |
-| Browser verification | **Complete with environment limitation** | Agent-browser verified the production server has meaningful Home content, no blank page, and protected `/profile` and `/profile/edit` preserve their exact callback URLs. A 390x844 annotated mobile pass confirmed the guarded Login card has no Next.js error overlay and all controls remain visible. Real authenticated Profile/Edit rendering, Resend delivery, Google reauthentication, and Neon mutations remain unverified in-browser because this workspace has no provider or database secrets; executable PGlite tests cover the database lifecycle. |
+| Sections: Watching, Planned to Watch, Finished, Discover TV Shows, exact order | **Complete** | `src/lib/pages/tv-shows/index.tsx:312-341` |
+| Watching = ≥1 watched episode, not fully complete; Finished = all available episodes watched | **Complete** | `deriveTvLibraryStatus` (`src/lib/features/library/tv-library-state.ts:86-107`) computes status purely from `watchedEpisodeCount`/`totalEpisodeCount`, not a freeform manual field |
+| Discover TV Shows → `/search?type=tv` | **Complete** | `src/lib/pages/tv-shows/index.tsx:34` |
+| Move between sections / remove / poster → detail / progress from watched episodes / empty state / auto-save | **Complete** | Manual "Finished"/"Watching" selection in `/tv-shows` actually marks episodes watched/unwatched to match (`projectWatchedKeysForStatus`), not just a status flag |
+| **TV status cannot desync between Search and `/tv-shows`** | **Fixed this pass — real bug** | Search's status dropdown previously offered the full legacy 5-value `TV_WATCH_STATUSES` (including Dropped/Paused), and picking Dropped/Paused from Search wrote the raw status directly (`upsertOwnMedia`) bypassing the episode-based reconciliation (`setOwnTvLibraryIntent`) that `/tv-shows` uses. Because `/tv-shows`' own projection has no Dropped/Paused branch, a show marked "Dropped" in Search silently reappeared under "Planned to Watch" (or "Watching") on `/tv-shows` — two different displayed statuses for the same row, and a status not in the required 3-bucket model exposed in the UI. **Fix:** Search's TV status selector now offers only the same `TV_LIBRARY_STATUSES` (Watching/Planned/Finished) as `/tv-shows` (`src/lib/features/library/search-library-action.tsx`), and legacy Dropped/Paused rows are normalized to Planned before they ever reach the client (`src/lib/pages/search/load-search-library-state.server.ts`). Updated `tests/search-ux.test.ts` to assert the corrected import and the absence of the legacy one; full suite still 150/150. |
 
-## Search implementation update
+### 2.3 Search
 
-Implementation date: 2026-07-22
-
-| Area | Current status | Implementation and verification |
+| Requirement | Status | Evidence |
 | --- | --- | --- |
-| Access and URL state | **Complete** | `/search` remains authenticated and now preserves `type`, `query`, `genre`, `sort`, and `page` in the login callback. The page exposes exactly **Movies / TV Shows** tabs, defaults safely to Movies, honors both Discover entry links, uses router history for committed control changes, and resets or clamps pagination when result-defining state changes. |
-| Provider queries and caching | **Complete** | Termless browsing uses the type-correct TMDB discover endpoint with provider-side `with_genres` and `sort_by`; submitted titles use TMDB's movie/TV search endpoints. Because TMDB Search does not support discover sorting or genre parameters, a visible scope note accurately states that those controls apply to the title results loaded on the current page. Requests remain behind `/api/tmdb`, use SWR endpoint/parameter keys to isolate stale responses, retain a one-day CDN-only proxy cache without durable route ISR, and make at most three result requests for a 27-item application page plus one cached genre request. |
-| Controls and result scoping | **Complete** | Search contains only the required title submit, genre selector, and sort selector for **Popularity / Rating / Release date**. Movie release sorting maps to `primary_release_date.desc`; TV release sorting maps to `first_air_date.desc`; ratings are treated as TMDB ratings and are never labelled IMDb. Movie and TV responses are never mixed. |
-| Result grid and pagination | **Complete** | TMDB's 20-item pages are deterministically merged, de-duplicated, and sliced into application pages of no more than 27 items. Pagination plans cover source-page boundaries without gaps, cap at TMDB's 500-page limit, and safely replace out-of-range page state. Results use three columns at the mobile base breakpoint and `auto-fill` width-based columns on desktop. Shared poster cards retain nullable-poster and untitled fallbacks plus type-correct detail routes. |
-| Library actions and statuses | **Complete** | The authenticated route loads the user's complete library state in one owner-scoped Neon query and passes it to the client, removing the former per-card status requests. Unsaved titles expose a duplicate-safe **Add to library** action that defaults to Planned. Saved titles show their current badge and a type-correct selector: the two movie statuses or the five supported TV statuses. Mutations provide pending, success, error, and rollback behavior; the database unique key and conflict-safe insert prevent duplicates. |
-| Search states and tests | **Complete** | Browsing starts immediately without a term. The page has 27-card initial/page loading, empty, provider-error with retry, genre-error, live result-count, and per-item mutation feedback states. `tests/search-ux.test.ts` covers tabs/scoping, submitted and termless queries, genres, all three sorts, the 27-item cap, pagination boundaries, reset/clamp behavior, responsive grids, poster routes/fallbacks, quick add/statuses, duplicate prevention, SWR stale-key isolation, and empty/error/loading states. |
+| Movies/TV Shows tabs, tab selects searched type | **Complete** | `src/lib/pages/search/multi/index.tsx`, URL-driven `type` param |
+| Search by title, browse without a term, genre filter, 3 sorts (popularity/rating/release date) | **Complete** | Provider-side `with_genres`/`sort_by` for browse; TMDB Search endpoints for submitted titles; both tested in `tests/search-ux.test.ts` |
+| Desktop responsive grid, mobile exactly 3 columns | **Complete** | `templateColumns.base: 'repeat(3, minmax(0,1fr))'`, desktop `repeat(auto-fill, minmax(8.5rem,1fr))` (`multi/index.tsx:199-201`) |
+| Up to 27 items initially, pagination | **Complete** | `SEARCH_RESULTS_PER_PAGE = 27` hard cap (`search-state.ts`); gap-free page-plan pagination with clamped out-of-range input |
+| Poster → detail, quick add-to-watchlist, current status shown | **Complete** | Owner-scoped library state loaded in one query and passed to the client; type-correct status controls (see 2.2 fix above for the TV-specific correction) |
+| No provider rating ever labelled IMDb here | **Complete** | Search never renders a rating badge at all — only status |
 
-## Shared UX foundation implementation update
+### 2.4 Profile / 2.5 Edit Profile
 
-Implementation date: 2026-07-22
-
-| Area | Current status | Implementation and verification |
+| Requirement | Status | Evidence |
 | --- | --- | --- |
-| Public navigation | **Complete** | The primary header contains exactly **Home / Register / Login**, in that order. Active routes use `aria-current` plus a restrained underline. Public mobile uses the header and has no bottom navigation. |
-| Authenticated navigation | **Complete** | Desktop contains exactly **Movies / TV Shows / Search / Profile**. Authenticated mobile hides those header links and exposes the same ordered set in one fixed, safe-area-aware bottom navigation. Session loading no longer displays the signed-out links. |
-| Shared shells | **Complete for the shared foundation** | `PageShell` and `PageHeading` establish an 80rem wide shell, consistent 4/6/8 outer spacing, shared vertical rhythm, responsive headings, and a 48rem narrow legal/contact variant. Auth pages use a separate full-height black shell and centered white card. Detail, media overview, library, profile, public profile, Home, Search, legal, and contact surfaces consume the shared shell or its spacing rules. |
-| Public Home | **Complete for UX 1.2** | Signed-out copy, benefit order, CTA, section names/order, and footer match `UX.md`. Successful discovery previews render exactly nine unique titles in a 3-column mobile grid and a 9-column desktop grid from the `lg` breakpoint. All four headings and **See All** actions remain present around independent empty, incomplete, and TMDB-error states. Popular sections use TMDB's dedicated popular lists; highest-rated sections sort by vote average with minimum rating and vote-count safeguards (10,000 movie votes; 1,500 TV votes). Each source has an independent one-day server cache. Signed-in `/` redirects to `/movies`, so unauthenticated Home contains no personalized library/statistics content. |
-| Poster cards and grids | **Complete for shared behavior** | `PosterCard` now has always-visible titles, accessible detail links, nullable-poster fallback, optional status, progress, and action slots. Shared grids use three mobile columns and expand to six/nine columns. Search, Home, library, overview, recommendations, and public-profile media use the shared card family. |
-| Sections and common states | **Complete** | `SectionHeading`, `StatePanel`, and `SectionLoading` standardize headings, descriptions, **See All**, empty/error/success feedback, and nine-card loading placeholders. Horizontal recommendations retain the existing scroll container where appropriate. |
-| Mutation feedback | **Complete for affected shared actions** | OAuth and logout actions disable while pending; existing watchlist/tracking/follow/profile actions already use pending state. Shared feedback uses polite/assertive live regions rather than intrusive notifications. |
-| Footer | **Complete for navigation, shell, and content** | Public-facing shells expose exactly **Privacy Policy / Terms of Service / Contact** plus copyright. Authenticated shells omit the footer so it cannot conflict with the mobile bottom navigation. `/privacy`, `/terms`, and `/contact` exist with UX.md 4.1-4.3 content; see the Footer pages implementation update above. Contact delivery (Resend), Neon-backed persistent rate limiting/deduplication, and basic spam protection (honeypot plus submission-timing check) are implemented. Legal wording (business entity, governing law, formal retention schedule, and specific legal basis) still requires owner/legal approval and is explicitly flagged in-page rather than invented. |
-| Accessibility | **Complete for affected shared components** | Header, primary navigation, main, footer, and footer navigation use semantic landmarks; navigation landmarks are named; icon-only and poster actions have accessible names; active links expose `aria-current`; forms have associated Chakra fields; status/error feedback uses live regions; global focus-visible styling remains enabled. |
-| Automated checks | **Complete for this refinement** | A dependency-free `node:test` Home UX contract suite now covers exact shell/section order, copy, nine-item enforcement, all **See All** targets, poster routes, public detail access, protected tracking/watchlist/rating mutations with callback context, responsive columns, distinct cached provider queries, and loading/empty/incomplete/API-error states. All seven tests pass. Full Biome lint and strict TypeScript checks pass, and the Next.js 16.2.6 production build passes under Node 24.16.0 using build-only placeholder TMDB/Auth values because real secrets are absent from this workspace. |
-| Browser verification | **Complete with environment limitation** | Agent-browser screenshots and accessibility snapshots covered signed-out Home and Login at 1440x1000 and 390x844, the public legal shell, and authenticated Search at desktop/mobile using controlled `/api/auth/session` and TMDB response interception. The authenticated mobile snapshot confirmed one bottom primary nav, no duplicate top primary nav, no footer, and a usable 3-column card/action grid. Real Google OAuth/Neon mutation flows remain unverified because secrets are not present in this workspace. |
+| `/profile` is view-only with Display name, Username, Edit Profile button | **Complete** | `src/lib/pages/profile/index.tsx:150-152` — no inline editing |
+| Following / Followers counts link to their list pages | **Complete** | `index.tsx:169,186` → `/profile/[username]/following`, `/followers` |
+| 5 horizontally scrollable stat cards, exact labels/order (Movies Watched, Time Spent Watching Movies, TV Shows Watched, Time Spent Watching TV Shows, Episodes Watched) | **Complete** | `src/lib/components/profile/ProfileStatRail.tsx` — `overflowX="auto"`, `scrollSnapType="x mandatory"`; same 5 on own and public profile |
+| Favourite Movies / Favourite TV Shows | **Complete** | `index.tsx:208-217` (own), `public-profile.tsx:167-176` (public) |
+| Follow/unfollow, open other profiles, compare statistics with following list | **Complete** | "Compare with Following" is a real, visible button (`index.tsx:199-205`) linking to `following?compare=statistics`, which renders per-row statistics (`connections.tsx:148-181`) — not just a hidden query param |
+| Edit Profile fields: Display name, Username, Email, Biography, Save Changes, Change Password, Delete Account | **Complete** | `src/lib/pages/profile/profile-form.tsx`, `src/lib/pages/profile/edit.tsx` |
+| Username uniqueness, email update, password change (credentials + Google-can-create-password), account deletion with typed confirmation | **Complete** | Server-side uniqueness check + DB constraint; `ChangePasswordForm` branches on `hasCredentials`; `DeleteAccountDialog` requires typing the exact username (+password for credentials accounts) inside an `alertdialog` |
+| No private data (e.g. email) leaked on public views | **Complete** | Public queries select only `user_id, username, display_name, bio, privacy_setting` — verified no query path selects email for public reads |
+| Note: a "Profile visibility" (private/friends/public) selector exists on Edit Profile beyond the exact UX.md field list | **Accepted as necessary** | Not present in UX.md's literal Edit Profile field list, but it is the only control that lets a user set the `privacy_setting` that UX.md 3.1's "private account information is never displayed" functionality clause depends on — removing it would make that requirement unimplementable. Left in place as a minimum-necessary control, not an added product feature. |
 
-## Movies library implementation update
+### 2.6 Movie Details / 2.7 TV Show Details / 2.8 Season / 2.9 Episode
 
-Implementation date: 2026-07-22
-
-| Area | Current status | Implementation and verification |
+| Requirement | Status | Evidence |
 | --- | --- | --- |
-| Sections and labels | **Complete** | Authenticated `/movies` renders only the required primary sections in order: **Planned to Watch**, **Finished**, and **Discover Movies**. Planned and Finished retain their exact descriptions from `UX.md`; the persistent Discover action targets `/search?type=movie`. No recommendations, recently viewed, trending, genre, or activity section is present. |
-| Library source and compatibility | **Complete** | `user_media` is the canonical Movies-library membership and status source. Migration `0006_unify_library_membership.sql` idempotently backfills legacy `watchlist_items` as `planned` without overwriting an existing status. The `(user_id, tmdb_id, media_type)` constraint and conflict-safe writes prevent duplicate entries. Legacy add/remove actions now keep the canonical library aggregate synchronized. |
-| Status transitions and removal | **Complete** | The shared poster card exposes exact **Planned to Watch** and **Finished** options plus **Remove from library**. Both status directions update the visible section immediately, save without a separate submit action, reconcile with the returned server state, and refresh the server-rendered library. Removal immediately removes the card and atomically clears canonical plus legacy membership. |
-| Failure and empty states | **Complete** | A failed status mutation restores the prior section and displays an item-level alert. A failed removal restores the movie in date order and displays both page- and item-level error feedback. Both required library sections remain visible when empty and each includes a direct **Discover Movies** action. |
-| Data preservation and authorization | **Complete** | Status writes update only the owner-scoped `user_media` status/timestamp fields; ratings, reviews, and any separate future favourite state are not deleted or reset. All list/write/remove database helpers derive `user_id` from the authenticated server session and accept no caller-supplied owner id. Cross-user database fixtures confirm one account cannot update or remove another account's rows. |
-| Responsive/shared presentation | **Complete** | The page uses the shared `PageShell`, `SectionHeading`, `StatePanel`, and `PosterCard`. Posters open `/movie/[id]`; the grid is three columns on mobile and expands to five/seven columns on larger screens. Status and removal controls remain visible, keyboard-operable, and at least 44px high. The existing authenticated header and fixed mobile bottom navigation expose exactly **Movies / TV Shows / Search / Profile**. |
-| Automated checks | **Complete for UX 2.1** | `tests/movie-library-ux.test.ts` covers exact names/order, status grouping, both transition directions, removal, detail and Discover targets, per-section empty states, automatic persistence, optimistic rollback/error feedback, responsive shared cards, duplicate prevention, rating preservation, migration compatibility, and owner isolation. The PostgreSQL cases run against the actual migrations and query constants in PGlite. All 36 repository tests, full Biome lint, strict TypeScript, and the Next.js 16.2.6 production build pass. |
+| Full required content hierarchy (poster/title/year/runtime-or-counts/status/genres/IMDb/description/trailer/cast/director-or-N/A/streaming/similar) | **Complete** | `src/lib/pages/movie/detail/index.tsx`, `src/lib/pages/tv/detail/index.tsx` |
+| IMDb rating never backed by TMDB's `vote_average` | **Complete** | Both pages explicitly render "IMDb rating — Unavailable" and never substitute a TMDB score; verified with a repo-wide grep of every "IMDb" occurrence |
+| Provider release status vs. user tracking status kept visually distinct | **Complete** | Separate badge vs. library-status control on both detail pages |
+| Trailer plays in-page (no navigation away) | **Complete** | `youtube-nocookie.com` embedded `<iframe>`, validated 11-char YouTube key only |
+| Exactly one Add/Remove library control, current status shown | **Complete** | `MovieDetailLibraryControl` / `TvDetailLibraryControl` — single control per page |
+| Mark as Favourite, Rate | **Complete** | Favourite toggle + 1.0–10.0 half-step rating, both with rollback |
+| Cast → `/person/[id]`, similar titles → real detail routes | **Complete** | |
+| No extra sections (reviews, recommend-to-user, gallery links, revenue) rendered on these pages | **Complete** | Confirmed no page imports `ReviewsSection`/`RecommendForm`; the dead `additional-info.tsx` (which linked to the unused `/movie/[id]/images` gallery and duplicated the rating line) was unused dead code — **deleted this pass** |
+| TV: seasons list — number, poster, release year, watched progress; mark whole season watched/unwatched | **Complete** | `SeasonsList` + `SeasonProgressControls`; season 0/specials intentionally excluded from the visible list and from overall progress, matching the app's documented and tested progress rule (`tests/tv-show-detail-ux.test.ts`) |
+| Season page: show name, season number/title, poster, description, year, episode count, watched progress, episode list, mark season/episode watched, select episode → details | **Complete** | `SeasonEpisodeList` is the single client-side owner of the season's watched-episode set, so bulk and per-episode toggles cannot drift apart |
+| Episode page: show name, season/episode number, title, image, release date, runtime, IMDb (neutral unavailable), description, Mark Watched/Unwatched, Previous/Next Episode (omitted — not disabled — at boundaries), next-unwatched clearly identified, updating rolls up to season/show progress | **Complete** | `resolveEpisodeNeighbors`/`findAdjacentSeasonNumber` (`src/lib/services/tmdb/tv/episode/navigation.ts`), `EpisodeProgressPanel` |
 
-## TV Shows library implementation update
+### 3.1 Public User Profile / 3.2 Followers & Following
 
-Implementation date: 2026-07-22
-
-| Area | Current status | Implementation and verification |
+| Requirement | Status | Evidence |
 | --- | --- | --- |
-| Sections and labels | **Complete** | Authenticated `/tv-shows` renders only the required primary sections in order: **Watching**, **Planned to Watch**, **Finished**, and **Discover TV Shows**. The Discover action targets `/search?type=tv`; recommendations, activity, schedules, Dropped, and Paused sections are absent. Historical Dropped/Paused rows remain valid in storage but project into one of the three specified sections according to episode progress. |
-| Deterministic projection | **Complete** | One pure projection assigns every canonical TV-library row to exactly one section. All available episodes watched is **Finished**; otherwise one or more watched episodes is **Watching**; explicit Watching intent with zero watched episodes remains **Watching**; every other zero-progress state is **Planned to Watch**. Duplicate canonical rows remain prevented by `(user_id, tmdb_id, media_type)`. |
-| Episode and status synchronization | **Complete** | Regular episode and whole-season mutations atomically persist episode rows and the derived `user_media` status through the same server-only owner-scoped path. Marking the final unwatched episode moves a show to Finished. Unwatching an episode from Finished moves it to Watching whenever another watched episode remains. Explicit Finished marks every currently listed regular episode watched; Planned clears regular progress; Watching ensures a non-complete projection where the episode count permits it. The detail status control exposes the same three UX statuses. |
-| Available-episode and specials rule | **Complete and documented** | To preserve the project's existing progress rule, overall status and percentage use episodes currently listed by TMDB in seasons numbered greater than zero. Season zero/specials remain independently trackable but never affect library totals or status. Air dates are not used by the existing normalized season-count projection, so a TMDB-listed regular episode counts when TMDB adds it. If that increases the denominator for a formerly complete show, the displayed projection becomes Watching without a read-time database rewrite; the prior explicit intent is only reconciled when the user changes progress or status. |
-| Removal and compatibility | **Complete** | Removal optimistically removes the card and one owner-scoped statement clears canonical membership, legacy watchlist membership, and that user's episode progress for the show; ratings and reviews remain untouched. Failure restores the card and date order. Migration `0007_reconcile_tv_progress_library.sql` idempotently adds progress-only regular-season shows to canonical `user_media` without overwriting existing intent. |
-| Failure, empty, and navigation states | **Complete** | Every required section remains visible when empty with a simple direct **Discover TV Shows** action. Failed status persistence restores the complete prior card projection and reports an item alert; failed removal restores the show and reports page/item alerts. Shared poster links open `/tv/show/[id]`. |
-| Responsive/shared presentation | **Complete** | The page reuses `PageShell`, `SectionHeading`, `StatePanel`, and `PosterCard`, including watched counts and progress bars. The grid uses three mobile columns and expands to five/seven columns on larger screens; status and removal controls remain visible and keyboard-operable. |
-| Automated checks | **Complete for UX 2.2** | `tests/tv-library-ux.test.ts` covers exact section order, deterministic Watching/Planned/Finished calculations, mutual exclusivity, all manual transitions, final-episode completion, Finished reopening, new TMDB episode behavior, season-zero exclusion, automatic persistence, removal, poster/Discover targets, empty states, failed-persistence rollback, mobile/desktop grids, migration compatibility, and owner isolation. PostgreSQL cases execute the production query constants against all migrations in PGlite. All 46 repository tests, full Biome lint, strict TypeScript, and the Next.js 16.2.6 production build pass. The build used placeholder TMDB/Auth values because real provider and Neon secrets are absent from this workspace. |
+| Display name, username, biography, Follow/Unfollow, following/follower counts, public statistics, favourite movies/TV | **Complete** | `src/lib/pages/profile/public-profile.tsx` |
+| Private account information never displayed | **Complete** | Public query selects only public-safe columns; private/unavailable profiles return Not Found |
+| Dedicated Followers/Following routes with search bar, display name, username, Follow/Unfollow per row | **Complete** | `src/app/profile/[username]/followers/page.tsx`, `.../following/page.tsx`; real server-filtered `?q=` search (`connections.tsx:81-98`); each row has a working `FollowButton` (own row shows "You" instead of a self-follow control) |
 
-## Authentication lifecycle implementation update
+## 4. Footer Pages
 
-Implementation date: 2026-07-22
-
-| Area | Current status | Implementation and verification |
+| Requirement | Status | Evidence |
 | --- | --- | --- |
-| Identity and schema | **Complete** | `database/migrations/0005_auth_lifecycle.sql` adds one internal profile identity with explicit credentials/Google provider mappings, bcrypt password hashes, verified-email state, JWT `session_version`, digest-only verification/reset tokens, and database-backed rate-limit counters. Existing Google-only profiles are backfilled as verified and mapped by their prior Google subject id. |
-| Registration (UX 1.3) | **Complete** | The responsive auth card contains the exact email, username, password, confirmation, Create Account, Google, and Login actions. Email and username input is NFKC/case normalized, usernames are ASCII-constrained, database indexes enforce trimmed case-insensitive uniqueness, registration writes profile/account/token atomically, and password confirmation plus field-level duplicate errors are implemented. |
-| Email verification | **Complete** | Credentials accounts cannot authenticate until `email_verified_at` is populated. Verification and resend tokens are 32-byte random values stored only as SHA-256 digests, expire after 24 hours, consume atomically once, invalidate sibling tokens, and are never logged. Resend delivery uses a lazy server-only client, escaped user-controlled HTML, and absolute environment-aware URLs. |
-| Login (UX 1.4) | **Complete** | NextAuth Credentials supports normalized email or username plus bcrypt verification with a dummy hash for missing users. Invalid credentials remain generic; correct-but-unverified credentials receive a distinct verification state and generic resend action. Google remains available and callback URLs reject encoded-slash, backslash, protocol-relative, cross-origin, and malformed targets. |
-| Google registration/login | **Complete** | Google sign-in requires Google's `email_verified = true`, persists Google's stable `sub` as `provider_account_id`, links a verified Google email to an existing credentials profile, rejects conflicting provider mappings, and fails closed if profile persistence cannot complete. Google users are marked verified without a separate TvSync email. |
-| Forgot Password (UX 1.5) | **Complete** | `/forgot-password` always returns the same valid-input response for missing accounts, delivery failures, and throttled requests. Requests are limited by both identity and IP HMAC digests and held to a minimum response timing envelope. Eligible credentials accounts receive a digest-only, single-use, 24-hour reset link through Resend. |
-| Reset Password (UX 1.6) | **Complete** | `/reset-password` validates token freshness and one-time state, validates/matches the new password, hashes and updates it atomically, consumes all sibling reset tokens, increments the session version, and redirects to `/login?reset=success`. Invalid/expired/used links offer a new request. Existing JWT sessions fail closed after the version rotates. |
-| Shared auth presentation | **Complete** | Login, Register, Forgot Password, Reset Password, and Verify Email use one full-height black shell and centered white 32rem card with responsive 4/6 outer and 6/8 inner spacing, deterministic Back links where specified, accessible labels/autocomplete, disabled/loading fieldsets, and live status/error regions. No promotional panel, Apple affordance, illustration, testimonial, or unrelated content is present. |
-| Automated checks | **Complete** | The suite now contains 29 passing tests: seven Home contracts, 14 auth unit/contract tests, and eight executable PostgreSQL lifecycle checks. The database suite applies the real migrations 0001-0005 to an isolated PGlite PostgreSQL instance and executes the same parameterized queries used by Neon for normalized uniqueness, credentials lookup, Google subject mapping, verification expiry/resend/single-use, password reset/hash replacement/session rotation, and persistent global-identity plus per-IP throttling. Full Biome lint, strict TypeScript, and the Next.js 16.2.6 production build pass. |
-| Browser verification | **Complete with provider limitation** | Agent-browser verified desktop Login and 390x844 Register/Forgot/Reset/Verify routes, exact interactive labels, mobile width/scroll behavior, live password-mismatch feedback, a generic forgot-password submission with no database configured, invalid reset/verification recovery links, and no runtime page errors. A final desktop Login and mobile Register regression after the database-query extraction confirmed meaningful content, no Next.js error overlay, no pending resources, and no page errors. The dev-only CSP was corrected so React development tooling no longer raises an `eval` error; production CSP remains unchanged. |
-| Live provider/database lifecycle | **Partially verified** | Migration `0005_auth_lifecycle.sql` was applied to Neon on 2026-07-22 through the tracked migration runner. A read-only post-migration check confirmed the migration record, all four auth tables, profile verification/session columns, normalized unique indexes, and Google mappings for both existing profiles. Real email receipt/link consumption, credential session issuance through the pooled runtime connection, and Google OAuth callbacks remain unverified because the corresponding Vercel runtime/provider configuration is not accessible from this workspace. |
+| 4.1 Privacy: data collected, how used, auth-data protection, external processors, request/delete data, cookies, contact | **Complete** | `src/app/privacy/page.tsx` — all 7 bullets covered with product-specific text (Auth.js/Google, Neon, Resend, TMDB, Vercel, conditional Umami named individually; bcrypt/token-digest/session-rotation auth protection explained) |
+| 4.2 Terms: responsibilities, acceptable use, ownership, availability, suspension/termination, liability, changes, contact | **Complete** | `src/app/terms/page.tsx` — all 8 bullets covered |
+| Legal placeholders (business entity, governing law, formal retention schedule, specific legal basis) | **Explicitly flagged, not fabricated** | Both pages carry a **Legal review** section stating these are unresolved rather than inventing a company name, jurisdiction, or compliance claim |
+| 4.3 Contact: Name, Email address, Subject, Message, Send Message | **Complete** | `src/lib/pages/contact/contact-form.tsx` — exactly these 4 fields + button |
+| Confirmation after success | **Complete** | Success panel replaces the form; generic failure message never leaks provider/DB error detail |
+| Spam protection and rate limiting, genuinely server-side | **Complete** | Honeypot + submission-timing heuristic; Neon-backed per-identity/per-IP rate limiting and a duplicate-submission dedupe window, reusing the existing `auth_rate_limits` table |
+| Footer links: Privacy Policy, Terms of Service, Contact, copyright, in order, signed-out shell only | **Complete** | `src/lib/layout/Footer.tsx`; `src/lib/layout/index.tsx:43` only renders the footer when `status === 'unauthenticated'` |
+
+## Known accepted deviations (not defects)
+
+- **Profile visibility control** on Edit Profile (see 2.5 above) — required to implement UX.md 3.1's private-profile behavior; not listed verbatim in 2.5's field list but not removable without breaking 3.1.
+- **`/movie/[id]/images`** stays in the route tree, `noindex,nofollow`, unreachable from any page, kept solely because `tests/cache-safety.test.ts` asserts its dynamic-route/robots contract.
+- **`/watchlist`** stays server-protected but unlinked from navigation, per `AGENTS.md`'s documented migration note; does not conflict with `/movies`/`/tv-shows`.
+- **Legal wording gaps** on `/privacy` and `/terms` (registered business entity, governing law, formal retention schedule, specific legal basis) are explicitly flagged in-page for owner/legal review rather than invented, consistent with "no fabricated fallback data."
 
 ## Status definitions
 
 | Status | Meaning |
 | --- | --- |
-| **Complete** | The current implementation satisfies the stated UX requirement. |
-| **Partially complete** | A meaningful part exists, but required content, behavior, state, or presentation is absent. |
-| **Missing** | The requirement has no usable implementation. |
-| **Conflicting** | The implementation or repository guidance intentionally behaves differently from `UX.md`, including extra user-facing behavior that displaces the specified UX. |
-| **Blocked** | Implementation requires an unresolved provider, security, legal, infrastructure, or product decision beyond writing the page itself. |
-
-Statuses describe the current repository, not implementation difficulty. A row can be **Complete** for its narrow requirement while still participating in a cross-cutting accessibility, state-management, or security issue recorded later.
-
-## Executive assessment
-
-The repository has a substantial discovery and tracking foundation, but it is not yet the experience specified by `UX.md`.
-
-- Strong foundations: public TMDB list/detail routes, normalized media data, poster/detail primitives, Google OAuth, server-only Neon access, authenticated watchlist/tracking/rating mutations, episode and season progress, public-profile privacy filtering, pagination primitives, and responsive Chakra layouts.
-- Largest specification gaps: local email/password accounts, email verification and password reset, the exact signed-out landing page, signed-in navigation, a unified library model, derived TV progress/status, the specified Search filters/grid, profile/social/favorites UX, trailers, streaming providers, similar-title sections, previous/next episode navigation, follower list pages, and all footer pages.
-- Largest conflicts: `AGENTS.md` and `README.md` prescribe Google-only authentication even though `UX.md` requires credentials and Resend; signed-in Home is a personalized dashboard not specified by `UX.md`; Search is public and includes an extra **All** filter; watchlist membership and tracking status are independent records; reviews/recommendations/stats/image-gallery/theme surfaces exceed the specification.
-- No test suite, test files, testing dependencies, or `test` script were found. There are therefore no existing tests that directly contradict `UX.md`, but there is also no regression coverage for it.
-- The standard validation commands are `pnpm lint`, `pnpm type:check`, and `pnpm build`. They could not be executed in the audit shell because dependencies are absent, direct `pnpm` is unavailable, Corepack fails signature verification, the shell has Node 20.17.0 while this repository requires Node 24, and required environment variables are not configured. See [Existing validation commands and audit result](#existing-validation-commands-and-audit-result).
-
-## Governing-document conflicts
-
-| Source | Conflict with `UX.md` | Required resolution |
-| --- | --- | --- |
-| `AGENTS.md` Authentication and Environment notes | Explicitly prohibits email/password and reset-password work and defines Google OAuth as the only active option. | When credential work begins, update the guidance in the same change as the approved auth/security design. Until then, `UX.md` remains authoritative and the implementation is blocked/missing, not waived. |
-| `AGENTS.md` Navigation notes | Prescribes public discovery links and a signed-in Home/dashboard/Watchlist navigation that differs from the UX headers. | Replace with the signed-out `Home / Register / Login` and signed-in `Movies / TV Shows / Search / Profile` information architecture, while retaining public deep links for browsing. |
-| `README.md` Authentication, Dashboard, Routes, and Navigation | Documents the current Google-only, dashboard-first, separate-watchlist behavior as intended. | Update after the target architecture is approved; do not use README prose to override `UX.md`. |
-| `README.md` Roadmap and Netlify references | References `ROADMAP.md` and `netlify.toml`, neither of which exists in the inspected tree. | Remove or restore those references in a documentation-only cleanup. This is not a UX blocker. |
-| Brand copy | `UX.md` spells the visible brand `TvSync`; the app consistently renders `TVSync`. | Confirm whether case is intentional. Under the current authority rule, visible copy should become `TvSync`. |
-
-## Route inventory
-
-### Existing user-facing routes
-
-| Route | Current access | Current implementation | UX target and status | Relevant files / expected work |
-| --- | --- | --- | --- | --- |
-| `/` | Public; session-personalized | Signed-out login/register panel, quick search, four discovery shelves. Signed-in welcome dashboard, watchlist preview, upcoming episodes, friend activity, search, then discovery. | **Conflicting**. Signed-out hero copy/layout and 9-card grids do not match; quick search is extra. A signed-in dashboard/Home route is not defined by `UX.md`. | `src/app/page.tsx`; `src/lib/pages/home/index.tsx`; `src/lib/features/dashboard/index.ts`. Recompose the signed-out page exactly; decide whether the extra authenticated dashboard is removed or moved outside primary UX. |
-| `/login` | Public; authenticated users redirected | Google-only OAuth page within the global shell. | **Conflicting**. Credentials form, forgot/resend links, auth-card layout, and required copy are absent. | `src/app/login/page.tsx`; `src/lib/pages/auth/*`; `src/lib/services/auth/*`. Implement credentials and verification-aware login after auth design. |
-| `/register` | Public; authenticated users redirected | Google-only registration entry plus disabled Apple button. | **Conflicting**. Email, username, password, confirmation, verification, and specified card are absent; Apple affordance is extra. | `src/app/register/page.tsx`; `src/lib/pages/auth/*`. Add secure credentials onboarding and Resend verification. |
-| `/movies` | Server-protected | Canonical movie library grouped by `user_media` status with optimistic status transitions/removal, per-section empty states, and a persistent Discover action. | **Complete for UX 2.1**. Exact required section names/order, labels, navigation, automatic persistence, rollback feedback, responsive shared cards, deduplication, data preservation, and owner authorization are implemented and tested. | `src/app/movies/page.tsx`; `src/lib/pages/movies/*`; `src/lib/features/library/*`; tracking database helpers; migration `0006`. |
-| `/tv-shows` | Server-protected | TV-only view of saved `watchlist_items`, grouped by manual status. | **Partially complete**. Correct destination and protection; wrong section order, extra states, manual rather than episode-derived membership/status. | `src/app/tv-shows/page.tsx`; `src/lib/pages/watchlist/*`. Derive Watching/Finished and add required discovery/empty UX. |
-| `/search` | Public | Debounced TMDB search with All/Movies/TV Shows buttons, list cards, paging, and add-to-watchlist actions. | **Conflicting**. UX places Search in the signed-in experience, requires only Movies/TV tabs, empty-query browsing, genre/sort filters, a responsive poster grid, and current library status. | `src/app/search/page.tsx`; `src/lib/pages/search/multi/index.tsx`; TMDB list/search services. Protect page per UX hierarchy, replace query model and presentation. |
-| `/movies/[section]` | Public | Popular overview when unqueried; otherwise TMDB list/discover pages with paging. Includes popular/top-rated/upcoming/now-playing/trending query variants. | **Partially complete**. Supports signed-out **See All** and public browsing, but routes expose extra discovery UX and use 2-column mobile grids. | `src/app/movies/[section]/page.tsx`; media overview/list components. Preserve as public browse targets; align card/grid/container patterns. |
-| `/movies/genre/[genre]` | Public | Paginated movie discovery by numeric genre. | **Complete** as supporting public discovery, though not a named page in `UX.md`. | `src/app/movies/genre/[genre]/page.tsx`; movie list service. Keep as a supporting route if Search genre filters link to it or consolidate into `/search`. |
-| `/movies/search` | Public | Legacy movie-only search list; the input is rendered only when a query already exists. | **Conflicting**. Extra route that duplicates `/search` and does not implement the specified Search page. | `src/app/movies/search/page.tsx`; `src/lib/components/movie/*`. Redirect/consolidate after the canonical Search implementation. |
-| `/movie/[id]` | Public content; mutations server-gated | Movie metadata, TMDB rating, cast/director, watchlist/status/rating, reviews, recommendations, recommend-to-user. | **Partially complete**. Core public detail works; IMDb rating, trailer, streaming, similar titles, favorites, and unified library action are absent. Reviews/social recommendation are extra. | `src/app/movie/[id]/page.tsx`; `src/lib/pages/movie/detail/*`; review/social/tracking features; TMDB services. |
-| `/movie/[id]/images` | Public | Client-loaded backdrop/poster gallery. | **Conflicting**. Extra route not specified. | `src/app/movie/[id]/images/page.tsx`; movie image components/service. Retain only if product explicitly accepts extras; otherwise remove navigation/route after regression review. |
-| `/tv/[listType]` | Public | Popular overview and paginated airing/on-air/popular/top-rated/trending/discover lists. | **Partially complete**. Supports signed-out public browsing and **See All**; presentation and extra categories exceed the UX. | `src/app/tv/[listType]/page.tsx`; TV overview/list components. Preserve public browse targets and align grids. |
-| `/tv/show/[id]` | Public content; mutations server-gated | TV metadata, TMDB rating, cast, seasons, manual status, watchlist, rating, progress summary, reviews, recommendation form. | **Partially complete**. Missing trailer, streaming, similar shows, favorites, season progress on cards, and UX status semantics. | `src/app/tv/show/[id]/page.tsx`; `src/lib/pages/tv/detail/*`; tracking/TMDB services. |
-| `/tv/show/[id]/season/[seasonNumber]` | Public content; mutations server-gated | TV show name/link, season metadata, rating, episode list with a single consistent watched-state owner, season-wide and per-episode progress. | **Complete**. Progress reconciles the show library status via the existing batched `setOwnTvSeasonWatchedAndReconcile`/`setOwnTvEpisodeWatchedAndReconcile` helpers. | `src/app/tv/show/[id]/season/[seasonNumber]/page.tsx`; `src/lib/pages/tv/season/detail/**`; tracking actions. |
-| `/tv/show/[id]/season/[seasonNumber]/episode/[episodeNumber]` | Public content; mutations server-gated | TV show name/link, runtime, neutral-unavailable IMDb rating, previous/next episode navigation (season-boundary aware, omitted at the edges), next-unwatched indication, image/title/date/description plus progress and personal rating. | **Complete**. | `src/app/tv/show/[id]/season/[seasonNumber]/episode/[episodeNumber]/page.tsx`; `src/lib/pages/tv/episode/detail/**`; `src/lib/services/tmdb/tv/episode/navigation.ts`; tracking actions/summary. |
-| `/watchlist` | Server-protected | Combined saved movies/TV shows with local search/filter/sort and direct removal. | **Conflicting**. Extra route; `UX.md` puts the library in Movies and TV Shows and does not define a separate combined Watchlist page. | `src/app/watchlist/page.tsx`; `src/lib/pages/watchlist/*`. Migrate or redirect only after `/movies` and `/tv-shows` fully own library behavior. |
-| `/profile` | Server-protected | Current-user profile display and edit form on one page, generated avatar, TV-status stats, theme, logout. | **Conflicting**. Viewing and editing are merged; social counts, specified stat cards, favorites, and Edit Profile CTA are missing. | `src/app/profile/page.tsx`; `src/lib/pages/profile/*`. Split view/edit responsibilities and use a shared profile summary/stat system. |
-| `/profile/[username]` | Public only for `privacy_setting = 'public'` | Public identity/bio, follow, counts, limited inline follower lists, derived stats/genres, public media, reviews. | **Partially complete**. Required public identity/privacy behavior exists; favorite titles and dedicated follower/following navigation are missing; extra sections are present. | Public profile route/page; `src/lib/features/profile`; database social/tracking helpers. |
-| `/stats` | Server-protected | Detailed statistics page with hours, genres, people, completion rate, and period metrics. | **Conflicting**. Extra route; UX requires five horizontally scrollable statistics cards on Profile, not a separate expanded page. | `src/app/stats/page.tsx`; stats feature/page. Reuse correct calculations in Profile or retain only with explicit product approval. |
-| `/recommendations` | Server-protected | Recommendations received from followed users. | **Conflicting**. Extra route with no corresponding `UX.md` feature. | Recommendations route/page and social service. Remove/defer or get explicit spec approval. |
-| `/person/[id]` | Public | Client-loaded TMDB biography page reachable from cast. | **Complete** as supporting behavior for selecting cast members, though the standalone page is not otherwise specified. | `src/app/person/[id]/page.tsx`; person page/service. Add route-specific error/empty handling. |
-| Not-found | Public fallback | Illustration, attribution, and Home action. | **Complete** as a supporting route; not specified in `UX.md`. | `src/app/not-found.tsx`; `src/lib/pages/404.tsx`. Keep; align shared container and heading conventions. |
-
-### Missing UX routes
-
-| Proposed route | Access | Status | Requirement / implementation work |
-| --- | --- | --- | --- |
-| `/forgot-password` | Public | **Missing** | Auth-card page; non-enumerating reset request; Resend delivery; throttling; audit-safe response. |
-| `/reset-password?token=...` | Public with valid one-time token | **Blocked** | New/confirm password, token digest lookup, 24-hour expiry, one-time consumption, invalid/expired recovery link, session invalidation. |
-| `/profile/edit` | Protected | **Missing** | Dedicated Edit Profile page or an explicitly approved equivalent route. Must include editable email, password setup/change, and account deletion after the auth model exists. |
-| `/profile/[username]/followers` | Public for a public profile; follow mutations protected | **Missing** | Searchable follower list with identity links and per-row Follow/Unfollow. |
-| `/profile/[username]/following` | Public for a public profile; follow mutations protected | **Missing** | Searchable following list with identity links and per-row Follow/Unfollow. |
-| `/privacy` | Public | **Blocked** | Privacy content page and footer link; production wording requires owner/legal approval. |
-| `/terms` | Public | **Blocked** | Terms content page and footer link; production wording requires owner/legal approval. |
-| `/contact` | Public | **Blocked** | Validated contact form, confirmation state, delivery/storage decision, spam controls, and rate limiting. |
-
-The UX hierarchy places `/search` under **Logged-In Users** and omits it from signed-out navigation. This audit therefore treats the current public Search page as a route-protection conflict. Public movie/TV browsing remains available through Home **See All** routes and public detail routes, satisfying the separate signed-out browsing requirement.
-
-### Internal route handlers
-
-| Route | Current protection / purpose | Audit finding |
-| --- | --- | --- |
-| `/api/auth/[...nextauth]` | NextAuth GET/POST with Google provider and JWT sessions. | Correctly server-side, but credentials, verification, password reset, durable account/provider records, and revocation flows are absent. |
-| `/api/tmdb/[[...path]]` | Public allowlisted TMDB proxy; filters query parameters and never exposes the API key. | Good secret boundary. Missing video, similar-title, watch-provider, TV external-ID, and several detail paths needed by the UX. No app-level request throttling. |
-| `/api/diagnostics/profile` | Requires a readable signed-in session; returns environment booleans, auth state, profile existence/username, and a user-id suffix. | **Security concern:** disable outside development or restrict to administrators; an ordinary authenticated user does not need production configuration diagnostics. |
-
-No `middleware.ts`, `proxy.ts`, nested route layout, route-specific `loading.tsx`, or `error.tsx` exists. Protection is implemented independently in page functions and server actions.
-
-## Shared-component inventory
-
-| Component / pattern | Current consumers and strength | Status against UX / expected work |
-| --- | --- | --- |
-| `src/lib/layout/index.tsx` | Global shell with shared header, main, footer, max width, and mobile bottom padding. | **Partially complete**. Auth pages need a distinct black/card layout; page containers currently bypass a common width/padding primitive. |
-| `src/lib/layout/Header.tsx` | Centralized desktop/mobile navigation with active-route styling and session awareness. | **Conflicting**. Replace nav sets/order/targets per UX, prevent signed-out nav during session loading, and label navigation landmarks. |
-| `src/lib/layout/Footer.tsx` | Shared copyright and TMDB attribution. | **Partially complete**. Add Privacy, Terms, Contact; decide footer behavior on auth-card pages. |
-| `PosterCard`, `PosterImage`, `PosterLabel` | Reused in shelves, grids, recommendations, and profiles; nullable posters have a fallback. | **Partially complete**. Title is hover-only and unavailable visually on touch/keyboard; add always-visible or focus-visible metadata and required status/quick-action composition. |
-| `GridContainer` | Shared movie/TV list grid and loading skeleton. | **Conflicting**. Base is 2 columns and desktop jumps to 8; UX requires 3 mobile columns and responsive available-width behavior. |
-| `SliderContainer` | Horizontal recommendation/cast-style shelf wrapper. | **Partially complete**. Overlaps with `OverviewShelf`; normalize section headings, **See All** casing, spacing, scroll behavior, and cards. |
-| `OverviewShelf` | Reused Home and movie/TV discovery shelf with 7 initial posters plus a paging action tile. | **Conflicting**. UX Home requires 9 posters simultaneously, 9 desktop columns and a 3x3 mobile grid, not internal next/previous tiles. |
-| `DetailMeta` | Shared movie/TV poster, title, year, status, tagline, overview, and action slot. | **Partially complete**. Useful base; enforce an `h1`, stabilize metadata order, and separate provider status from user tracking status. |
-| `PageNavButtons` | Shared previous/next and page count. | **Complete** for pagination; add live/loading/error semantics and URL-boundary tests. |
-| `MediaOverviewPage` | Shared public movie/TV overview header, search, and section composition. | **Partially complete**. Strong reuse, but not the signed-in library UX and its containers differ from Home/Search. |
-| `MediaSearchBar` | Shared media-specific suggestions for public overview pages. | **Partially complete**. Needs combobox/listbox semantics, Escape/outside-click behavior, a no-results state, and consolidation with Search. |
-| `WatchlistPage` | Reused for the legacy combined Watchlist and TV Shows pages. Movies now has a dedicated `MoviesPage` composition. | **Partially complete outside UX 2.1**. The Movies page no longer depends on the dual-record view; TV Shows and the legacy combined route still require their later library reconciliation. |
-| `MoviesPage` | Dedicated authenticated Movies library using shared shell, sections, state panels, poster cards, and responsive grid. | **Complete for UX 2.1**. Exact status labels/order, Discover routing, optimistic automatic writes, rollback feedback, removal, and empty states are implemented. |
-| `WatchlistButton` / `WatchlistStateButton` | Reused public-detail/search save action with login redirect. | **Partially complete**. Merge into an **Add to Library** status action; expose validation/error/success states; avoid one server request per result card. |
-| `MediaStatusControl` | Shared movie/TV manual status selector. | **Conflicting**. Labels differ from UX, there is no remove option, and TV status must derive/reconcile from episodes. |
-| `EpisodeProgressButton` / `SeasonProgressControls` | Standalone season-card mutations (auth redirect) used on the TV Show Detail page's season list, where only a compact toggle/count is needed. | **Complete for that surface**. The dedicated Season Detail page now uses `SeasonEpisodeList` instead — one client component owning the season's watched-episode set so bulk and individual mutations, status reconciliation, live feedback, and rollback stay consistent; `EpisodeProgressPanel` does the equivalent for the Episode Detail page, including next-unwatched reconciliation. |
-| `RatingInput` / `RatingDisplay` | Reused movie, TV, season, and episode personal rating UI. | **Partially complete**. Movie/TV personal rating is required; season/episode ratings are extra. Errors are silently rolled back and controls initially render before auth state resolves. |
-| Movie and TV cast wrappers | Parallel dialogs and avatar rows in separate files. | **Duplicated.** Extract one typed `CastSection`/`CastDialog` with character support; add image alt text and consistent empty/search states. |
-| Movie and TV list pages | Separate but structurally similar list/grid/pagination implementations. | **Duplicated.** Consolidate query parsing, result states, pagination, grid, and title conventions. |
-| Profile/public-profile/stats `StatTile` | Three local implementations of bordered numeric cards. | **Duplicated.** Create a shared horizontally scrollable stat-card rail matching Profile UX. |
-| Home/media `SectionHeading`, multiple `EmptyState` blocks, `PosterThumb` cards | Repeated headings, bordered empties, and poster-thumbnail patterns. | **Duplicated.** Create small shared page-container, section-header, empty-state, feedback, and media-card primitives before page rewrites. |
-| Auth `AuthPage` | Shared Login/Register Google-only content. | **Partially complete**. Retain shared shell but add mode-specific forms, deterministic back links, validation, and accessibility; remove disabled Apple unless specified. |
-| Profile form | Labeled Chakra fields, server validation, duplicate username handling, success/error live messaging. | **Partially complete**. Strong form-state pattern to reuse; fields and actions do not match Edit Profile UX. |
-| `getLoginHref` helpers | Repeated in watchlist, tracking, season, episode, and rating controls. | **Duplicated.** Move to the existing auth callback utility/client helper and test open-redirect handling once. |
-
-## Requirement-by-requirement checklist
-
-### 1. Non-Logged-In Users
-
-#### 1.1 Header
-
-| ID | Requirement | Status | Current evidence | Expected implementation / blockers |
-| --- | --- | --- | --- | --- |
-| 1.1.1 | Header contains Home, Register, Login. | **Partially complete** | All three exist in `Header.tsx`. | Keep these three and the brand link. |
-| 1.1.2 | No other signed-out primary links; order is Home, Register, Login. | **Conflicting** | Movies and TV Shows are inserted; Login precedes Register. Signed-out mobile also uses a bottom bar. | Remove the extra primary items, correct order, and use the signed-out header behavior rather than the logged-in bottom navigation. Public deep routes remain directly accessible. |
-
-#### 1.2 Home page
-
-| ID | Requirement | Status | Current evidence | Expected implementation / blockers |
-| --- | --- | --- | --- | --- |
-| 1.2.1 | Hero shows `TvSync`, the three exact introductory sentences, five benefit bullets, and **Create an Account**. | **Complete** | `src/lib/pages/home/index.tsx` renders the exact copy/order, semantic benefit list, and `/register` CTA. | Covered by the Home UX contract suite. |
-| 1.2.2 | No quick-search block is part of the hero/page specification. | **Complete** | Signed-out Home contains only the hero followed by the four required discovery sections. | The contract suite rejects the removed promotional/search categories. |
-| 1.2.3 | Popular Movies: 9 items, **See All**, 9 in one desktop row, mobile 3x3. | **Complete** | Dedicated TMDB popular-movie data is shaped to exactly nine unique items; the grid uses 3 base columns and 9 `lg` columns. | Empty/incomplete/error responses render a state rather than a misleading partial populated grid. |
-| 1.2.4 | Highest-Rated Movies of All Time: same count/action/responsiveness. | **Complete** | Exact hyphenated title, nine-item grid, full-list link, vote-average sort, minimum 7 rating, and 10,000-vote safeguard are implemented. | One-day server cache protects the provider. |
-| 1.2.5 | Popular TV Shows: same count/action/responsiveness. | **Complete** | Dedicated TMDB popular-TV data uses the same exact nine-item and 3/9-column presentation. | One-day server cache protects the provider. |
-| 1.2.6 | Highest-Rated TV Shows of All Time: same count/action/responsiveness. | **Complete** | Exact hyphenated title, nine-item grid, full-list link, vote-average sort, minimum 7 rating, and 1,500-vote safeguard are implemented. | One-day server cache protects the provider. |
-| 1.2.7 | Section order is Popular Movies, Highest-Rated Movies, Popular TV Shows, Highest-Rated TV Shows. | **Complete** | One shared ordered title tuple drives loaded and loading states. | Order is contract-tested. |
-| 1.2.8 | Footer links Privacy Policy, Terms of Service, Contact, and copyright. | **Complete** | Public footer exposes the three specified links followed by explicit copyright information. | Footer order is contract-tested. |
-| 1.2.9 | Create Account opens registration; See All opens full lists; posters open detail pages. | **Complete** | CTA, four query-preserving list targets, and movie/TV poster routes are deterministic. | All targets are contract-tested. |
-| 1.2.10 | Anyone can browse public movie/TV information without an account. | **Complete** | Movie, TV, season, and episode routes load public TMDB data without a session redirect. | Public-route access is contract-tested. |
-| 1.2.11 | Tracking and watchlist/library management require an account. | **Complete** | Tracking, watchlist, and rating writes authenticate before database mutation; client controls redirect anonymous users to Login with the current pathname/query as callback context. | Auth ordering and callback preservation are contract-tested. |
-
-#### 1.3 Register page
-
-| ID | Requirement | Status | Current evidence | Expected implementation / blockers |
-| --- | --- | --- | --- | --- |
-| 1.3.1 | Black background and centered white registration card. | **Missing** | Page uses the global shell and a transparent max-width grid. | Add an auth route layout or shell variant with the specified card and mobile-safe sizing. |
-| 1.3.2 | Back to Home at top left and `TvSync` branding in the auth experience. | **Missing** | Only the global `TVSync` header link exists. | Add explicit back link and specified brand copy inside/adjacent to the card. |
-| 1.3.3 | Heading **Create an Account**. | **Conflicting** | Current heading is **Create your TVSync account**. | Use specified copy. |
-| 1.3.4 | Email, username, password, confirm-password fields and **Create Account**. | **Missing** | No credential fields or submit action. | Add client/server validation, accessible autocomplete, password rules, matching confirmation, and pending/success/error states. |
-| 1.3.5 | Unique email and username. | **Partially complete** | `profiles` has case-insensitive unique indexes; only OAuth profile setup uses them. | Use the constraints in an atomic credentials registration transaction and map conflicts without account enumeration. |
-| 1.3.6 | Secure password hashing and confirmation before submission. | **Blocked** | No password column, hashing dependency, Credentials provider, or auth-account model. | Approve auth architecture; store only Argon2id/bcrypt hashes, never confirmation or plaintext; add password policy and breach-safe logging. |
-| 1.3.7 | Verification email via Resend; account inaccessible until verified; resend available. | **Blocked** | No Resend dependency/config, verification-token schema, verified timestamp, or routes/actions. | Add email service/domain, digest-only single-use tokens, expiry, resend throttling, generic responses, and verified-session gate. |
-| 1.3.8 | Continue with Google; Google users need no separate verification. | **Partially complete** | Google sign-in exists and bootstraps a profile. | Preserve, explicitly require/validate Google's verified-email claim before email-based profile linking, and surface profile-bootstrap failures rather than silently allowing a broken session. |
-| 1.3.9 | Already registered? Log in. | **Complete** | Alternate link is present. | Adjust copy only if exact casing is required. |
-| 1.3.10 | No unspecified provider CTA. | **Conflicting** | Disabled **Apple coming later** is visible. | Remove until added to the authoritative UX. |
-
-#### 1.4 Login page
-
-| ID | Requirement | Status | Current evidence | Expected implementation / blockers |
-| --- | --- | --- | --- | --- |
-| 1.4.1 | Same black/centered-white-card layout, Back to Home, `TvSync`, heading **Login**. | **Conflicting** | Shared Google-only page in global shell; heading is **Log in to TVSync**. | Reuse the new auth shell and exact labels. |
-| 1.4.2 | Email address or username, password, Login button. | **Missing** | No Credentials provider or fields. | Add identifier lookup using normalized email/username and constant-time password verification. |
-| 1.4.3 | Continue with Google. | **Complete** | Google button and safe callback normalization exist. | Retain; add verified-email/linking tests. |
-| 1.4.4 | Forgot password and New user? Create an account links. | **Partially complete** | Registration link exists; forgot-password link does not. | Add `/forgot-password`; use specified copy. |
-| 1.4.5 | Invalid credentials show a clear error. | **Missing** | OAuth errors are mapped, but credential attempts do not exist. | Return a generic invalid-credentials message without revealing identifier existence; announce with `role=alert`. |
-| 1.4.6 | Unverified users can request another verification email. | **Blocked** | Verification model absent. | Add an unverified state with generic resend response and throttling. |
-| 1.4.7 | Password reset request is delivered through Resend. | **Blocked** | Reset page/action/token/email delivery absent. | Implement sections 1.5/1.6 first. |
-
-#### 1.5 Forgot Password page
-
-| ID | Requirement | Status | Current evidence | Expected implementation / blockers |
-| --- | --- | --- | --- | --- |
-| 1.5.1 | Auth visual style, Back to Login, `TvSync`, **Reset Password**, email field, **Send Reset Email**. | **Missing** | No route or component. | Create `/forgot-password` using the shared auth shell and accessible form. |
-| 1.5.2 | Submit the account email and send reset email through Resend. | **Blocked** | No email service or credential account model. | Configure verified sending domain/from/reply-to and server-only Resend client. |
-| 1.5.3 | Response never reveals whether the email is registered. | **Missing** | No action. | Always return the same status/body/timing envelope; do not log raw reset tokens. |
-| 1.5.4 | Link expires after 24 hours. | **Missing** | No token storage. | Store token digest, user id, expiry, created/used timestamps; enforce server-side expiry. |
-| 1.5.5 | Link is single-use. | **Missing** | No token storage. | Consume atomically in the password update transaction and invalidate sibling tokens. |
-
-#### 1.6 Reset Password page
-
-| ID | Requirement | Status | Current evidence | Expected implementation / blockers |
-| --- | --- | --- | --- | --- |
-| 1.6.1 | Auth style, `TvSync`, **Create a New Password**, new/confirm fields, **Reset Password**. | **Missing** | No route/component. | Create token-bound page and shared password field/validation components. |
-| 1.6.2 | Validate confirmation and securely update the password. | **Blocked** | No password hash/account model. | Hash server-side; rotate hash; mark token consumed atomically; avoid exposing token in logs/analytics. |
-| 1.6.3 | Redirect to Login on success. | **Missing** | No flow. | Redirect with a one-time non-sensitive success indicator. |
-| 1.6.4 | Expired/invalid link offers a new request. | **Missing** | No token validation UI. | Render a generic invalid/expired state linking to `/forgot-password`. |
-| 1.6.5 | Existing sessions are handled safely after password reset. | **Blocked** | UX implies account protection, but JWT sessions have no session version/revocation. | Add session-version or token-version checks and invalidate prior credential sessions; document Google-session behavior. |
-
-### 2. Logged-In Users
-
-#### Logged-in header
-
-| ID | Requirement | Status | Current evidence | Expected implementation / blockers |
-| --- | --- | --- | --- | --- |
-| 2.H.1 | Desktop header contains Movies, TV Shows, Search, Profile in that order. | **Conflicting** | Current authenticated set is Home, Movies, TV Shows, Profile. | Remove Home from primary signed-in navigation, add `/search`, preserve exact order and active state. |
-| 2.H.2 | Mobile uses a bottom navigation bar. | **Partially complete** | Fixed bottom bar exists, but contains the wrong four routes. | Use Movies, TV Shows, Search, Profile; retain safe-area padding and verify 320-430 px widths. |
-| 2.H.3 | Desktop/mobile state remains stable while session loads. | **Partially complete** | Header renders the full signed-out nav while `useSession()` is loading, then swaps. | Render a stable skeleton or server-provided auth state to avoid route flicker and accidental focus movement. |
-
-#### 2.1 Movies
-
-| ID | Requirement | Status | Current evidence | Expected implementation / blockers |
-| --- | --- | --- | --- | --- |
-| 2.1.1 | **Planned to Watch** section for desired movies. | **Complete** | `planned` canonical library rows render under the exact heading and description. | Covered by source-contract and PostgreSQL grouping tests. |
-| 2.1.2 | **Finished** section for completed movies. | **Complete** | `watched` canonical library rows render under the exact heading and description. | Covered by source-contract and PostgreSQL transition tests. |
-| 2.1.3 | **Discover Movies** button opens Search with Movies selected. | **Complete** | The persistent action targets `/search?type=movie`, whose Search parser selects the Movies tab. | Link target and tab value are contract-tested. |
-| 2.1.4 | Section order is Planned, Finished, Discover. | **Complete** | The dedicated Movies composition renders exactly those three primary sections in that order and no dashboard/discovery extras. | Exact order and absence of disallowed extras are contract-tested. |
-| 2.1.5 | Move movies between Watchlist/Planned and Finished; save automatically. | **Complete** | Both selector directions move the card immediately, invoke an owner-scoped server action, reconcile the returned status, refresh server state, and restore the prior status with an alert on failure. | Both persistence directions and optimistic failure handling are tested. |
-| 2.1.6 | Remove movies from the library. | **Complete** | Removal optimistically removes the card; one owner-scoped SQL statement deletes canonical and legacy membership. Failure restores the card and reports a useful error. Ratings/reviews are untouched. | Removal, restoration contract, owner isolation, and rating retention are tested. |
-| 2.1.7 | Poster opens details. | **Complete** | Shared `PosterCard` links movie posters/titles to `/movie/[id]`. | Retained and contract-tested. |
-| 2.1.8 | Empty sections show a simple message to discover movies. | **Complete** | Planned and Finished always render; each empty state contains a simple message and direct **Discover Movies** action. | Both persistent empty sections are contract-tested. |
-
-#### 2.2 TV Shows
-
-| ID | Requirement | Status | Current evidence | Expected implementation / blockers |
-| --- | --- | --- | --- | --- |
-| 2.2.1 | **Watching** means at least one watched episode and not all available episodes. | **Conflicting** | `watching` is a manual `user_media` status unrelated to episode rows. | Derive or transactionally reconcile this status from normalized available episodes and watched rows. Define handling for unaired/special episodes. |
-| 2.2.2 | **Planned to Watch** section. | **Partially complete** | Manual `planned` group exists as **Plan to Watch** and depends on `watchlist_items`. | Correct label and unify membership/status. |
-| 2.2.3 | **Finished** means all available episodes watched. | **Conflicting** | `completed` can be selected manually with zero watched episodes; marking all episodes does not set it. | Compute completion from episode progress or enforce it atomically; define newly released episode behavior. |
-| 2.2.4 | **Discover TV Shows** opens Search with TV Shows selected. | **Missing** | Only a generic empty-state Search action exists. | Add `/search?type=tv` with specified label. |
-| 2.2.5 | Required order Watching, Planned, Finished, Discover. | **Conflicting** | Enum order renders Planned, Watching, Completed, Dropped, Paused; **Saved** may also appear. | Render exact required order. Move/drop Paused and Dropped unless the specification is amended. |
-| 2.2.6 | Move between Watching/Planned/Finished and save automatically. | **Conflicting** | Manual select works, includes Dropped/Paused, and can contradict episode progress. | Route transitions through a library/progress domain service with explicit invariants and feedback. |
-| 2.2.7 | Remove TV shows from library. | **Conflicting** | Watchlist removal leaves `user_media` and episode progress. | Define library removal and whether progress is retained; implement one confirmed action. |
-| 2.2.8 | Poster opens TV details. | **Complete** | Cards link to `/tv/show/[id]`. | Retain. |
-| 2.2.9 | Progress is calculated using watched episodes. | **Partially complete** | Detail progress summary calculates watched count/percentage; library grouping/status does not. | Reuse one server-side progress projection for detail, library, season cards, and next-unwatched. |
-| 2.2.10 | Empty sections show a discover message. | **Partially complete** | Same generic/filter behavior as Movies. | Show each required section and its Discover TV Shows action even when the library is empty. |
-
-#### 2.3 Search
-
-| ID | Requirement | Status | Current evidence | Expected implementation / blockers |
-| --- | --- | --- | --- | --- |
-| 2.3.1 | Tabs are Movies and TV Shows; selected tab defines searched type. | **Complete** | Exactly two accessible tabs bind `type=movie\|tv` to URL state and never mix response types. | Contract-tested with both Discover entry links. |
-| 2.3.2 | Search by title. | **Complete** | The labelled title form commits on submit and uses TMDB's type-specific Search endpoint. | Input follows URL state on Back/Forward. |
-| 2.3.3 | Filter by genre. | **Complete** | Type-specific genres load from TMDB; browse queries use provider-side `with_genres`, while title-result page filtering is transparently scoped. | Genre changes reset page one. |
-| 2.3.4 | Sort by popularity, rating, and release date. | **Complete** | Browse mode uses provider-wide type-correct discover sorts. Title searches transparently sort the loaded result page because TMDB Search has no sort parameter. | No provider rating is labelled IMDb. |
-| 2.3.5 | Results update on submit or filter change. | **Complete** | Submit, genre, sort, and tab changes commit URL state, reset page one, and update the active SWR key or local title-result projection. | Loading and result-count changes are announced. |
-| 2.3.6 | Browse without a search term. | **Complete** | Both tabs immediately load popularity-sorted Discover results without requiring a term. | Initial state is useful browsing content. |
-| 2.3.7 | Desktop responsive grid; mobile 3 columns. | **Complete** | Base uses exactly three columns; desktop uses available-width `auto-fill` columns. | Covered by the Search contract suite. |
-| 2.3.8 | Display up to 27 initially. | **Complete** | Two or three cached TMDB source pages are merged, de-duplicated, and sliced to 27. | The same stable boundary is used for later application pages. |
-| 2.3.9 | Pagination. | **Complete** | Previous/next controls use gap-free 27-item page plans, reset on defining changes, clamp invalid input, and replace pages beyond provider totals. | Boundary math is unit-tested. |
-| 2.3.10 | Poster opens detail. | **Complete** | Shared cards route movies to `/movie/[id]` and TV shows to `/tv/show/[id]`. | Nullable posters and titles retain fallbacks. |
-| 2.3.11 | Quick add-to-watchlist/library action. | **Complete** | Every unsaved result exposes **Add to library**; saved results expose a type-correct status selector. | Conflict-safe persistence prevents duplicate membership. |
-| 2.3.12 | Existing items show current library status. | **Complete** | One server-side owner-scoped query seeds all current status badges and selectors without per-card reads. | Movie and TV status sets remain distinct. |
-| 2.3.13 | Empty, loading, and error states. | **Complete** | Browse, initial/page loading, no-results, provider error/retry, genre error, live count, and mutation success/error states are present. | Filters remain intact across retry and error states. |
-
-#### 2.4 Profile
-
-| ID | Requirement | Status | Current evidence | Expected implementation / blockers |
-| --- | --- | --- | --- | --- |
-| 2.4.1 | Display name and username. | **Complete** | Profile header displays both with generated avatar. | Retain using a shared profile summary. |
-| 2.4.2 | Edit Profile button. | **Missing** | Edit fields are always inline; no view-to-edit action. | Make `/profile` a view page and add a `/profile/edit` CTA/route (or obtain approval for an equivalent mode). |
-| 2.4.3 | Following and Followers values open their user lists. | **Missing** | Current-user page has no counts; public page renders plain text and inline previews. | Add linked counts and dedicated list routes. |
-| 2.4.4 | Horizontally scrollable stat cards: Movies Watched, Movie Time, TV Shows Watched, TV Time, Episodes Watched. | **Missing** | Current profile has a responsive grid of six TV status counts. Separate `/stats` has different metrics and combines time. | Build shared horizontal rail; calculate movie/TV time separately and define TV-shows-watched semantics. |
-| 2.4.5 | Favourite Movies and Favourite TV Shows. | **Blocked** | No favorites table/column/actions; derived “favorite genres” is unrelated. | Choose normalized favorites schema (or library flag), migration, privacy semantics, ordering, and detail actions. |
-| 2.4.6 | View own profile information/activity and edit it. | **Partially complete** | Identity/settings/editing exist; activity and required favorites/social summary do not. | Compose a view page from profile, library, follow, favorite, and stat projections. |
-| 2.4.7 | Open other profiles; follow/unfollow. | **Partially complete** | Public profile links/actions exist, but no user discovery/search route and signed-out follow displays an error instead of login redirect. | Add user discovery entry point/list navigation and auth-aware follow action. |
-| 2.4.8 | Compare statistics with following list. | **Missing** | No compare UI or query. | Define comparison metrics/privacy and implement after exact profile stats. |
-
-#### 2.5 Edit Profile
-
-| ID | Requirement | Status | Current evidence | Expected implementation / blockers |
-| --- | --- | --- | --- | --- |
-| 2.5.1 | Fields: Display name, Username, Email, Biography. | **Partially complete** | All render inline, but Email is read-only; extra Name and Privacy fields are present. | Move to edit page, make email editable after verification design, and decide where extra settings belong. |
-| 2.5.2 | **Save Changes**. | **Partially complete** | **Save profile** action validates server-side and reports live success/error. | Rename and retain robust form state. |
-| 2.5.3 | Username uniqueness. | **Complete** | Server pre-check plus case-insensitive unique DB index and constraint-error mapping. | Preserve atomic DB constraint as final authority. |
-| 2.5.4 | Change Password; Google users can create a password. | **Blocked** | No credential account/password model. | Implement account/provider model, password creation with reauthentication, and secure change-password flow. |
-| 2.5.5 | Delete Account with confirmation. | **Missing** | No UI/action. DB FKs cascade but JWT/provider/session cleanup does not exist. | Require recent reauthentication, explicit destructive confirmation, transactional data deletion/anonymization decision, token/session revocation, and provider unlink expectations. |
-| 2.5.6 | Update email. | **Conflicting** | UI states Google owns email and server ignores submitted email. | Define provider-vs-login email ownership, uniqueness, re-verification, notification of old/new addresses, and session identity update. |
-| 2.5.7 | Validation, pending, success, and error states. | **Partially complete** | Profile text fields have strong validation and live feedback. | Extend to email/password/deletion flows; focus first invalid field and preserve non-sensitive values. |
-
-#### 2.6 Individual Movie Details Page
-
-| ID | Requirement | Status | Current evidence | Expected implementation / blockers |
-| --- | --- | --- | --- | --- |
-| 2.6.1 | Poster, title, release year, runtime, release status, genres, description. | **Complete** | Shared `DetailMeta` and movie additional info provide these with fallbacks. | Clarify label so provider release status is not confused with user tracking status. |
-| 2.6.2 | IMDb rating. | **Blocked** | UI shows TMDB rating. TMDB supplies `imdb_id`, not IMDb's rating value. | Select/licence a rating provider or amend the UX to TMDB rating; do not relabel TMDB votes as IMDb. |
-| 2.6.3 | Trailer playable without leaving the page. | **Missing** | No videos endpoint/player, though CSP already permits YouTube frames. | Add normalized TMDB videos helper/proxy allowlist, choose official trailer, use privacy-enhanced embed, consent/fallback, and responsive controls. |
-| 2.6.4 | Cast and Director. | **Complete** | Credits are normalized; cast links to person pages; director is derived from crew. | Extract shared cast component and add accessible image names. |
-| 2.6.5 | Streaming availability. | **Blocked** | No watch-provider service. | TMDB can supply watch providers, but a user region/default and attribution/deeplink behavior must be decided. |
-| 2.6.6 | Similar movies. | **Conflicting** | Page uses TMDB **recommendations** and labels **Recommended movies**. | Add `/movie/{id}/similar` helper/proxy path and label **Similar movies**, or obtain spec approval to use recommendations. |
-| 2.6.7 | Add to Library with status; clearly show/update tracking status. | **Partially complete** | Separate watchlist toggle and status selector exist; status updates are auth-gated. | Replace with one library control whose add flow selects Planned/Finished; remove duplicate state and use UX labels. |
-| 2.6.8 | Remove from Library. | **Partially complete** | Watchlist removal exists but does not delete tracking status. | Implement one coherent removal action and confirmation only if destructive secondary data is affected. |
-| 2.6.9 | Mark as Favourite. | **Blocked** | No persistence/UI. | Add favorites domain/schema/action after privacy/product decision. |
-| 2.6.10 | Rate movie; submit/update personal rating. | **Complete** | Auth-gated 1.0-10.0 half-step save/update/removal exists. | Add success/error announcements and clarify scale if IMDb rating is also shown. |
-| 2.6.11 | Cast and similar-title navigation. | **Partially complete** | Cast and current recommendation posters link correctly; true similar titles are missing. | Preserve links after changing endpoint. |
-| 2.6.12 | Required section order and no unrelated sections. | **Conflicting** | Backdrop/back button, review editor/list, recommendation-to-user form, gallery, revenue, and social reactions are inserted; required trailer/streaming/similar sections are absent. | Implement required order first; remove/defer extras or document explicit approval. |
-
-#### 2.7 Individual TV Show Details Page
-
-| ID | Requirement | Status | Current evidence | Expected implementation / blockers |
-| --- | --- | --- | --- | --- |
-| 2.7.1 | Poster, name, release year, season/episode counts, current provider status, genres, description. | **Complete** | See "TV Show Detail implementation update" above. TMDB provider status is shown distinctly from the user's own tracking status. | — |
-| 2.7.2 | IMDb rating. | **Complete (provider limitation recorded)** | A new `/tv/{id}/external_ids` service supplies a validated IMDb identifier; the page never substitutes TMDB's `vote_average` for a genuine IMDb rating. | — |
-| 2.7.3 | Trailer playable in page. | **Complete** | New normalized TV videos service and shared trailer component; only validated YouTube trailer keys ever render. | — |
-| 2.7.4 | Cast. | **Complete** | Normalized credits render in the same compact grid pattern as Movie Detail with person links. | — |
-| 2.7.5 | Streaming availability. | **Complete (regional/provider limits)** | New `/tv/{id}/watch/providers` integration, region-scoped per `TMDB_WATCH_REGION`. | — |
-| 2.7.6 | Similar TV shows. | **Complete** | New `/tv/{id}/similar` normalized service, empty/error state, and linked cards. | — |
-| 2.7.7 | Display all seasons; each shows number, poster, release year, watched progress; select/expand for episodes. | **Complete** | Seasons render in ascending order with poster, computed release year, and `SeasonProgressControls`; one link-based navigation pattern per card; season 0/specials excluded from the visible list and from overall progress. | — |
-| 2.7.8 | Add/Remove Library and statuses Watching, Finished, Planned. | **Complete** | One unified `TvDetailLibraryControl` replaces the previous separate watchlist button and status selector; exposes exactly Watching/Planned to Watch/Finished with a coherent Add/Remove. | — |
-| 2.7.9 | Mark as Favourite and rate show. | **Complete** | Favourite toggle and 1.0–10.0 half-step rating both persist with rollback and feedback. | — |
-| 2.7.10 | Mark an entire season watched/unwatched. | **Complete** | `SeasonProgressControls` now renders directly on the TV Show Detail season list, not only after opening a season. | — |
-| 2.7.11 | Overall progress shown and automatically calculated from watched episodes. | **Complete** | `TvProgressSummary` calculates watched/total from available (non-special) episodes and derives library status from the same counts on every read. | — |
-| 2.7.12 | Trailer works without navigation; tracking/rating can update. | **Complete** | In-page YouTube-nocookie trailer; tracking/rating mutations give explicit success/error feedback with rollback. | — |
-| 2.7.13 | Required section order and no unrelated sections. | **Complete** | Reviews and recommend-to-user were removed from this surface; the page follows poster/metadata/actions, trailer, cast, streaming, seasons, similar shows. | — |
-
-#### 2.8 TV Show Season Page
-
-| ID | Requirement | Status | Current evidence | Expected implementation / blockers |
-| --- | --- | --- | --- | --- |
-| 2.8.1 | TV show name. | **Complete** | The season route fetches `getTvShowDetail(showId)` alongside the season and passes `showName` into the page, which renders it above the season title and links back to `/tv/show/{id}`. | — |
-| 2.8.2 | Season number/title, poster, description, release year, episode count. | **Complete** | `getReleaseYear` formats the season air date the same way the show detail page formats its release year, with an honest `Release year unavailable` fallback; title, poster, overview, and episode count are unchanged. | — |
-| 2.8.3 | Watched progress and episode list. | **Complete** | `SeasonEpisodeList` renders `watched / total` text plus a `Progress.Root` percentage bar, and the full normalized episode list underneath it. | — |
-| 2.8.4 | Mark entire season watched/unwatched. | **Complete** | `setSeasonWatched` still persists through `setOwnTvSeasonWatchedAndReconcile`, which writes all season rows in one batched `SET_OWN_TV_LIBRARY_STATE_QUERY`/`SET_OWN_EPISODE_PROGRESS_BATCH_QUERY` statement (single CTE, atomic per Postgres) rather than one query per episode. | — |
-| 2.8.5 | Mark individual episodes watched. | **Complete** | Each episode row in `SeasonEpisodeList` has its own toggle, backed by the same component state as the bulk controls. | — |
-| 2.8.6 | Select episode to open details. | **Complete** | Still/title blocks link to the episode route. | Avoid two adjacent links with duplicate accessible names if card becomes one link. |
-| 2.8.7 | Empty/loading/error/success states; consistent episode-list state after bulk changes. | **Complete** | `SeasonEpisodeList` is the single owner of the season's watched-episode set (initialized from a server-fetched `getSeasonProgressState` call), so bulk "mark season watched/unwatched" and individual toggles can no longer drift out of sync the way two independently-mounted client components could. Zero-episode seasons show a simple "TMDB does not have episode information" state instead of controls; seasons with a future `air_date` show a "has not premiered yet" banner. Mutations show inline `role="status"`/`role="alert"` feedback and roll back optimistic state on failure or login redirect. Fetch failures remain a standard `notFound()` 404. | — |
-
-#### 2.9 Individual Episode Details Page
-
-| ID | Requirement | Status | Current evidence | Expected implementation / blockers |
-| --- | --- | --- | --- | --- |
-| 2.9.1 | TV show name. | **Complete** | The episode route fetches `getTvShowDetail(showId)` and passes `showName`, rendered above the episode title and linked to `/tv/show/{id}`. | — |
-| 2.9.2 | Season/episode numbers, episode title/image, release date, description. | **Complete** | All are normalized and rendered with fallbacks. | Retain. |
-| 2.9.3 | Runtime. | **Complete** | `formatRuntime(data.runtime)` renders alongside the air date, with a `Runtime unavailable` fallback for zero/missing values. | — |
-| 2.9.4 | IMDb rating. | **Complete (neutral unavailable state)** | TMDB's API has no genuine per-episode IMDb rating endpoint (only a show-level `imdb_id` external reference), so the page always shows "IMDb rating: Unavailable — TMDB does not provide a genuine IMDb episode rating value," matching the pattern already used on movie/show detail pages. `vote_average`/TMDB ratings are never relabeled as IMDb. | — |
-| 2.9.5 | Mark Watched / Mark Unwatched. | **Complete** | `EpisodeProgressPanel` renders explicit "Mark as Watched"/"Mark as Unwatched" labels, is auth-gated, and shows inline success/error feedback. | — |
-| 2.9.6 | Previous Episode and Next Episode. | **Complete** | Pure `resolveEpisodeNeighbors`/`findAdjacentSeasonNumber` helpers (`src/lib/services/tmdb/tv/episode/navigation.ts`) compute the true previous/next episode within the season and across season boundaries (regular seasons only, matching the existing "available episode" convention). The route fetches the adjacent season only when the current episode is first/last in its season. Buttons are omitted entirely — not disabled — when no destination exists. | — |
-| 2.9.7 | Updating an episode automatically updates season/show progress and derived status. | **Complete** | `setEpisodeWatched` still calls `setOwnTvEpisodeWatchedAndReconcile`, which recomputes the season/show watched counts, percentage, and derived `user_media` status (`getTvLibraryProjection`/`deriveTvLibraryStatus`) in the same batched write used by the season and show detail pages. | — |
-| 2.9.8 | Next unwatched episode is clearly identified. | **Complete** | `EpisodeProgressPanel` shows "This is your next unwatched episode" when the current episode is the canonical next-unwatched episode, or a "Next unwatched episode: S# E# - Title" link otherwise; after every watched/unwatched toggle it re-fetches `getTvProgressSummary` so the indicator stays accurate without a full page reload. | — |
-| 2.9.9 | Required actions/content are not displaced by extras. | **Complete** | Runtime, IMDb state, and previous/next navigation are now implemented; no comments, reviews, clips, guest-star biographies, or recaps were added. Personal rating remains as an existing, allowed feature. | — |
-
-**Automated checks:** `tests/tv-season-episode-ux.test.ts` adds 29 passing contracts covering season metadata/name/link, the episode list, watched progress (count and percentage bar), whole-season watched/unwatched (batched, rollback), individual episode watched/unwatched (rollback), single-source-of-truth consistency after bulk changes, episode-selection navigation, empty/unreleased season states, episode content (name, numbers, title, image, date, runtime, neutral IMDb state, description), Mark Watched/Unwatched, omitted-not-disabled previous/next controls, no-mutation-on-view plus duplicate-prevention, season/show/next-unwatched reconciliation, pure previous/next boundary-crossing and missing-destination logic (unit-tested independent of TMDB), owner-scoped authorization, PostgreSQL duplicate-prevention and bulk-update-failure atomicity (via PGlite against the real migrations and query constants), missing-metadata fallbacks, and responsive mobile/desktop layouts. The complete repository suite is **132/132 passing**; full Biome lint, strict TypeScript, and the Next.js 16.2.6 production build pass.
-
-### 3. Social Pages
-
-#### 3.1 User Profile Page
-
-| ID | Requirement | Status | Current evidence | Expected implementation / blockers |
-| --- | --- | --- | --- | --- |
-| 3.1.1 | Display name, username, biography. | **Complete** | Public profile header renders all with sensible empty bio. | Retain. |
-| 3.1.2 | Follow/Unfollow button. | **Complete** | Button and owner suppression exist; server helper restricts following to public profiles and prevents self-follow. | Redirect signed-out users to Login with callback rather than rendering a raw authorization error. |
-| 3.1.3 | Following and follower counts. | **Complete** | Counts are queried and shown. | Make each count a link to its dedicated list. Clarify why count may exceed the visible public-only list. |
-| 3.1.4 | Public statistics. | **Partially complete** | Watching, Completed, Movies, Reviews are shown, not the exact Profile metrics. | Share the approved public subset of the five canonical stats and honor privacy. |
-| 3.1.5 | Favourite movies and TV shows. | **Blocked** | No favorite persistence or UI. Current favorite genres are a derived extra. | Implement favorites schema/privacy and two poster sections. |
-| 3.1.6 | View public profile information and activity. | **Partially complete** | Public media/reviews are shown; explicit activity presentation differs and includes extra review/social features. | Define the required activity projection and reuse privacy-scoped queries. |
-| 3.1.7 | Private account information is never displayed. | **Partially complete** | Non-public profile route returns 404 and public media/reviews require public flags. However activity feed exposes watchlist, ratings, and episode progress for any public profile without per-record privacy flags, and the profile query unnecessarily selects email. | Add privacy semantics/filters to every activity source, avoid selecting email for public reads, and add privacy regression tests. |
-
-#### 3.2 Followers and Following Pages
-
-| ID | Requirement | Status | Current evidence | Expected implementation / blockers |
-| --- | --- | --- | --- | --- |
-| 3.2.1 | Dedicated Followers and Following pages. | **Missing** | Public profile shows limited inline lists and slices them to eight. | Add two routes backed by paginated/public-safe queries. |
-| 3.2.2 | Search bar within the list. | **Missing** | No search UI/query. | Add local search for small sets or indexed server search/pagination for large sets. |
-| 3.2.3 | Each row shows display name and username. | **Partially complete** | Inline previews show both. | Extract a reusable `UserListItem` for dedicated pages. |
-| 3.2.4 | Each row has Follow/Unfollow. | **Missing** | Inline previews are links only. | Add auth-aware action with optimistic state, pending state, error announcement, and self-row handling. |
-| 3.2.5 | Open another user's profile. | **Partially complete** | Inline entries link correctly. | Retain on dedicated pages. |
-
-### 4. Footer Pages
-
-#### 4.1 Privacy Policy
-
-| ID | Requirement | Status | Current evidence | Expected implementation / blockers |
-| --- | --- | --- | --- | --- |
-| 4.1.1 | Public Privacy Policy page linked from footer. | **Blocked** | No route/link/copy. | Create page and navigation; owner/legal approval is required before declaring production copy complete. |
-| 4.1.2 | Explain collected data and its uses. | **Missing** | No policy. | Cover Google/credential identity, profile text, watch/library/progress, ratings/social/contact data, logs, and analytics. |
-| 4.1.3 | Explain authentication protection and external processors. | **Missing** | No policy. | Cover password hashes/token handling once added, Google, Neon, Vercel, TMDB, Resend, Umami when enabled, and retention. |
-| 4.1.4 | Explain data access/deletion, cookies, and contact information. | **Blocked** | Account deletion/contact flows are absent. | Align policy with implemented export/deletion/contact procedures and NextAuth/analytics cookie behavior. |
-
-#### 4.2 Terms of Service
-
-| ID | Requirement | Status | Current evidence | Expected implementation / blockers |
-| --- | --- | --- | --- | --- |
-| 4.2.1 | Public Terms page linked from footer. | **Blocked** | No route/link/copy. | Create page after owner/legal approval. |
-| 4.2.2 | Account responsibilities and acceptable use. | **Missing** | No terms. | Include credential security, content/social behavior, automation/abuse, and age/eligibility decisions. |
-| 4.2.3 | Content ownership and service availability. | **Missing** | No terms. | Address user reviews/comments, TMDB attribution/licensing, availability, changes, and backups. |
-| 4.2.4 | Suspension/termination, liability limits, term changes, contact. | **Blocked** | No moderation/suspension model or contact channel. | Approve policy/operations, then publish accurate language. |
-
-#### 4.3 Contact
-
-| ID | Requirement | Status | Current evidence | Expected implementation / blockers |
-| --- | --- | --- | --- | --- |
-| 4.3.1 | Name, email, subject, message, Send Message. | **Missing** | No route/component/action/schema. | Build accessible server-handled form with length/type validation and safe email-header construction. |
-| 4.3.2 | Users can ask questions/report problems. | **Blocked** | No delivery address/service/storage decision. | Choose Resend delivery and/or ticket storage, destination ownership, retention, and privacy wording. |
-| 4.3.3 | Confirmation after success. | **Missing** | No flow. | Add `role=status`, reset behavior, retryable failure, and idempotency. |
-| 4.3.4 | Basic spam protection and rate limiting. | **Blocked** | No limiter/captcha/honeypot. | Choose serverless-compatible per-IP/per-email throttling, honeypot/time trap, payload limits, abuse monitoring, and a CAPTCHA only if needed. Never trust client-only controls. |
-
-### Requirement file index
-
-This index supplies the current and expected implementation boundary for every checklist row in the corresponding UX section. Proposed paths do not exist yet and are recommendations, not changes made by this audit.
-
-| UX section | Current evidence files | Primary implementation files / proposed boundary |
-| --- | --- | --- |
-| 1.1 and logged-in Header | `src/lib/layout/Header.tsx`; `src/lib/layout/index.tsx`; `src/lib/components/ui/provider.tsx` | Same header/layout plus a shared server-to-client auth-state contract if needed. |
-| 1.2 Home/Footer | `src/app/page.tsx`; `src/lib/pages/home/index.tsx`; `src/lib/pages/media/overview-shelf.tsx`; `src/lib/components/shared/PosterCard.tsx`; `src/lib/layout/Footer.tsx`; `src/lib/features/dashboard/index.ts` | Home page and shared Home-grid/section/footer primitives under `src/lib/components` and `src/lib/layout`. |
-| 1.3 Register | `src/app/register/page.tsx`; `src/lib/pages/auth/index.tsx`; `src/lib/pages/auth/client-actions.tsx`; `src/lib/services/auth/index.server.ts`; `src/lib/services/database/auth.server.ts`; `database/migrations/0001_initial_tracking_schema.sql` | Register route; shared auth shell/forms; proposed credentials/email services under `src/lib/services/auth` and `src/lib/services/email`; new numbered migration. |
-| 1.4 Login | `src/app/login/page.tsx`; `src/lib/pages/auth/*`; `src/lib/services/auth/*` | Login route; shared credentials form; verification-aware server action/provider. |
-| 1.5 Forgot Password | No current route/action; absence confirmed in `src/app` and package/schema scans. | Proposed `src/app/forgot-password/page.tsx`, `src/lib/pages/auth/forgot-password.tsx`, server-only reset/email helper, migration. |
-| 1.6 Reset Password | No current route/action; JWT sessions in `src/lib/services/auth/index.server.ts`. | Proposed `src/app/reset-password/page.tsx`, shared password form, token/password/session service, migration. |
-| 2.1 Movies | `src/app/movies/page.tsx`; `src/lib/pages/watchlist/index.tsx`; `src/lib/pages/watchlist/load-watchlist-items.server.ts`; `src/lib/features/watchlist/*`; `src/lib/features/tracking/*`; `src/lib/services/database/tracking.server.ts`; `src/lib/types/media.ts` | Proposed library feature boundary under `src/lib/features/library`, reusing shared cards/status/progress and a migration/reconciliation tool. |
-| 2.2 TV Shows | `src/app/tv-shows/page.tsx`; same watchlist/tracking/database files; TMDB TV season/detail services. | Same proposed library boundary plus a canonical server-side TV progress projection. |
-| 2.3 Search | `src/app/search/page.tsx`; `src/lib/pages/search/multi/index.tsx`; `src/lib/services/tmdb/search/multi/*`; movie/TV list services; `src/app/api/tmdb/[[...path]]/route.ts`; watchlist actions. | Search feature/page, shared media grid/card, typed discover/genre helpers, batch library-state server helper. |
-| 2.4 Profile | `src/app/profile/page.tsx`; `src/lib/pages/profile/index.tsx`; `src/lib/pages/profile/profile-form.tsx`; `src/lib/features/stats/index.ts`; `src/lib/pages/stats/index.tsx`; tracking/social database helpers. | View-only Profile composition, shared stat rail, favorites and comparison feature boundaries. |
-| 2.5 Edit Profile | Current Profile route/form/action and `src/lib/services/database/auth.server.ts`. | Proposed `src/app/profile/edit/page.tsx`; edit page/actions; credentials/email/deletion services; migrations. |
-| 2.6 Movie Detail | `src/app/movie/[id]/page.tsx`; `src/lib/pages/movie/detail/**`; shared detail/poster/slider components; reviews/social/tracking/watchlist features; TMDB movie detail/credits/list services and proxy. | Same page plus typed movie videos/providers/similar services, shared trailer/provider/library/favorite components, favorites migration. |
-| 2.7 TV Detail | `src/app/tv/show/[id]/page.tsx`; `src/lib/pages/tv/detail/**`; `src/lib/features/library/tv-detail-library-control.tsx`; `src/lib/features/tracking/*`; `src/lib/features/profile/favorite-button.tsx`; `src/lib/features/reviews/*`; TMDB TV detail/credits/season/videos/providers/list/external-ids services. | Implemented: unified library control, TV videos/providers/similar/external-ids services, and shared progress/season-progress components, matching the Movie Detail pattern. |
-| 2.8 Season Detail | `src/app/tv/show/[id]/season/[seasonNumber]/page.tsx`; `src/lib/pages/tv/season/detail/index.tsx`; tracking controls/actions; TMDB season/detail services. | Same page plus show-summary handoff and canonical TV progress service. |
-| 2.9 Episode Detail | Episode route; `src/lib/pages/tv/episode/detail/index.tsx`; `src/lib/features/tracking/*`; TMDB episode/season/show services. | Same page plus episode-neighbor/next-unwatched projection and shared navigation component. |
-| 3.1 Public User Profile | `src/app/profile/[username]/page.tsx`; `src/lib/pages/profile/public-profile.tsx`; `src/lib/features/profile/index.ts`; follow/social helpers; tracking public queries. | Public profile composition plus favorites/stat projection and privacy-safe activity service. |
-| 3.2 Followers/Following | Inline `FollowList` in public profile; `src/lib/features/social/follow-button.tsx`; `src/lib/services/database/social.server.ts`. | Proposed nested route pages, reusable user-list item/search, paginated social queries. |
-| 4.1 Privacy | No current route; footer is `src/lib/layout/Footer.tsx`; current processors/config are documented in README/env/package/Next config. | Proposed `src/app/privacy/page.tsx` and `src/lib/pages/legal/privacy.tsx`, approved content source, footer link. |
-| 4.2 Terms | No current route; footer only. | Proposed `src/app/terms/page.tsx` and `src/lib/pages/legal/terms.tsx`, approved content source, footer link. |
-| 4.3 Contact | No current route/action/dependency; CSP/form policy in `next.config.ts`. | Proposed `src/app/contact/page.tsx`, `src/lib/pages/contact`, server-only email/rate-limit helper, environment variables and optional migration. |
-
-Cross-cutting configuration and validation evidence: `AGENTS.md`, `README.md`, `UX.md`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `tsconfig.json`, `biome.json`, `knip.ts`, `turbo.json`, `next.config.ts`, `next-sitemap.config.js`, `vercel.json`, `.env.example`, `additional.d.ts`, and `database/migrate.mjs`.
-
-## Cross-cutting findings for audit goals 1-18
-
-### Missing pages and sections
-
-- Pages: Forgot Password, Reset Password, dedicated Edit Profile, Followers, Following, Privacy, Terms, Contact.
-- Signed-out Home: authoritative hero/value list/CTA and exact 9-card presentation.
-- Signed-in library: persistent Discover buttons and correct empty sections.
-- Search: genre/sort controls, empty-query browse state, 27-item grid, current status.
-- Profile: social counts/links on own profile, exact horizontal stats, favorites, comparison.
-- Details: trailers, streaming availability, true similar titles, favorites; TV season-card progress; episode show name/runtime/IMDb/previous/next/next-unwatched.
-
-### Extra or conflicting user-facing behavior
-
-- Personalized signed-in dashboard/Home, Watchlist Preview, Upcoming Episodes, Friend Activity, and Home search.
-- Separate `/watchlist`, `/stats`, `/recommendations`, `/movie/[id]/images`, and legacy `/movies/search` routes.
-- Reviews, review likes/comments, recommendation-to-user controls, season/episode personal ratings, image gallery, theme preference, generated-avatar explanatory copy, public favorite genres, public review/activity sections, disabled Apple login.
-- Dropped and Paused TV states; uncategorized **Saved** state; independent watchlist and tracking controls.
-- These features are not automatically defects. They are **Conflicting** while `UX.md` is authoritative because they affect navigation, ordering, page length, state model, and implementation risk. Retain them only after an explicit spec amendment; hiding their nav does not resolve underlying privacy/regression risk.
-
-### Labels, ordering, and containers
-
-- Brand case `TVSync` versus required `TvSync`.
-- **Log in to TVSync** versus **Login**; **Create your TVSync account** versus **Create an Account**.
-- **Add to Watchlist** versus **Add to Library**; **Plan to Watch** versus **Planned to Watch**; **Watched/Completed** versus **Finished**; **Recommended movies** versus **Similar movies**; **TMDB rating** versus required **IMDb rating**.
-- Public header has extra items and wrong order; authenticated header is missing Search and adds Home.
-- TV library order is Planned, Watching, Finished, Dropped, Paused instead of Watching, Planned, Finished, Discover.
-- Pages independently use zero, 4/6/8, or centered max-width padding; profile/auth/stats/public-profile use different widths; details use edge-to-edge backdrops; no shared `PageContainer` exists.
-- Home/overview uses poster-only hover cards, Search/Watchlist use horizontal bordered cards, season/episode use other bordered cards, and Profile uses a fourth media grid. The UX needs a documented card family and shared responsive grid tokens.
-
-### Desktop and mobile behavior
-
-- Home and shared list grids use two columns at the smallest breakpoint, not three. Overview shelves use two base/four small/eight desktop columns and show seven posters plus an action tile, not 3x3/1x9.
-- Search is always a vertical list instead of mobile three-column/desktop responsive grid.
-- Public-profile media is two columns on mobile. Watchlist/library cards remain horizontal and are not a poster grid.
-- Auth pages are inside the global shell rather than a full black background with centered white card.
-- The bottom navigation exists but uses incorrect routes and is also shown to signed-out users. Five signed-out destinations create cramped labels on narrow screens.
-- Fixed bottom nav safe-area space is handled in the shell, but focus/scroll behavior after route transitions and virtual keyboard overlap have no browser coverage.
-
-### Authentication and access matrix
-
-| Surface/action | UX access | Current enforcement | Status / work |
-| --- | --- | --- | --- |
-| Home lists and movie/TV/season/episode/person details | Public | Public server/client reads. | **Complete**. Preserve. |
-| Movies and TV Shows libraries | Authenticated | Page-level server redirects. | **Complete**. Protection matches; correct data/UX separately. |
-| Search page | Authenticated by placement in UX section 2 | Public. | **Conflicting**. Add page guard; preserve query callback through login if linked while signed out. |
-| Current Profile/Edit Profile | Authenticated | `/profile` redirects; edit is inline. | **Partially complete**. Protection matches; dedicated Edit route is missing. |
-| Public user profile and follower/following lists | Public only when profile is public | Public profile filters correctly; lists missing. | **Partially complete**. |
-| Watchlist/library, status, rating, review, follow, comment, recommendation mutations | Authenticated | Server helpers/actions authenticate. | **Complete**. Server protection matches; several public buttons need a login redirect instead of raw errors and extra actions need spec approval. |
-| Forgot/reset/verify/contact | Public entry, securely server-processed | Missing. | **Blocked**. Auth/email/contact infrastructure is unresolved. |
-| Stats/recommendations/watchlist extra pages | Not specified | Protected. | Protection is sound, but routes conflict with target IA. |
-
-Page-level guards are duplicated and there is no middleware. Keep authorization in server helpers as the security boundary even if middleware is later added for navigation convenience.
-
-## Data and provider support matrix
-
-| UX data requirement | Current support | Status | Dependency / implementation work |
-| --- | --- | --- | --- |
-| Unique username/email | Case-insensitive unique indexes on `profiles`. | **Partially complete** | Suitable constraint foundation; credentials registration must use atomic transactions and generic errors. |
-| Password authentication | No password/account credential columns, hashes, provider, or dependency. | **Blocked** | Auth architecture and migration; secure hashing; account/provider linking; reauthentication/session revocation. |
-| Email verification | No verification state/token/email service. | **Blocked** | Resend/domain/secrets plus digest tokens, expiry, resend limits, verified gate. |
-| Password reset | No reset tokens/actions/pages. | **Blocked** | Same infrastructure plus one-time 24-hour tokens and password/session rotation. |
-| Editable email | Google email is treated as auth-owned and read-only. | **Conflicting** | Decide canonical identity email, re-verification, provider linking, notifications, and uniqueness. |
-| Account deletion | Cascading FKs cover current app tables; no action, reauth, auth-account/session cleanup. | **Blocked** | Deletion policy, recent-auth confirmation, transaction, JWT revocation/versioning, provider expectations. |
-| Library/watch statuses | `watchlist_items` and `user_media` both exist independently. | **Conflicting** | Unify around one library aggregate/status source or enforce atomic coupling and migrate orphan rows. |
-| TV episode progress | Unique per-user/show/season/episode rows and server actions exist. | **Partially complete** | Derive/reconcile Watching/Finished, next episode, and library views; define specials/unaired/new releases. |
-| Favorites | No table/flag. | **Blocked** | Schema/privacy/order/action design and migration. |
-| Personal ratings | Numeric half-step ratings support movie, TV, season, episode. | **Complete** for movie/TV; season/episode are extra. | Add feedback and decide privacy for aggregate summaries. |
-| Exact Profile stats | Watched movie runtime and TV episode counts exist; TV time uses a show-level runtime estimate; no separate five-card projection. | **Partially complete** | Calculate movie/TV time separately; fetch episode runtime where practical; define “TV Shows Watched.” |
-| Followers/following | `follows` table and public-profile queries/actions exist. | **Partially complete** | Paginated searchable lists and per-row current-user state; privacy-consistent counts. |
-| Favorite movie/TV lists | No support; favorite genres are derived. | **Blocked** | Favorites schema. |
-| Trailers | Current service/proxy lacks the provider's [movie videos](https://developer.themoviedb.org/reference/movie-videos) and [TV series videos](https://developer.themoviedb.org/reference/tv-series-videos) endpoints; CSP already permits YouTube. | **Missing** | Provider supports it; add endpoints/normalizers/selection/player/fallback. |
-| Streaming availability | Current service lacks TMDB's regional [movie](https://developer.themoviedb.org/reference/movie-watch-providers) and [TV](https://developer.themoviedb.org/reference/tv-series-watch-providers) watch-provider endpoints. | **Blocked** | Resolve region/product decision, then choose country/locale, endpoint, required JustWatch attribution, offer categories, deeplink behavior, and stale-data messaging. |
-| Similar movies/shows | Movie recommendations exist; TMDB's [movie](https://developer.themoviedb.org/reference/movie-similar) and [TV](https://developer.themoviedb.org/reference/tv-series-similar) similar endpoints are not integrated. | **Missing** | Add typed `/similar` helpers/proxy allowlist for movie/TV. |
-| IMDb ratings | TMDB movie detail supplies an IMDb id only; the provider also exposes [movie](https://developer.themoviedb.org/reference/movie-external-ids) and [TV](https://developer.themoviedb.org/reference/tv-series-external-ids) external-ID endpoints, not IMDb rating values. | **Blocked** | Select a licensed rating source or amend `UX.md` to TMDB rating. TV/episode IDs also need external-ID resolution. |
-| Contact delivery | No form, database, Resend, destination, or limiter. | **Blocked** | Delivery/storage/retention and anti-abuse infrastructure. |
-| Legal copy | No content. | **Blocked** | Production copy needs product owner/legal review; then static public routes. |
-
-## State coverage
-
-| Surface | Existing states | Missing or incorrect states |
-| --- | --- | --- |
-| Global/root | Minimal `HomeLoading` skeleton; custom 404. | Root loader is Home-specific even for every route; no route `error.tsx`, retry, or offline behavior. |
-| Home | Dashboard error and empty panels; poster fallbacks. | Discovery failure collapses to no sections/message; no section loading/partial retry; signed-out hero absent. |
-| Login/Register | OAuth query errors and missing-config warning. | Credential validation/pending/success, unverified/resend, password/reset states; auth card. |
-| Movies/TV library | Whole-library empty, filter-empty, status empty, local sort/search. | Server loading/error/partial TMDB hydration, per-section discover actions, mutation success/error, coherent removal confirmation. Failed TMDB items are silently dropped. |
-| Search | Instruction, skeleton, no results, provider error, paging. | Browse initial state, filter/sort validation, retry, current-status loading, 27-item aggregation failures, live result count. |
-| Profile | Session and database diagnostic panels; field validation; save success/error. | View-page activity/favorites/social empties, exact stats loading, email/password/delete confirmation/success/error. |
-| Details | Nullable poster/overview/cast/recommendation/season fallbacks. Route fetch errors become 404. | Distinguish not-found from provider outage, route-specific loading/retry, trailers/providers/similar states, action success/errors; current-state controls load without skeletons. |
-| Season/Episode | No episodes/overview; progress buttons pending. | Route error/loading, mutation error/success announcements, next-unwatched/neighbor edge states. |
-| Social | Public-profile empty bio/media/reviews/follows; follow error text. | Dedicated list search/empty/paging, login redirect, action success announcements, privacy-denied state (currently indistinguishable 404). |
-| Footer/contact | None. | Legal page availability; contact validation/pending/success/failure/rate-limit/spam states. |
-
-## Accessibility findings
-
-1. **High: poster titles are hover-only.** `PosterLabel` uses `_groupHover` and `visibility:hidden`; it is not revealed by focus and cannot be discovered visually on touch. Keep the accessible link label, but also render visible title/status text or support `:focus-within` without relying on overlays.
-2. **High: light theme contrast is inconsistent.** Many pages hard-code `color="white"`, white borders, and dark-specific backgrounds while Profile exposes a Light theme. Either remove the extra theme control under the authoritative UX or replace hard-coded colors with semantic tokens and verify WCAG contrast in both modes.
-3. **High: detail pages may lack a semantic page `h1`.** Shared `DetailMeta` and several detail views use `Heading` without an explicit `as="h1"`; confirm generated levels and enforce one descriptive `h1` per route.
-4. **Medium: Search “tabs” are ordinary buttons.** Implement tab semantics, arrow-key behavior, selected state, and labelled panels when replacing All/Movies/TV Shows.
-5. **Medium: media suggestion dropdown is not a combobox/listbox.** It lacks expanded/controls/active-descendant semantics, keyboard selection, Escape, outside-click dismissal, and no-result feedback.
-6. **Medium: cast avatar images omit explicit alternative text in both wrappers.** The surrounding links have labels in the compact row, but dialog images/rows should expose person and character consistently.
-7. **Medium: async mutation failures are often silent.** Watchlist, status, episode, season, and rating controls optimistically roll back without `role=alert`; success is also not announced. This prevents assistive-technology users from knowing the result.
-8. **Medium: session-driven nav replacement can move focus/content.** Render stable navigation while auth resolves.
-9. **Medium: navigation landmarks need names.** Desktop uses `role="navigation"` on an `HStack`; mobile uses `<nav>`; provide consistent `aria-label="Primary"`. Footer/legal nav should have its own label.
-10. **Medium: three-column mobile requirement needs touch-target review.** Quick actions cannot be tiny overlay-only controls; cards need readable text, 44px action targets, and no hover dependency at 320-430px.
-11. **Low/medium: feedback semantics are inconsistent.** Profile uses `role=alert/status`; auth, reviews, social, and contact-related future forms do not consistently use live regions or focus management.
-12. **Low: browser-history Back buttons are nondeterministic.** Provide deterministic route links/fallbacks for auth and hierarchy pages, especially Previous/Next Episode.
-
-## Security findings
-
-### Registration, verification, and password reset
-
-- Do not add credential UI before the storage/provider/token design. The current absence is safer than an incomplete password flow.
-- Store password hashes only, using an approved memory-hard algorithm and per-hash salt; never log credentials or tokens. Add server-side password length/strength controls and reauthentication for sensitive changes.
-- Verification/reset tokens must be cryptographically random, stored as digests, short-lived, single-use, and consumed atomically. Reset-request responses must not enumerate accounts; resend/reset endpoints require throttling.
-- Verification must gate credential sessions until `email_verified_at` exists. Google linking should explicitly accept only a verified Google email before merging a profile by email.
-- Current Google JWT callback catches profile-bootstrap failure and still issues a session. This can create an authenticated user with no valid profile/foreign-key parent. Fail sign-in cleanly or provide an atomic repair path.
-- Current identity storage has no durable NextAuth adapter/account/provider table. Before mixing Google and passwords, model one user with multiple providers and explicit collision/linking rules; do not infer ownership solely from a submitted email.
-- Safe callback URL normalization is a current strength and should receive unit tests for encoded slash/backslash and cross-origin cases.
-
-### Google authentication and sessions
-
-- Secrets and TMDB keys remain server-only; Auth callbacks and mutation helpers enforce the session user id.
-- Add recent-auth checks for password/email/account deletion, session-version revocation for password reset/deletion, and explicit Google reauthentication behavior.
-- Disable or administrator-restrict `/api/diagnostics/profile` in production because it exposes deployment configuration state and user/profile identifiers to any authenticated account.
-
-### Account deletion
-
-- `ON DELETE CASCADE` covers the present relational tables, but deletion still needs an authenticated, recently reverified, confirmed transaction; email/token/session/provider cleanup; analytics/log retention disclosure; and an idempotent result.
-- Decide whether reviews/comments are deleted or anonymized and make Terms/Privacy match. Do not rely on UI confirmation alone.
-
-### Public profiles and social/contact handling
-
-- Public profile lookup correctly requires `profiles.privacy_setting = 'public'`; public media/reviews add item-level public filters.
-- `listFollowedActivity` exposes watchlist additions, all ratings, and watched episode rows for followed public profiles without item-level privacy settings. Add privacy columns/policy or exclude these sources. Do not treat a public profile as blanket consent for all private tracking records.
-- Follow/review/comment/recommendation mutations authenticate in server helpers, which is good. Add abuse rate limits and normalized error responses before expanding social discovery.
-- Future contact handling needs server-side length/type validation, header-injection protection, HTML escaping by the mail template, spam/rate controls, minimal logging, and a published retention policy. A hidden client field alone is insufficient.
-- RLS is absent. Application-scoped queries are generally careful, but add database RLS or equivalent defense in depth only with a documented transaction-local user context; never remove current ownership predicates.
-
-## Tests and specification conflicts
-
-The repository now has a dependency-free `node:test` script and `tests/home-ux.test.mjs` for the public Home refinement. The suite contains seven source-contract tests covering UX 1.1/1.2 content and order, exact preview count, responsive columns, links/access, query intent/caching, authorization ordering/context preservation, and all requested Home states.
-
-- Existing tests conflicting with `UX.md`: **none found**.
-- Public Home test coverage: **Complete for this refinement**; all seven tests pass.
-- Movies library test coverage: **Complete for UX 2.1** through source contracts and executable PGlite integration tests; broader product coverage remains missing outside the completed Home, authentication, and Movies refinements.
-- `pnpm lint`, `pnpm type:check`, and `pnpm build` remain validation checks rather than substitutes for UX/regression tests.
-- `README.md`/`AGENTS.md` expectations conflict with other parts of `UX.md` as documented above, but those are documentation conflicts, not tests.
-
-Minimum tests to add alongside implementation:
-
-- Unit: callback URL safety, auth identifier normalization, password/token expiry/one-time consumption, library/status invariants, episode-derived Watching/Finished, next/previous/next-unwatched, provider normalizers, privacy filters, stat calculations.
-- Integration: credentials registration/verification/login/reset, Google linking/bootstrap failure, profile update/email uniqueness, account deletion cascades/revocation, contact throttling, library transitions/removal, episode-to-show reconciliation, public/private social queries.
-- Component/accessibility: header sets/order, auth forms and errors, 9-card Home grids, Search tabs/filters/grid/status, library empties/actions, stat rail, media controls and live feedback, legal/contact forms.
-- Browser: all public and protected routes at desktop/mobile sizes, unauthenticated mutation redirects, keyboard-only operation, focus restoration, and screen-reader smoke checks.
-
-## Recommended implementation order
-
-The user-supplied audit goals are numbered 1-18. The dependency-safe sequence below maps every goal rather than implementing strictly in numerical order.
-
-| Sequence | Audit goals | Work package | Exit criteria |
-| --- | --- | --- | --- |
-| 1 | **15, 18** | Resolve architecture/security blockers: credentials + provider-account model, password algorithm, verification/reset token model, Resend/domain, session revocation, favorites schema, IMDb source, watch-provider region, contact delivery/rate limiting, legal owner. | Written decisions and migrations/API contracts approved; privacy/security threat model recorded. |
-| 2 | **8, 5, 6, 7, 17** | Shared UX foundation: page/auth containers, section headers, empty/feedback states, library/media cards, 3-column mobile grid, 9-card Home grid, stat rail, cast component, semantic colors/headings/navigation. | Story/fixture-level components cover desktop/mobile, keyboard, focus, light/dark decision, and exact labels/order. |
-| 3 | **9, 1, 11, 18** | Authentication pages/flows: auth shell, credentials register/login, verification/resend, forgot/reset, Google linking, validation and secure error states. | End-to-end credential and Google flows pass; no enumeration; tokens expire/consume once; unverified users are gated. |
-| 4 | **10, 15, 2, 4, 6, 11** | Unify library/tracking domain and migrate data. Make Movies/TV Shows the canonical library; derive TV states/progress; add coherent removal and exact labels/order/empties. | No orphan split-state rows; episode changes deterministically update progress/status; Movies/TV UX matches sections. |
-| 5 | **1, 2, 4, 5, 6, 7, 11** | Rebuild signed-out Home and global navigation/footer shell. | Exact hero/copy/order, four 9-item grids, 3x3 mobile, correct signed-out/signed-in nav, stable session loading. |
-| 6 | **2, 5, 7, 10, 11, 15** | Rebuild authenticated Search with two tabs, discover mode, genre/sort, 27-item strategy, pagination, quick library action/status. | Query/filter URL behavior, responsive grid, batch status data, all states, and auth guard pass. |
-| 7 | **2, 4, 5, 6, 7, 10, 11, 15, 17** | Bring movie/TV/season/episode pages to content/action spec: trailers, providers, similar, favorites, season progress, neighbors/next-unwatched. | Every detail checklist row is complete or only the explicitly external IMDb decision remains blocked. |
-| 8 | **1, 2, 5, 7, 8, 11, 15, 17** | Split Profile/Edit Profile; add exact stats/favorites; dedicated follower/following pages and comparison. | Own/public/private states, searchable lists, follow actions, stats, favorites, edit/email/password/delete flows pass. |
-| 9 | **1, 2, 11, 15, 17, 18** | Add Privacy, Terms, Contact and approved content/operations. | Footer links work; legal copy approved; contact confirmation, abuse controls, delivery, and privacy retention verified. |
-| 10 | **12, 13, 14, 18** | Central access audit after routes settle. Add guards/redirects where required; preserve public reads and server-side mutation enforcement. | Access matrix tests pass for anonymous, unverified, verified, private/public-profile, and owner/non-owner states. |
-| 11 | **3** | Remove, relocate, or explicitly specify extras: dashboard, combined Watchlist, Stats, Recommendations, legacy search/gallery, reviews/social recommendation, extra statuses/ratings/theme/Apple. | No extra feature displaces authoritative sections/order; retained extras are documented in a revised UX spec. |
-| 12 | **16** (and regression coverage for **1-18**) | Complete automated tests, accessibility checks, browser matrix, and production-like build/deploy verification. | Required commands pass under Node 24/pnpm 11.7 with test suite green and no high-severity a11y/security finding. |
-
-Goal-by-goal coverage summary:
-
-1. Missing pages — sequences 3, 5, 8, 9.
-2. Missing sections — sequences 4-9.
-3. Extra sections/features — sequence 11.
-4. Incorrect names/labels — sequences 2, 4-7.
-5. Inconsistent shared visual patterns — sequence 2, consumed thereafter.
-6. Incorrect ordering — sequences 2, 4, 5, 7.
-7. Desktop/mobile behavior — sequence 2 plus page packages.
-8. Duplicated components — sequence 2 and Profile/social extraction.
-9. Authentication differences — sequence 3.
-10. Tracking/progress differences — sequence 4 and detail reconciliation.
-11. Missing states — every feature package, finalized in sequence 12.
-12. Missing route protection — sequence 10.
-13. Incorrectly protected public pages — sequence 10 preserves public deep content/profile reads.
-14. Public actions that need auth — sequence 10 verifies every mutation.
-15. Unsupported data/provider needs — sequence 1, then implemented by feature packages.
-16. Test conflicts/coverage — sequence 12; no current conflicting tests exist.
-17. Accessibility — sequence 2 and acceptance criteria for every package.
-18. Security — sequence 1, auth/contact/profile implementation, and final access audit.
-
-## Regression risks
-
-| Risk | Why it is high-impact | Mitigation |
-| --- | --- | --- |
-| Google identity + credentials convergence | Current `user_id` is based on Google provider account id and profiles are merged by email; adding credentials can duplicate or hijack identity if linking is vague. | Explicit user/account/provider schema, verified-email checks, migration rehearsal, collision tests, and recent-auth linking. |
-| Dual watchlist/tracking migration | Existing users can have watchlist-only, status-only, or contradictory rows. | Inventory production data, define canonical mapping, transactional/idempotent migration, backup, reconciliation report, rollback plan. |
-| Episode-derived TV status | New episodes, specials, unaired episodes, TMDB corrections, and partial seasons can unexpectedly move Finished back to Watching. | Document “available episode” rule, timestamp/version projections, reconciliation tests, UI explanation, scheduled reconciliation strategy compatible with Vercel constraints. |
-| Route/navigation changes | Public discovery routes and protected libraries use overlapping movie paths; links/bookmarks/sitemap can break. | Preserve deep list/detail URLs, add redirects for removed extras, regenerate/exclude sitemap routes, test active states and callback URLs. |
-| Static TMDB detail caching plus personalized client actions | Details are force-static while user status loads client-side; rewrites can create stale or flashing personal state. | Keep public data cacheable, batch authenticated state through a stable client/server boundary, add skeletons, test sign-in/out transitions. |
-| TMDB request volume | Home, stats, public profiles, progress, 27-result Search, and per-season hydration can exceed free-tier/serverless/provider limits. | Batch/cap hydration, cache normalized public reads, avoid N+1 state calls, partial failure states, observe latency/rate limits. |
-| IMDb/streaming data trust | IMDb rating may require another licensed source; providers are region-specific and time-sensitive. | Attribute source/region/date, never mislabel TMDB, handle unavailable/stale data, obtain provider/legal approval. |
-| Auth email and token delivery | Misconfigured sender/domain or token leakage can lock out users or enable takeover. | Environment separation, digest tokens, no URL/token analytics, generic responses, rate limits, delivery monitoring, expiry tests. |
-| Account deletion | Cascades are irreversible and social/content retention choices affect other users and legal promises. | Recent reauth, typed confirmation, preview of impact, transaction, audit event without sensitive payload, documented retention, recovery/backup policy. |
-| Privacy leakage in social activity | Current public-profile assumption exposes watchlist/rating/episode activities without per-item privacy. | Default-private policy, privacy filters at query boundary, RLS/defense-in-depth plan, public/private fixture tests. |
-| Removing extras | Dashboard/reviews/recommendations/stats may have real users/data despite not being specified. | Measure usage, preserve data, feature-flag or hide before deletion, provide redirects, obtain explicit product decision. |
-| Responsive redesign | Three-column mobile posters and fixed bottom navigation can create unreadable text/small actions. | Test 320/360/390/430 widths, minimum targets, visible labels, no hover-only actions, zoom/reflow at 200%. |
-| Theme behavior | Extra light theme currently conflicts with hard-coded white/dark styling. | Either remove it as out-of-scope or fully tokenize and regression-test both themes. |
-| No current tests | Broad rewrites can silently alter public routes, authorization, privacy, and provider normalization. | Add characterization tests before migration and requirement tests with each sequence, not at the end only. |
-
-## Validation plan
-
-### Required environments
-
-- Runtime/tooling: Node 24.16 (compatible with package engine `^24.14.0`), pnpm 11.7.0, frozen lockfile install.
-- Public data: valid `TMDB_API_KEY`; optional `TMDB_API_URL` only if intentionally overridden.
-- Persistence/auth: isolated Neon branch with all migrations, pooled `DATABASE_URL`, unpooled migration URL, stable `AUTH_SECRET`, correct app URL, Google client id/secret.
-- Future UX flows: Resend API key/from domain, email recipient fixtures, password/verification/reset schema, contact destination/rate limiter, approved IMDb/provider decision.
-- Seed accounts: anonymous; unverified credentials; verified credentials; Google-only; linked Google+password; private profile; public profile with followers/following; empty/new account; rich library/progress account.
-
-### Automated validation
-
-1. Run migration tests on an empty database and a copy with all current migration states/orphan combinations.
-2. Run unit/integration/component suites described in [Tests and specification conflicts](#tests-and-specification-conflicts).
-3. Run `pnpm lint`, `pnpm type:check`, then `pnpm build` with build-time TMDB configuration.
-4. Run a production server from the build and browser tests, not only the dev server.
-5. Run an accessibility scanner on every page state, then keyboard and screen-reader manual checks for flows scanners cannot validate.
-6. Inspect browser/server logs for hydration errors, failed Server Actions, leaked tokens/PII, CSP violations, TMDB/Neon failures, and unhandled route exceptions.
-
-### Desktop matrix
-
-Use at least 1024x768 and 1440x900 in Chromium, plus one WebKit/Firefox pass.
-
-- Signed out: header exact set/order; Home hero copy/CTA; four 9-poster one-row sections; footer links; public See All/list/detail/person/season/episode navigation; no tracking mutation succeeds anonymously.
-- Auth: centered card layout and all credentials/Google/verification/reset states; invalid credentials and non-enumerating reset behavior; callback returns to intended same-origin route.
-- Signed in: header exact set/order/active state; Movies/TV sections/order/transitions/removal/Discover; Search tabs/filters/sort/27/paging/status; Profile/Edit/social lists/stats/favorites; details/progress/rating/favorite/trailer/providers/similar; legal/contact.
-- Public/private social: public profile content only, private profile denial, owner/non-owner follow states, searchable follower/following lists, stat comparison privacy.
-
-### Mobile matrix
-
-Use 320x568, 360x800, 390x844, and 430x932 with safe-area emulation where available.
-
-- Verify signed-in bottom nav is Movies/TV Shows/Search/Profile, stays above safe area/keyboard, has no clipped labels, correct active state, and no content hidden beneath it.
-- Verify signed-out header behavior (not the signed-in bottom nav), auth card reflow, Back links, password-manager/autofill behavior, and no horizontal page overflow.
-- Home must show exactly three poster columns and three rows per section; Search must use three columns; titles/status/actions remain visible and touch targets remain usable.
-- Check season/episode controls, stat horizontal scrolling, follower list actions, contact fields, dialogs/trailers, orientation changes, 200% zoom/reflow, and reduced-motion preference.
-
-### Unauthenticated and unverified checks
-
-- Anonymous users can open public lists and every detail depth, public profiles, Privacy/Terms/Contact.
-- Anonymous users cannot access Movies, TV Shows library, Search (under current UX interpretation), Profile/Edit, or any mutation; redirects retain safe callback URLs.
-- Direct Server Action requests without a valid session fail even if the UI is bypassed.
-- Unverified credential accounts cannot access authenticated features; resend is generic/throttled; Google verified accounts bypass app email verification.
-- Reset/contact endpoints do not reveal account existence, tokens, secrets, stack traces, database/provider configuration, or internal ids.
-
-### Authenticated checks
-
-- Test Google-only, password-only, and linked accounts; duplicate email/username; provider collision; profile-bootstrap/database failure; logout/session revocation.
-- Verify every library status transition, remove behavior, episode/season toggle, next-unwatched, all-watched completion, new-episode regression, rating update, favorite toggle, profile/email/password update, follow/unfollow, account deletion.
-- Verify database rows are always scoped to `session.user.id`; attempt cross-user ids in every action; confirm private data never appears in public profile/activity/list responses.
-- Confirm avatar handling remains text/initials-only unless `UX.md` changes; no file input/upload/object storage path should appear.
-
-### Page-state checklist
-
-For every applicable route verify: initial loading, partial loading, populated, whole-page empty, section empty, filtered no-results, invalid input, provider/database unavailable, unauthorized, forbidden/private, not-found, mutation pending, success, retryable failure, and destructive confirmation/cancel.
-
-## Existing validation commands and audit result
-
-Repository-defined commands:
-
-```bash
-pnpm lint
-pnpm type:check
-pnpm build
-```
-
-Other existing scripts recorded from `package.json`:
-
-```bash
-pnpm dev
-pnpm start
-pnpm build:turbo
-pnpm check:turbo
-pnpm db:migrate
-pnpm db:migrate:record-existing
-pnpm ultracite:check
-pnpm ultracite:fix
-pnpm biome:ci
-```
-
-Audit-shell result on 2026-07-22:
-
-| Check | Result | Evidence / next action |
-| --- | --- | --- |
-| Dependency availability | **Blocked** | `node_modules` is absent. Install with the repository package manager under the correct runtime. |
-| Node | **Blocked** | Shell is Node 20.17.0; `package.json` requires `^24.14.0` and lockfile/dev runtime records 24.16.0. Use Node 24.16. |
-| pnpm | **Blocked** | Direct `pnpm` is not installed. Corepack 0.29.3 fails package-signature key verification. `npx pnpm@11.7.0` also cannot run because pnpm 11.7 requires Node >=22.13 and uses `node:sqlite`. Repair Node/Corepack, then use pnpm 11.7.0. |
-| `pnpm lint` | **Not run (environment blocked)** | Run after frozen install under Node 24. |
-| `pnpm type:check` | **Not run (environment blocked)** | Run after frozen install under Node 24. |
-| `pnpm build` | **Not run (environment blocked)** | In addition to tooling, a valid build-time `TMDB_API_KEY` is required. |
-| Runtime/auth smoke tests | **Not run (environment blocked)** | No TMDB, Neon, Auth, or Google variables are configured in the audit shell. Use an isolated configured environment and real Google OAuth as specified above. |
-| Test suite | **Missing** | No test script/files/framework were found. Add coverage as part of implementation. |
-
-Do not interpret the environment-blocked checks as code failures or passes. The audit document itself is the only repository change made for this goal.
-
-## Completion coverage
-
-Every section of `UX.md` is mapped above:
-
-- 1.1 Header
-- 1.2 Home page
-- 1.3 Register
-- 1.4 Login
-- 1.5 Forgot Password
-- 1.6 Reset Password
-- Logged-in Header
-- 2.1 Movies
-- 2.2 TV Shows
-- 2.3 Search
-- 2.4 Profile
-- 2.5 Edit Profile
-- 2.6 Movie Detail
-- 2.7 TV Show Detail
-- 2.8 Season Detail
-- 2.9 Episode Detail
-- 3.1 User Profile
-- 3.2 Followers/Following
-- 4.1 Privacy Policy
-- 4.2 Terms of Service
-- 4.3 Contact
-
-This map should be updated requirement-by-requirement as implementation lands; a status should move to **Complete** only when its implementation, states, access behavior, accessibility, security, and validation evidence all match `UX.md`.
+| **Complete** | Verified against the exact wording of `UX.md` in this pass; implementation matches. |
+| **Fixed this pass** | A real discrepancy was found and corrected during this pass; verified complete afterward. |
+| **Accepted as necessary** | A minimal deviation required to make an explicitly-specified requirement actually work; not a product-feature addition. |

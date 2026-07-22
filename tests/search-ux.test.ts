@@ -236,7 +236,8 @@ test('quick library actions use batched status input, type-correct options, and 
   assert.match(page, /status=\{getSearchStatusLabel\(status\)\}/);
   assert.match(action, /Add to library/);
   assert.match(action, /MOVIE_WATCH_STATUSES/);
-  assert.match(action, /TV_WATCH_STATUSES/);
+  assert.match(action, /TV_LIBRARY_STATUSES/);
+  assert.doesNotMatch(action, /TV_WATCH_STATUSES/);
   assert.match(action, /setMediaWatchStatus/);
   assert.match(action, /Added to your library/);
   assert.match(action, /Could not add this title/);

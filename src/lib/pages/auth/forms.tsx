@@ -319,9 +319,6 @@ export const LoginForm = ({
                 type="password"
               />
             </Field.Root>
-            <Box alignSelf="flex-end" asChild color="teal.700" fontWeight="600">
-              <a href="/forgot-password">Forgot password?</a>
-            </Box>
             <Button loading={isPending} size="lg" type="submit">
               Login
             </Button>
@@ -332,6 +329,9 @@ export const LoginForm = ({
       <ProviderDivider />
       <GoogleAvailability enabled={googleEnabled} />
       <OAuthButtons callbackUrl={callbackUrl} googleEnabled={googleEnabled} />
+      <Text textAlign="center">
+        <a href="/forgot-password">Forgot password?</a>
+      </Text>
       <Text textAlign="center">
         <a href="/register">New user? Create an account</a>
       </Text>

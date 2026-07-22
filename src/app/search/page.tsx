@@ -7,13 +7,13 @@ import { getServerSession } from 'next-auth/next';
 import { Suspense } from 'react';
 
 export const metadata: Metadata = {
-  title: 'Search movies and TV shows | TVSync',
+  title: 'Search movies and TV shows | TvSync',
   description:
-    'Search TMDB for movies and TV shows, open detail pages, and save titles to your TVSync watchlist.',
+    'Search TMDB for movies and TV shows, open detail pages, and save titles to your TvSync watchlist.',
   openGraph: {
-    title: 'Search movies and TV shows | TVSync',
+    title: 'Search movies and TV shows | TvSync',
     description:
-      'Search TMDB for movies and TV shows, open detail pages, and save titles to your TVSync watchlist.',
+      'Search TMDB for movies and TV shows, open detail pages, and save titles to your TvSync watchlist.',
     url: '/search',
   },
 };

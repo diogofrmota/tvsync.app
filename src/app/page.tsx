@@ -7,11 +7,11 @@ import { getServerSession } from 'next-auth/next';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
-  title: 'TVSync | Movie and TV show tracker',
+  title: 'TvSync | Movie and TV show tracker',
   description:
     'Discover trending movies and TV shows, search TMDB, and track what you plan to watch next.',
   openGraph: {
-    title: 'TVSync | Movie and TV show tracker',
+    title: 'TvSync | Movie and TV show tracker',
     description:
       'Discover trending movies and TV shows, search TMDB, and track what you plan to watch next.',
     url: '/',

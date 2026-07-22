@@ -22,7 +22,7 @@ export const PersonDetailPage = ({ personId }: { personId: number }) => {
 
   return (
     <Grid gap={8} marginX={8}>
-      <Button onClick={router.back}>back</Button>
+      <Button onClick={router.back}>Back</Button>
 
       <Skeleton loading={isLoading}>
         <Box

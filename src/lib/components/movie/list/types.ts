@@ -1,6 +1,5 @@
 export enum MovieListMode {
   section = 0,
-  search = 1,
   discover = 2,
 }
 
