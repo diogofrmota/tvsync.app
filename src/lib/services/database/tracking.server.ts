@@ -14,7 +14,9 @@ import { getDatabaseSql } from './core.server';
 import {
   ADD_OWN_LIBRARY_ITEM_QUERY,
   REMOVE_OWN_LIBRARY_ITEM_QUERY,
+  SET_OWN_EPISODE_PROGRESS_BATCH_QUERY,
   SET_OWN_MOVIE_LIBRARY_STATUS_QUERY,
+  SET_OWN_TV_LIBRARY_STATE_QUERY,
 } from './library-queries';
 
 type ProfileRow = {
@@ -487,6 +489,78 @@ export const listOwnEpisodeProgressForShow = async (tmdbShowId: number) => {
       and tmdb_show_id = ${tmdbShowId}
     order by season_number asc, episode_number asc
   `) as Array<EpisodeProgressRow>;
+};
+
+export const listOwnEpisodeProgressForTvLibrary = async () => {
+  const userId = await getAuthenticatedUserId();
+  const sql = getDatabaseSql();
+
+  return (await sql`
+    select episode_progress.id, episode_progress.user_id,
+      episode_progress.tmdb_show_id, episode_progress.season_number,
+      episode_progress.episode_number, episode_progress.watched,
+      episode_progress.watched_at, episode_progress.note,
+      episode_progress.created_at, episode_progress.updated_at
+    from episode_progress
+    inner join user_media
+      on user_media.user_id = episode_progress.user_id
+      and user_media.tmdb_id = episode_progress.tmdb_show_id
+      and user_media.media_type = 'tv'
+    where episode_progress.user_id = ${userId}
+    order by episode_progress.tmdb_show_id asc,
+      episode_progress.season_number asc,
+      episode_progress.episode_number asc
+  `) as Array<EpisodeProgressRow>;
+};
+
+export const setOwnEpisodeProgressBatch = async (
+  tmdbShowId: number,
+  episodes: Array<{
+    episodeNumber: number;
+    seasonNumber: number;
+    watched: boolean;
+  }>
+) => {
+  const userId = await getAuthenticatedUserId();
+  const sql = getDatabaseSql();
+  const values = episodes.map((episode) => ({
+    episode_number: episode.episodeNumber,
+    season_number: episode.seasonNumber,
+    watched: episode.watched,
+  }));
+
+  return sql.query(SET_OWN_EPISODE_PROGRESS_BATCH_QUERY, [
+    userId,
+    tmdbShowId,
+    JSON.stringify(values),
+  ]);
+};
+
+export const setOwnTvLibraryState = async (
+  tmdbShowId: number,
+  watchStatus: Extract<WatchStatus, 'planned' | 'watching' | 'completed'>,
+  episodes: Array<{
+    episodeNumber: number;
+    seasonNumber: number;
+    watched: boolean;
+  }>,
+  lastWatchedAt: Date | null
+) => {
+  const userId = await getAuthenticatedUserId();
+  const sql = getDatabaseSql();
+  const values = episodes.map((episode) => ({
+    episode_number: episode.episodeNumber,
+    season_number: episode.seasonNumber,
+    watched: episode.watched,
+  }));
+
+  return sql.query(SET_OWN_TV_LIBRARY_STATE_QUERY, [
+    userId,
+    tmdbShowId,
+    watchStatus,
+    JSON.stringify(values),
+    lastWatchedAt,
+  ]);
 };
 
 export const listOwnEpisodeProgressForSeason = async (

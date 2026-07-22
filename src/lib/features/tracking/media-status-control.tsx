@@ -1,6 +1,7 @@
 'use client';
 
 import { Badge, Field, Grid, NativeSelect, Text } from '@chakra-ui/react';
+import { TV_LIBRARY_STATUSES } from 'lib/features/library/tv-library-state';
 import {
   getMediaTrackingState,
   setMediaWatchStatus,
@@ -9,7 +10,6 @@ import {
   MediaType,
   MOVIE_WATCH_STATUSES,
   type TrackableMediaType,
-  TV_WATCH_STATUSES,
   WatchStatus,
 } from 'lib/types';
 import type { Route } from 'next';
@@ -56,7 +56,9 @@ export const MediaStatusControl = ({
   const [isPending, startTransition] = useTransition();
   const options = useMemo(
     () =>
-      mediaType === MediaType.Movie ? MOVIE_WATCH_STATUSES : TV_WATCH_STATUSES,
+      mediaType === MediaType.Movie
+        ? MOVIE_WATCH_STATUSES
+        : TV_LIBRARY_STATUSES,
     [mediaType]
   );
 

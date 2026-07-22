@@ -1,12 +1,22 @@
 'use server';
 
+import {
+  getOwnTvLibraryProjection,
+  setOwnTvEpisodeWatchedAndReconcile,
+  setOwnTvLibraryIntent,
+  setOwnTvSeasonWatchedAndReconcile,
+} from 'lib/features/library/tv-library.server';
+import {
+  getAvailableRegularEpisodes,
+  getTvEpisodeKey,
+  getWatchedAvailableEpisodeKeys,
+} from 'lib/features/library/tv-library-state';
 import { authOptions } from 'lib/services/auth/index.server';
 import {
   getOwnEpisodeProgress,
   getOwnMedia,
   listOwnEpisodeProgressForSeason,
   listOwnEpisodeProgressForShow,
-  upsertOwnEpisodeProgress,
   upsertOwnMedia,
 } from 'lib/services/database/tracking.server';
 import { getTvShowDetail } from 'lib/services/tmdb/tv/detail/index.server';
@@ -127,6 +137,7 @@ const revalidateEpisodePaths = (
   episodeNumber?: number
 ) => {
   revalidatePath(`/tv/show/${tmdbShowId}`);
+  revalidatePath('/tv-shows');
   revalidatePath(`/tv/show/${tmdbShowId}/season/${seasonNumber}`);
 
   if (episodeNumber) {
@@ -146,6 +157,23 @@ export const getMediaTrackingState = async ({
 
   if (!(await ensureAuthenticated())) {
     return { status: 'login_required', watchStatus: null };
+  }
+
+  if (mediaType === MediaType.Tv) {
+    try {
+      const item = await getOwnMedia(tmdbId, mediaType);
+      if (!item) {
+        return { status: 'removed', watchStatus: null };
+      }
+      const projection = await getOwnTvLibraryProjection(tmdbId);
+
+      return {
+        status: 'saved',
+        watchStatus: projection.status,
+      };
+    } catch {
+      return { status: 'error', watchStatus: null };
+    }
   }
 
   const item = await getOwnMedia(tmdbId, mediaType);
@@ -173,15 +201,34 @@ export const setMediaWatchStatus = async (
     return { status: 'login_required', watchStatus: null };
   }
 
-  await upsertOwnMedia({
-    lastWatchedAt: getLastWatchedAtForStatus(input.status),
-    mediaType: input.mediaType,
-    tmdbId: input.tmdbId,
-    watchStatus: input.status,
-  });
-  revalidateMediaPaths(input.tmdbId, input.mediaType);
+  try {
+    if (
+      input.mediaType === MediaType.Tv &&
+      (input.status === WatchStatus.Planned ||
+        input.status === WatchStatus.Watching ||
+        input.status === WatchStatus.Completed)
+    ) {
+      const projection = await setOwnTvLibraryIntent(
+        input.tmdbId,
+        input.status
+      );
+      revalidateMediaPaths(input.tmdbId, input.mediaType);
 
-  return { status: 'saved', watchStatus: input.status };
+      return { status: 'saved', watchStatus: projection.status };
+    }
+
+    await upsertOwnMedia({
+      lastWatchedAt: getLastWatchedAtForStatus(input.status),
+      mediaType: input.mediaType,
+      tmdbId: input.tmdbId,
+      watchStatus: input.status,
+    });
+    revalidateMediaPaths(input.tmdbId, input.mediaType);
+
+    return { status: 'saved', watchStatus: input.status };
+  } catch {
+    return { status: 'error', watchStatus: null };
+  }
 };
 
 export const getEpisodeProgressState = async ({
@@ -235,20 +282,18 @@ export const setEpisodeWatched = async (
     return { status: 'login_required', watched: false };
   }
 
-  await upsertOwnEpisodeProgress({
-    episodeNumber: input.episodeNumber,
-    seasonNumber: input.seasonNumber,
-    tmdbShowId: input.tmdbShowId,
-    watched: input.watched,
-    watchedAt: input.watched ? new Date() : null,
-  });
-  revalidateEpisodePaths(
-    input.tmdbShowId,
-    input.seasonNumber,
-    input.episodeNumber
-  );
+  try {
+    await setOwnTvEpisodeWatchedAndReconcile(input);
+    revalidateEpisodePaths(
+      input.tmdbShowId,
+      input.seasonNumber,
+      input.episodeNumber
+    );
 
-  return { status: 'saved', watched: input.watched };
+    return { status: 'saved', watched: input.watched };
+  } catch {
+    return { status: 'error', watched: !input.watched };
+  }
 };
 
 export const getSeasonProgressState = async ({
@@ -292,32 +337,29 @@ export const setSeasonWatched = async (
     return { status: 'login_required', watchedEpisodeNumbers: [] };
   }
 
-  const season = await getTVSeasonDetailsServer({
-    seasonNumber: input.seasonNumber,
-    showId: input.tmdbShowId,
-  });
+  try {
+    const season = await getTVSeasonDetailsServer({
+      seasonNumber: input.seasonNumber,
+      showId: input.tmdbShowId,
+    });
+    const episodeNumbers = season.episodes.map(
+      (episode) => episode.episode_number
+    );
+    await setOwnTvSeasonWatchedAndReconcile({
+      episodeNumbers,
+      seasonNumber: input.seasonNumber,
+      tmdbShowId: input.tmdbShowId,
+      watched: input.watched,
+    });
+    revalidateEpisodePaths(input.tmdbShowId, input.seasonNumber);
 
-  const episodeNumbers = season.episodes.map(
-    (episode) => episode.episode_number
-  );
-
-  await Promise.all(
-    episodeNumbers.map((episodeNumber) =>
-      upsertOwnEpisodeProgress({
-        episodeNumber,
-        seasonNumber: input.seasonNumber,
-        tmdbShowId: input.tmdbShowId,
-        watched: input.watched,
-        watchedAt: input.watched ? new Date() : null,
-      })
-    )
-  );
-  revalidateEpisodePaths(input.tmdbShowId, input.seasonNumber);
-
-  return {
-    status: 'saved',
-    watchedEpisodeNumbers: input.watched ? episodeNumbers : [],
-  };
+    return {
+      status: 'saved',
+      watchedEpisodeNumbers: input.watched ? episodeNumbers : [],
+    };
+  } catch {
+    return { status: 'error', watchedEpisodeNumbers: [] };
+  }
 };
 
 export const getTvProgressSummary = async (
@@ -354,6 +396,7 @@ export const getTvProgressSummary = async (
   const seasons = show.seasons.filter(
     (season) => season.season_number > 0 && season.episode_count > 0
   );
+  const availableEpisodes = getAvailableRegularEpisodes(show.seasons);
   const seasonDetails = await Promise.all(
     seasons.map((season) =>
       getTVSeasonDetailsServer({
@@ -375,21 +418,36 @@ export const getTvProgressSummary = async (
         ? left.episodeNumber - right.episodeNumber
         : left.seasonNumber - right.seasonNumber
     );
-  const watchedRows = progressRows.filter((row) => row.watched);
-  const watchedKeys = new Set(
-    watchedRows.map((row) => `${row.season_number}:${row.episode_number}`)
+  const watchedKeys = getWatchedAvailableEpisodeKeys(
+    availableEpisodes,
+    progressRows
   );
-  const totalEpisodeCount = episodes.length || show.number_of_episodes;
+  const watchedRows = progressRows.filter(
+    (row) =>
+      row.watched &&
+      watchedKeys.has(
+        getTvEpisodeKey({
+          episodeNumber: row.episode_number,
+          seasonNumber: row.season_number,
+        })
+      )
+  );
+  const totalEpisodeCount = availableEpisodes.length;
   const watchedEpisodeCount = watchedKeys.size;
   const nextEpisode =
-    episodes.find(
-      (episode) =>
-        !watchedKeys.has(`${episode.seasonNumber}:${episode.episodeNumber}`)
-    ) ?? null;
-  const watchedSeasonCount = seasonDetails.filter((season) =>
-    season.episodes.every((episode) =>
-      watchedKeys.has(`${season.season_number}:${episode.episode_number}`)
-    )
+    episodes.find((episode) => !watchedKeys.has(getTvEpisodeKey(episode))) ??
+    null;
+  const watchedSeasonCount = seasonDetails.filter(
+    (season) =>
+      season.episodes.length > 0 &&
+      season.episodes.every((episode) =>
+        watchedKeys.has(
+          getTvEpisodeKey({
+            episodeNumber: episode.episode_number,
+            seasonNumber: season.season_number,
+          })
+        )
+      )
   ).length;
   const lastWatchedAt =
     watchedRows
