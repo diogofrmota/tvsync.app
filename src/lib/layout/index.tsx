@@ -7,7 +7,13 @@ import { useSession } from 'next-auth/react';
 import Footer from './Footer';
 import Header from './Header';
 
-const authRoutes = new Set(['/login', '/register']);
+const authRoutes = new Set([
+  '/forgot-password',
+  '/login',
+  '/register',
+  '/reset-password',
+  '/verify-email',
+]);
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();

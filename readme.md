@@ -15,7 +15,7 @@ Repository: https://github.com/diogofrmota/tvsync.app
 - Tooling: pnpm, Biome, TypeScript, Turbo, Husky
 - Deployment target: Vercel free tier
 - Database: Neon Postgres through Vercel Marketplace
-- Auth: Auth.js/NextAuth with Google OAuth account creation/login
+- Auth: Auth.js/NextAuth with verified email/password credentials and Google OAuth
 
 ## Project Structure
 
@@ -92,15 +92,22 @@ Do not pass `TMDB_API_KEY` into client components or `NEXT_PUBLIC_*` variables. 
 
 ## Authentication
 
-Authentication is implemented with NextAuth v4 and Google OAuth. The active auth routes are:
+Authentication is implemented with NextAuth v4 JWT sessions, a credentials provider, Google OAuth, Neon persistence, and Resend delivery. The active auth routes are:
 
-- `/login` - Google sign-in, with clear configuration and OAuth error messages.
-- `/register` - Google account creation entry point. Google handles the account creation flow.
+- `/login` - Email-or-username/password login, verification resend, Google login, and safe callback redirects.
+- `/register` - Email/username/password registration with verification plus Google registration.
+- `/forgot-password` - Non-enumerating password-reset request.
+- `/reset-password?token=...` - One-time 24-hour password reset.
+- `/verify-email?token=...` - One-time email verification.
 - `/api/auth/[...nextauth]` - NextAuth route handler.
 
-Email/password registration, email/password login, and reset-password flows are not enabled yet because the current auth layer has no password provider, password hashing, or email delivery configuration. The UI names that limitation directly. Apple login is represented as a disabled future option until Apple OAuth credentials are available.
+`database/migrations/0005_auth_lifecycle.sql` adds explicit credentials/Google account mappings, bcrypt password hashes, verified-email state, digest-only one-time tokens, JWT session-version revocation, and persistent rate-limit counters. Raw verification/reset tokens and plaintext passwords are never stored. Credential sessions are refused until `email_verified_at` is set; Google linking requires Google's verified-email claim and uses the stable Google subject as the provider identifier.
 
-Successful Google sign-in uses JWT sessions and bootstraps a row in the existing Neon `profiles` table when `DATABASE_URL` is configured. `/profile` and `/watchlist` are protected server-side and redirect signed-out users to `/login` with a callback URL.
+Resend is initialized lazily on the server and uses absolute environment-aware links. Configure `RESEND_API_KEY` and a verified `AUTH_EMAIL_FROM` sender. Forgot-password and verification-resend responses are generic, rate limited by both identity and IP digests, and use a minimum timing envelope to reduce account-enumeration signals.
+
+Successful sign-in uses JWT sessions backed by an internal `profiles.user_id`. `/profile` and `/watchlist` are protected server-side and redirect signed-out users to `/login` with a normalized same-origin callback URL. A password reset increments `profiles.session_version`, invalidating existing JWT sessions on their next check.
+
+`pnpm test` includes an isolated PGlite PostgreSQL suite that applies migrations 0001-0005 and executes the same parameterized lifecycle queries used by Neon. It covers normalized identity constraints, credentials lookup, Google subject mapping, verification and reset token expiry/single-use behavior, password hash replacement, session rotation, and persistent throttling without requiring a developer database.
 
 The protected `/profile` route lets the current user edit their text profile. It saves name, username, display name, bio, and privacy setting through a server-only action, keeps Google email read-only, validates usernames as 3-24 lowercase letters/numbers/underscores, and relies on the lowercased unique username index to prevent duplicates. If an authenticated user reaches `/profile` without an existing profile row, the page acts as a first-login setup form using session-derived defaults.
 
@@ -137,8 +144,11 @@ Dashboard data loading lives in `src/lib/features/dashboard`. It keeps private N
 - `/tv/show/[id]` - TV show detail page with poster, backdrop, overview, genres, first air date, status, season and episode counts, TMDB rating, cast, linked seasons, watchlist add/remove state, current-user watch status, and TV progress summary.
 - `/tv/show/[id]/season/[seasonNumber]` - TMDB season detail page with season metadata, episodes, per-episode watched/unwatched controls, and season-wide watched/unwatched actions.
 - `/tv/show/[id]/season/[seasonNumber]/episode/[episodeNumber]` - TMDB episode detail page with watched/unwatched progress action.
-- `/login` - Public Google OAuth login page.
-- `/register` - Public Google OAuth registration page.
+- `/login` - Public email-or-username/password and Google login page.
+- `/register` - Public credentials or Google registration page.
+- `/forgot-password` - Public generic reset-email request page.
+- `/reset-password` - Public one-time token password reset page.
+- `/verify-email` - Public one-time token email verification page.
 - `/watchlist` - Auth-protected watchlist page with separated Neon-backed saved movie and TV show sections, TMDB hydration, local search, filtering, sorting, detail links, and direct removal.
 - `/profile` - Auth-protected current-user profile page with a left-aligned title/subtitle, generated initials avatar, editable text fields, username validation, duplicate username protection, privacy settings, and logout.
 - `/person/[id]` - Person detail page.
@@ -171,6 +181,9 @@ AUTH_URL=http://localhost:3000
 NEXTAUTH_URL=http://localhost:3000
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
+RESEND_API_KEY=
+AUTH_EMAIL_FROM=
+AUTH_EMAIL_REPLY_TO=
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 NEXT_PUBLIC_UMAMI_WEBSITE_ID=
 NEXT_PUBLIC_UMAMI_SRC=
@@ -183,6 +196,7 @@ NEXT_PUBLIC_UMAMI_SRC=
 - `AUTH_SECRET` is required for production auth sessions. Generate a strong value and store it only in local/Vercel environment variables.
 - `AUTH_URL` and `NEXTAUTH_URL` should be `http://localhost:3000` locally and `https://tvsync.app` in the Vercel production environment. `NEXTAUTH_URL` is required by NextAuth v4 in many deployments.
 - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are required for Google OAuth login/register. Without them, the auth pages render a configuration warning and disable Google sign-in.
+- `RESEND_API_KEY` and `AUTH_EMAIL_FROM` are required for verification and password-reset delivery. Use a Resend-verified sender domain in production. `AUTH_EMAIL_REPLY_TO` is optional.
 - `NEXT_PUBLIC_SITE_URL` controls the canonical sitemap origin. Set it to `http://localhost:3000` locally and `https://tvsync.app` in production.
 - `NEXT_PUBLIC_UMAMI_WEBSITE_ID` and `NEXT_PUBLIC_UMAMI_SRC` are optional. When both are set, the app loads the Umami tracker script and existing UI events are sent through `src/lib/utils/track-event.ts`.
 
@@ -192,6 +206,7 @@ For local development, create `.env.local` from `.env.example` and fill in the T
 
 ```bash
 pnpm dev
+pnpm test
 pnpm lint
 pnpm type:check
 pnpm build
@@ -210,6 +225,7 @@ pnpm push-release
 The main validation path is:
 
 ```bash
+pnpm test
 pnpm lint
 pnpm type:check
 pnpm build
@@ -256,7 +272,7 @@ pnpm db:migrate
 
 Create Google OAuth credentials in Google Cloud Console. Add `http://localhost:3000/api/auth/callback/google` for local development and `https://tvsync.app/api/auth/callback/google` for production. Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `AUTH_SECRET`, `AUTH_URL`, and `NEXTAUTH_URL` in the matching local and Vercel environments.
 
-Login and registration intentionally use Google OAuth only. There is no email/password or reset-password flow yet.
+Apply `database/migrations/0005_auth_lifecycle.sql` before testing credentials. Login and registration support verified email/password accounts and Google OAuth; credential accounts remain inaccessible until their verification link is consumed.
 
 ## Deployment
 
@@ -268,8 +284,8 @@ The project is prepared for Vercel free tier deployment.
 - Root directory: repository root
 - Node version: `24`
 - Database: Vercel-managed Neon Postgres store `tvsync-db`
-- Required Vercel environment variables: `TMDB_API_KEY`, `DATABASE_URL`, `AUTH_SECRET`, `NEXTAUTH_URL`, `GOOGLE_CLIENT_ID`, and `GOOGLE_CLIENT_SECRET`.
-- Optional Vercel environment variables: `TMDB_API_URL`, `DATABASE_URL_UNPOOLED`, `AUTH_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_UMAMI_WEBSITE_ID`, and `NEXT_PUBLIC_UMAMI_SRC`.
+- Required Vercel environment variables: `TMDB_API_KEY`, `DATABASE_URL`, `AUTH_SECRET`, `NEXTAUTH_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `RESEND_API_KEY`, and `AUTH_EMAIL_FROM`.
+- Optional Vercel environment variables: `TMDB_API_URL`, `DATABASE_URL_UNPOOLED`, `AUTH_URL`, `AUTH_EMAIL_REPLY_TO`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_UMAMI_WEBSITE_ID`, and `NEXT_PUBLIC_UMAMI_SRC`.
 - Migration-only variable: keep `DATABASE_URL_UNPOOLED` separate from pooled runtime access and use it only for migration tooling/direct `psql` work.
 - Confirm `DATABASE_URL` is the pooled Neon string in Vercel so runtime Server Components, Server Actions, and Route Handlers stay serverless-friendly.
 - Set `AUTH_URL`, `NEXTAUTH_URL`, and `NEXT_PUBLIC_SITE_URL` to `https://tvsync.app` in the production environment.

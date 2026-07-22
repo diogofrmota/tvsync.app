@@ -1,4 +1,4 @@
-import { AuthPage } from 'lib/pages/auth';
+import { RegisterAuthPage } from 'lib/pages/auth';
 import { getSafeCallbackUrl } from 'lib/services/auth/callback-url';
 import { authOptions } from 'lib/services/auth/index.server';
 import type { Metadata, Route } from 'next';
@@ -8,11 +8,11 @@ import { getServerSession } from 'next-auth/next';
 export const metadata: Metadata = {
   title: 'Register | TVSync',
   description:
-    'Create a TVSync account with Google to save watchlists and track movies and TV shows.',
+    'Create a TvSync account with email and password or Google authentication.',
   openGraph: {
     title: 'Register | TVSync',
     description:
-      'Create a TVSync account with Google to save watchlists and track movies and TV shows.',
+      'Create a TvSync account with email and password or Google authentication.',
     url: '/register',
   },
 };
@@ -34,13 +34,12 @@ export default async function Page({ searchParams }: RegisterPageProps) {
   }
 
   return (
-    <AuthPage
+    <RegisterAuthPage
       callbackUrl={safeCallbackUrl}
       error={error}
       googleEnabled={Boolean(
         process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
       )}
-      mode="register"
     />
   );
 }

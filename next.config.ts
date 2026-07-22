@@ -13,9 +13,12 @@ const getOrigin = (url?: string) => {
 };
 
 const umamiOrigin = getOrigin(process.env.NEXT_PUBLIC_UMAMI_SRC);
-const scriptSources = ["'self'", "'unsafe-inline'", umamiOrigin].filter(
-  Boolean
-);
+const scriptSources = [
+  "'self'",
+  "'unsafe-inline'",
+  process.env.NODE_ENV === 'development' ? "'unsafe-eval'" : null,
+  umamiOrigin,
+].filter(Boolean);
 const connectSources = ["'self'", umamiOrigin].filter(Boolean);
 
 /**

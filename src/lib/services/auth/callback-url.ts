@@ -2,7 +2,7 @@ const DEFAULT_AUTH_CALLBACK_URL = '/profile';
 const DEFAULT_APP_ORIGIN = 'https://tvsync.app';
 const MAX_NORMALIZE_ATTEMPTS = 3;
 
-const getConfiguredAppOrigin = () => {
+export const getApplicationOrigin = () => {
   try {
     return new URL(
       process.env.NEXTAUTH_URL ?? process.env.AUTH_URL ?? DEFAULT_APP_ORIGIN
@@ -33,7 +33,7 @@ const normalizeDangerousUrlCharacters = (value: string) => {
 
 export const getSafeCallbackUrl = (
   callbackUrl?: string,
-  baseOrigin = getConfiguredAppOrigin()
+  baseOrigin = getApplicationOrigin()
 ) => {
   if (!callbackUrl) {
     return DEFAULT_AUTH_CALLBACK_URL;

@@ -1,106 +1,156 @@
 import { Box, Heading, Stack, Text } from '@chakra-ui/react';
-import type { AuthPageMode } from 'lib/pages/auth/types';
+import type { Route } from 'next';
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { FiArrowLeft } from 'react-icons/fi';
 
-import { OAuthButtons } from './client-actions';
+import {
+  ForgotPasswordForm,
+  LoginForm,
+  RegisterForm,
+  ResetPasswordForm,
+} from './forms';
 
-type AuthPageProps = {
-  callbackUrl: string;
-  error?: string;
-  googleEnabled: boolean;
-  mode: AuthPageMode;
+type AuthShellProps = {
+  backHref?: Route;
+  backLabel?: string;
+  children: ReactNode;
+  heading: string;
 };
 
+export const AuthShell = ({
+  backHref,
+  backLabel,
+  children,
+  heading,
+}: AuthShellProps) => (
+  <Stack
+    margin="auto"
+    maxWidth="32rem"
+    padding={{ base: 4, sm: 6 }}
+    width="full"
+  >
+    {backHref && backLabel ? (
+      <Box
+        _hover={{ textDecoration: 'underline' }}
+        alignSelf="flex-start"
+        asChild
+        color="white"
+        marginBottom={4}
+      >
+        <Link href={backHref}>
+          <FiArrowLeft aria-hidden /> {backLabel}
+        </Link>
+      </Box>
+    ) : null}
+    <Stack
+      background="white"
+      borderRadius="xl"
+      boxShadow="0 18px 60px rgba(0, 0, 0, 0.35)"
+      color="black"
+      gap={6}
+      padding={{ base: 6, sm: 8 }}
+    >
+      <Stack gap={2} textAlign="center">
+        <Text fontSize="xl" fontWeight="700">
+          TvSync
+        </Text>
+        <Heading as="h1" fontSize={{ base: '2xl', sm: '3xl' }}>
+          {heading}
+        </Heading>
+      </Stack>
+      {children}
+    </Stack>
+  </Stack>
+);
+
 const errorMessages: Record<string, string> = {
-  Configuration:
-    'Authentication is not configured yet. Please try again later.',
   AccessDenied:
     'Google sign-in was accepted, but TvSync could not finish the session. Please try again.',
-  OAuthSignin: 'Google sign-in could not start. Please try again.',
+  Configuration:
+    'Authentication is not configured yet. Please try again later.',
+  OAuthAccountNotLinked:
+    'This email is already connected to a different Google identity. Log in with the existing method.',
   OAuthCallback:
     'Google could not finish the sign-in request. Please try again.',
-  OAuthAccountNotLinked:
-    'This email is already connected to another sign-in method.',
+  OAuthSignin: 'Google sign-in could not start. Please try again.',
   default: 'Sign-in failed. Please try again.',
 };
 
 export const getAuthErrorMessage = (error?: string) =>
   error ? (errorMessages[error] ?? errorMessages.default) : null;
 
-export const AuthPage = ({
-  callbackUrl,
-  error,
-  googleEnabled,
-  mode,
-}: AuthPageProps) => {
-  const register = mode === 'register';
-  const errorMessage = getAuthErrorMessage(error);
-  return (
-    <Stack
-      margin="auto"
-      maxWidth="32rem"
-      padding={{ base: 4, sm: 6 }}
-      width="full"
-    >
-      <Box alignSelf="flex-start" asChild color="white" marginBottom={4}>
-        <Link href="/">
-          <FiArrowLeft aria-hidden /> Back to Home
+export const LoginAuthPage = (props: {
+  callbackUrl: string;
+  error?: string;
+  googleEnabled: boolean;
+  passwordReset?: boolean;
+}) => (
+  <AuthShell backHref="/" backLabel="Back to Home" heading="Login">
+    <LoginForm
+      callbackUrl={props.callbackUrl}
+      errorMessage={getAuthErrorMessage(props.error)}
+      googleEnabled={props.googleEnabled}
+      passwordReset={props.passwordReset}
+    />
+  </AuthShell>
+);
+
+export const RegisterAuthPage = (props: {
+  callbackUrl: string;
+  error?: string;
+  googleEnabled: boolean;
+}) => (
+  <AuthShell backHref="/" backLabel="Back to Home" heading="Create an Account">
+    <RegisterForm
+      callbackUrl={props.callbackUrl}
+      errorMessage={getAuthErrorMessage(props.error)}
+      googleEnabled={props.googleEnabled}
+    />
+  </AuthShell>
+);
+
+export const ForgotPasswordAuthPage = () => (
+  <AuthShell
+    backHref="/login"
+    backLabel="Back to Login"
+    heading="Reset Password"
+  >
+    <ForgotPasswordForm />
+  </AuthShell>
+);
+
+export const ResetPasswordAuthPage = (props: {
+  token: string;
+  tokenValid: boolean;
+}) => (
+  <AuthShell heading="Create a New Password">
+    <ResetPasswordForm token={props.token} tokenValid={props.tokenValid} />
+  </AuthShell>
+);
+
+export const VerifyEmailAuthPage = ({ verified }: { verified: boolean }) => (
+  <AuthShell
+    heading={verified ? 'Email Verified' : 'Verification Link Invalid'}
+  >
+    <Stack gap={5} textAlign="center">
+      <Text color="gray.700" role={verified ? 'status' : 'alert'}>
+        {verified
+          ? 'Your email is verified. You can now log in to TvSync.'
+          : 'This verification link is invalid, expired, or has already been used.'}
+      </Text>
+      <Box
+        _hover={{ textDecoration: 'underline' }}
+        asChild
+        color="teal.700"
+        fontWeight="600"
+      >
+        <Link href={verified ? '/login' : '/login?verification=required'}>
+          {verified
+            ? 'Continue to Login'
+            : 'Return to Login to request a new link'}
         </Link>
       </Box>
-      <Stack
-        background="white"
-        borderRadius="xl"
-        color="black"
-        gap={6}
-        padding={{ base: 6, sm: 8 }}
-      >
-        <Stack gap={2} textAlign="center">
-          <Text fontSize="xl" fontWeight="700">
-            TvSync
-          </Text>
-          <Heading as="h1" fontSize={{ base: '2xl', sm: '3xl' }}>
-            {register ? 'Create an Account' : 'Login'}
-          </Heading>
-          <Text color="gray.600">
-            Continue securely with your Google account.
-          </Text>
-        </Stack>
-        {errorMessage ? (
-          <Box
-            aria-live="assertive"
-            borderColor="red.500"
-            borderRadius="md"
-            borderWidth="1px"
-            color="red.700"
-            padding={4}
-            role="alert"
-          >
-            {errorMessage}
-          </Box>
-        ) : null}
-        {googleEnabled ? null : (
-          <Box
-            aria-live="polite"
-            borderColor="orange.500"
-            borderRadius="md"
-            borderWidth="1px"
-            color="orange.700"
-            padding={4}
-            role="status"
-          >
-            Google sign-in is temporarily unavailable.
-          </Box>
-        )}
-        <OAuthButtons callbackUrl={callbackUrl} googleEnabled={googleEnabled} />
-        <Text textAlign="center">
-          <Link href={register ? '/login' : '/register'}>
-            {register
-              ? 'Already registered? Log in'
-              : 'New user? Create an account'}
-          </Link>
-        </Text>
-      </Stack>
     </Stack>
-  );
-};
+  </AuthShell>
+);

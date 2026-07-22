@@ -15,6 +15,10 @@ declare global {
 }
 
 declare module 'next-auth' {
+  interface User {
+    sessionVersion?: number;
+  }
+
   interface Session {
     user?: DefaultSession['user'] & {
       id: string;

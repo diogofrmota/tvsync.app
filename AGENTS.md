@@ -13,7 +13,7 @@ Guidance for AI agents and contributors working in this repository.
 - External API: TMDB.
 - Deployment target: Vercel free tier.
 - Database: Neon Postgres through Vercel Marketplace.
-- Auth: Auth.js/NextAuth with Google OAuth login/register.
+- Auth: Auth.js/NextAuth with verified email/password credentials and Google OAuth.
 
 ## Working Rules
 
@@ -28,7 +28,8 @@ Guidance for AI agents and contributors working in this repository.
 - Use `DATABASE_URL` for pooled Neon runtime access. Use `DATABASE_URL_UNPOOLED` for migration tooling and direct `psql` schema application.
 - Do not add database tables until persistence work is explicitly started.
 - Keep personal tracking queries behind `src/lib/services/database/tracking.server.ts` or another server-only database helper that verifies the authenticated user id before reading or mutating private rows.
-- Login and register pages are intentionally implemented with Google OAuth only. Do not add email/password or reset-password flows until password hashing, email delivery, and database contracts are explicitly designed.
+- Keep email/password authentication on the established credentials account model: bcrypt hashes only, verified-email gating, digest-only one-time verification/reset tokens, database-backed throttling, and session-version revocation after password reset.
+- Keep Google identity linked through `auth_accounts` using Google's stable provider account id. Only link by email after Google supplies a verified-email claim; reject conflicting provider mappings.
 - Do not use object storage for user avatars. Generate profile avatar UI from text data such as initials, display name, color preference, or a small JSON appearance object.
 - Keep current-user profile editing in `src/lib/pages/profile` with mutations flowing through server-only actions/helpers and database uniqueness checks.
 - Keep shared app domain contracts in `src/lib/types`.
@@ -58,6 +59,7 @@ Guidance for AI agents and contributors working in this repository.
 Run these before handing off changes:
 
 ```bash
+pnpm test
 pnpm lint
 pnpm type:check
 pnpm build
@@ -72,6 +74,8 @@ Confirm avatar handling remains storage-free: generated initials/text-based avat
 ## Database Notes
 
 The initial tracking schema is in `database/migrations/0001_initial_tracking_schema.sql` and creates `profiles`, `user_media`, `episode_progress`, `ratings`, `reviews`, and `watchlist_items`.
+
+The authentication lifecycle schema is in `database/migrations/0005_auth_lifecycle.sql`. It adds provider mappings, verified-email/session-version state, one-time verification/reset token digests, and persistent authentication rate-limit counters.
 
 - Apply migrations with `DATABASE_URL_UNPOOLED`; use pooled `DATABASE_URL` only for runtime app queries.
 - Duplicate user/media records are guarded by database unique constraints.
@@ -104,6 +108,7 @@ Required:
 - `TMDB_API_KEY`
 - `DATABASE_URL` before using Neon-backed features.
 - `AUTH_SECRET` before production auth sessions are enabled.
+- `RESEND_API_KEY` and `AUTH_EMAIL_FROM` before credential registration, verification, or password-reset email delivery is enabled.
 
 Optional:
 
@@ -114,12 +119,13 @@ Optional:
 - `NEXT_PUBLIC_SITE_URL`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
+- `AUTH_EMAIL_REPLY_TO`
 - `NEXT_PUBLIC_UMAMI_WEBSITE_ID`
 - `NEXT_PUBLIC_UMAMI_SRC`
 
 `TMDB_API_KEY` is required at build time because some App Router pages prerender TMDB-backed content.
 
-Google OAuth is the active auth option. Apple OAuth is a prepared future UI affordance only, and email/password plus reset-password flows are intentionally absent until the auth layer supports them.
+Verified email/password credentials and Google OAuth are the active authentication options. Google users with a verified Google email bypass separate TvSync verification. Apple OAuth is not exposed.
 
 ## TMDB Service Notes
 
