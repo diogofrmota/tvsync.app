@@ -55,6 +55,9 @@ type ProxyPathValidator = (
 const proxyPathValidators: Record<string, ProxyPathValidator> = {
   discover: (idOrSection, nestedResource) =>
     (idOrSection === 'movie' || idOrSection === 'tv') && !nestedResource,
+  genre: (idOrSection, nestedResource) =>
+    (idOrSection === 'movie' || idOrSection === 'tv') &&
+    nestedResource === 'list',
   movie: (idOrSection, nestedResource) => {
     if (movieListSections.has(idOrSection ?? '')) {
       return !nestedResource;

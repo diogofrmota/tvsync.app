@@ -116,11 +116,11 @@ const makeItem = (
 };
 
 test('TV Shows page has the exact required section names, order, and navigation targets', async () => {
-  const [page, route, poster, search] = await Promise.all([
+  const [page, route, poster, searchState] = await Promise.all([
     read('src/lib/pages/tv-shows/index.tsx'),
     read('src/app/tv-shows/page.tsx'),
     read('src/lib/components/shared/PosterCard.tsx'),
-    read('src/lib/pages/search/multi/index.tsx'),
+    read('src/lib/pages/search/search-state.ts'),
   ]);
 
   assertInOrder(page, [
@@ -135,7 +135,7 @@ test('TV Shows page has the exact required section names, order, and navigation 
   );
   assert.match(page, /const discoverTvShowsHref = '\/search\?type=tv'/);
   assert.match(page, /href=\{discoverTvShowsHref\}/);
-  assert.match(search, /value === MediaType\.Tv \? MediaType\.Tv/);
+  assert.match(searchState, /value === MediaType\.Tv \? MediaType\.Tv/);
   assert.match(poster, /tv: '\/tv\/show'/);
   assert.match(poster, /href=\{href\}/);
   assert.match(route, /redirect\('\/login\?callbackUrl=\/tv-shows'/);

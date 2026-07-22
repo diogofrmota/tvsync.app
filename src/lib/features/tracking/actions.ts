@@ -120,6 +120,7 @@ const revalidateMediaPaths = (
   tmdbId: number,
   mediaType: TrackableMediaType
 ) => {
+  revalidatePath('/search');
   revalidatePath('/watchlist');
   revalidatePath(mediaType === MediaType.Movie ? '/movies' : '/tv-shows');
 

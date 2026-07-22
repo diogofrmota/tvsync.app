@@ -66,6 +66,7 @@ export const addToWatchlist = async (
   }
 
   await addOwnLibraryItem(input);
+  revalidatePath('/search');
   revalidatePath('/watchlist');
   revalidatePath(input.mediaType === MediaType.Movie ? '/movies' : '/tv-shows');
 
@@ -84,6 +85,7 @@ export const removeFromWatchlist = async (
   }
 
   await removeOwnLibraryItem(input.tmdbId, input.mediaType);
+  revalidatePath('/search');
   revalidatePath('/watchlist');
   revalidatePath(input.mediaType === MediaType.Movie ? '/movies' : '/tv-shows');
 

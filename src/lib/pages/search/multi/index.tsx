@@ -8,6 +8,7 @@ import {
   Input,
   NativeSelect,
   Stack,
+  Text,
 } from '@chakra-ui/react';
 import PageNavButtons, {
   type PageNavButtonProps,
@@ -15,149 +16,142 @@ import PageNavButtons, {
 import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
 import PosterCard from 'lib/components/shared/PosterCard';
 import { SectionLoading, StatePanel } from 'lib/components/shared/Section';
-import { WatchlistStateButton } from 'lib/features/watchlist';
-import { useMovieList } from 'lib/services/tmdb/movie/list/index.client';
-import type { MovieListItemType } from 'lib/services/tmdb/movie/list/types';
 import {
-  useTVShowByList,
-  useTVShowSearchResultList,
-} from 'lib/services/tmdb/tv/list/index.client';
-import type { TVShowItem } from 'lib/services/tmdb/tv/list/types';
-import { MediaType } from 'lib/types';
+  getSearchStatusLabel,
+  SearchLibraryAction,
+} from 'lib/features/library/search-library-action';
+import type { SearchLibraryItem } from 'lib/pages/search/search-state';
+import {
+  getSearchGenre,
+  getSearchMediaType,
+  getSearchPage,
+  getSearchSort,
+  SEARCH_RESULTS_PER_PAGE,
+} from 'lib/pages/search/search-state';
+import { useSearchResults } from 'lib/pages/search/use-search-results';
+import { useGenreList } from 'lib/services/tmdb/genre/index.client';
+import { MediaType, type WatchStatus } from 'lib/types';
 import type { Route } from 'next';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  type FormEvent,
+  type KeyboardEvent,
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 
-type SearchMediaType = MediaType.Movie | MediaType.Tv;
-type SearchItem = {
-  date: string;
-  id: number;
-  mediaType: SearchMediaType;
-  popularity: number;
-  posterPath: string | null;
-  rating: number;
-  title: string;
+const getLibraryKey = (
+  mediaType: MediaType.Movie | MediaType.Tv,
+  tmdbId: number
+) => `${mediaType}:${tmdbId}`;
+
+const searchTabs = [
+  { id: 'search-tab-movies', label: 'Movies', value: MediaType.Movie },
+  { id: 'search-tab-tv', label: 'TV Shows', value: MediaType.Tv },
+] as const;
+
+type MultiSearchPageProps = {
+  initialLibraryItems: Array<SearchLibraryItem>;
 };
-type SortKey = 'popularity' | 'rating' | 'release';
 
-const getPage = (value: string | null) => {
-  const page = Number(value);
-  return Number.isFinite(page) && page > 0 ? page : 1;
-};
-const getMediaType = (value: string | null): SearchMediaType =>
-  value === MediaType.Tv ? MediaType.Tv : MediaType.Movie;
-const mapMovie = (item: MovieListItemType): SearchItem => ({
-  date: item.release_date,
-  id: item.id,
-  mediaType: MediaType.Movie,
-  popularity: item.popularity,
-  posterPath: item.poster_path,
-  rating: item.vote_average,
-  title: item.title,
-});
-const mapTV = (item: TVShowItem): SearchItem => ({
-  date: item.first_air_date,
-  id: item.id,
-  mediaType: MediaType.Tv,
-  popularity: item.popularity,
-  posterPath: item.poster_path,
-  rating: item.vote_average,
-  title: item.name,
-});
-
-export const MultiSearchPage = () => {
+export const MultiSearchPage = ({
+  initialLibraryItems,
+}: MultiSearchPageProps) => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const page = getPage(searchParams.get('page'));
-  const query = searchParams.get('query') ?? '';
-  const mediaType = getMediaType(searchParams.get('type'));
+  const page = getSearchPage(searchParams.get('page'));
+  const query = (searchParams.get('query') ?? '').trim();
+  const genre = getSearchGenre(searchParams.get('genre'));
+  const mediaType = getSearchMediaType(searchParams.get('type'));
+  const sort = getSearchSort(searchParams.get('sort'));
   const [inputValue, setInputValue] = useState(query);
-  const [sort, setSort] = useState<SortKey>('popularity');
+  const [libraryStatuses, setLibraryStatuses] = useState<
+    Record<string, WatchStatus>
+  >(() =>
+    Object.fromEntries(
+      initialLibraryItems.map((item) => [
+        getLibraryKey(item.mediaType, item.tmdbId),
+        item.status,
+      ])
+    )
+  );
 
   useEffect(() => setInputValue(query), [query]);
-  useEffect(() => {
-    const trimmed = inputValue.trim();
-    if (trimmed === query) {
-      return;
-    }
-    const timer = window.setTimeout(() => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (trimmed) {
-        params.set('query', trimmed);
-      } else {
-        params.delete('query');
-      }
-      params.set('page', '1');
-      router.push(`${pathname}?${params}` as Route);
-    }, 500);
-    return () => window.clearTimeout(timer);
-  }, [inputValue, pathname, query, router, searchParams]);
 
-  const movie = useMovieList(
-    'popular',
-    { page, query },
-    undefined,
-    mediaType === MediaType.Movie
-  );
-  const tvBrowse = useTVShowByList({
-    isReady: mediaType === MediaType.Tv && !query,
-    listType: 'popular',
-    params: { page },
-  });
-  const tvSearch = useTVShowSearchResultList(
-    { page, query },
-    mediaType === MediaType.Tv && Boolean(query)
-  );
-  let isLoading = movie.isLoading;
-  let isError = movie.isError;
-  let totalPages = movie.data?.total_pages ?? 0;
-  if (mediaType === MediaType.Tv && query) {
-    isLoading = tvSearch.isLoading;
-    isError = tvSearch.isError;
-    totalPages = tvSearch.data?.total_pages ?? 0;
-  } else if (mediaType === MediaType.Tv) {
-    isLoading = tvBrowse.isLoading;
-    isError = tvBrowse.isError;
-    totalPages = tvBrowse.data?.total_pages ?? 0;
-  }
-  const rawItems =
-    mediaType === MediaType.Movie
-      ? (movie.data?.results ?? []).map(mapMovie)
-      : ((query ? tvSearch.data?.results : tvBrowse.data?.results) ?? []).map(
-          mapTV
-        );
-  const items = useMemo(
-    () =>
-      rawItems
-        .toSorted((left, right) => {
-          if (sort === 'rating') {
-            return right.rating - left.rating;
-          }
-          if (sort === 'release') {
-            return (right.date || '').localeCompare(left.date || '');
-          }
-          return right.popularity - left.popularity;
-        })
-        .slice(0, 27),
-    [rawItems, sort]
-  );
   const changeParams = useCallback(
-    (updates: Record<string, string>) => {
+    (
+      updates: Record<string, string | null>,
+      navigation: 'push' | 'replace' = 'push'
+    ) => {
       const params = new URLSearchParams(searchParams.toString());
+
       for (const [key, value] of Object.entries(updates)) {
-        params.set(key, value);
+        if (value) {
+          params.set(key, value);
+        } else {
+          params.delete(key);
+        }
       }
-      router.push(`${pathname}?${params}` as Route);
+
+      const href = `${pathname}?${params.toString()}` as Route;
+      router[navigation](href);
     },
     [pathname, router, searchParams]
   );
+
+  const genreList = useGenreList(mediaType);
+  const { isError, isLoading, items, retry, totalPages } = useSearchResults({
+    genre,
+    mediaType,
+    page,
+    query,
+    sort,
+  });
+
+  useEffect(() => {
+    if (!(isLoading || isError) && totalPages > 0 && page > totalPages) {
+      changeParams({ page: String(totalPages) }, 'replace');
+    }
+  }, [changeParams, isError, isLoading, page, totalPages]);
+
+  const submitSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    changeParams({ page: '1', query: inputValue.trim() || null });
+  };
+
+  const selectTab = (nextMediaType: MediaType.Movie | MediaType.Tv) => {
+    changeParams({ genre: null, page: '1', type: nextMediaType });
+  };
+
+  const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+      return;
+    }
+
+    event.preventDefault();
+    const selectMovies =
+      event.key === 'Home' ||
+      (event.key === 'ArrowLeft' && mediaType === MediaType.Tv) ||
+      (event.key === 'ArrowRight' && mediaType === MediaType.Tv);
+    const nextMediaType = selectMovies ? MediaType.Movie : MediaType.Tv;
+    selectTab(nextMediaType);
+    document
+      .getElementById(
+        nextMediaType === MediaType.Movie
+          ? 'search-tab-movies'
+          : 'search-tab-tv'
+      )
+      ?.focus();
+  };
+
   const navProps: PageNavButtonProps = {
     isLoading,
     page,
     totalPages,
     onClickNext: () =>
-      changeParams({ page: String(Math.min(page + 1, totalPages || 1)) }),
+      changeParams({ page: String(Math.min(page + 1, totalPages)) }),
     onClickPrev: () => changeParams({ page: String(Math.max(page - 1, 1)) }),
   };
 
@@ -165,115 +159,193 @@ export const MultiSearchPage = () => {
     if (isError) {
       return (
         <StatePanel
-          message="Search is unavailable right now. Please try again shortly."
+          action={
+            <Button onClick={retry} size="sm" variant="outline">
+              Try again
+            </Button>
+          }
+          message="Search is unavailable right now. Your filters have been preserved."
           title="Unable to load results"
           tone="error"
         />
       );
     }
     if (isLoading) {
-      return <SectionLoading />;
+      return (
+        <Stack aria-label={`Loading page ${page}`} role="status">
+          <SectionLoading count={SEARCH_RESULTS_PER_PAGE} />
+        </Stack>
+      );
     }
     if (items.length === 0) {
       return (
         <StatePanel
-          message="Try another title or change the selected content type."
+          message="Try another title or change the selected genre or sort order."
           title="No titles found"
         />
       );
     }
+
     return (
       <>
+        <Text aria-live="polite" color="gray.500" fontSize="sm" role="status">
+          Showing {items.length}{' '}
+          {mediaType === MediaType.Movie ? 'movies' : 'TV shows'} on page {page}
+          .
+        </Text>
         <Grid
           columnGap={{ base: 3, md: 5 }}
           rowGap={{ base: 7, md: 9 }}
           templateColumns={{
             base: 'repeat(3, minmax(0, 1fr))',
-            md: 'repeat(6, minmax(0, 1fr))',
-            xl: 'repeat(9, minmax(0, 1fr))',
+            md: 'repeat(auto-fill, minmax(8.5rem, 1fr))',
           }}
         >
-          {items.map((item) => (
-            <PosterCard
-              actions={
-                <WatchlistStateButton
-                  mediaType={item.mediaType}
-                  mode="add-only"
-                  size="xs"
-                  tmdbId={item.id}
-                />
-              }
-              id={item.id}
-              imageUrl={item.posterPath}
-              key={`${item.mediaType}-${item.id}`}
-              layout="grid"
-              mediaType={item.mediaType}
-              name={item.title}
-              prefetch={false}
-            />
-          ))}
+          {items.map((item) => {
+            const libraryKey = getLibraryKey(item.mediaType, item.id);
+            const status = libraryStatuses[libraryKey] ?? null;
+
+            return (
+              <PosterCard
+                actions={
+                  <SearchLibraryAction
+                    mediaType={item.mediaType}
+                    onStatusChange={(nextStatus) =>
+                      setLibraryStatuses((current) => ({
+                        ...current,
+                        [libraryKey]: nextStatus,
+                      }))
+                    }
+                    status={status}
+                    title={item.title}
+                    tmdbId={item.id}
+                  />
+                }
+                id={item.id}
+                imageUrl={item.posterPath}
+                key={libraryKey}
+                layout="grid"
+                mediaType={item.mediaType}
+                name={item.title}
+                prefetch={false}
+                status={getSearchStatusLabel(status)}
+              />
+            );
+          })}
         </Grid>
         <PageNavButtons {...navProps} />
       </>
     );
   };
 
+  const activeTabId =
+    mediaType === MediaType.Movie ? 'search-tab-movies' : 'search-tab-tv';
+
   return (
     <PageShell>
       <PageHeading
-        subtitle="Find movies and TV shows, then add them to your library."
+        subtitle="Browse and search one content type at a time, then add titles to your library."
         title="Search"
       />
-      <Stack gap={4}>
-        <HStack aria-label="Content type" as="div" gap={2} role="tablist">
-          {[
-            { label: 'Movies', value: MediaType.Movie },
-            { label: 'TV Shows', value: MediaType.Tv },
-          ].map((tab) => (
+      <Stack gap={5}>
+        <HStack aria-label="Content type" gap={2} role="tablist">
+          {searchTabs.map((tab) => (
             <Button
+              aria-controls="search-results-panel"
               aria-selected={mediaType === tab.value}
+              id={tab.id}
               key={tab.value}
-              onClick={() => changeParams({ type: tab.value, page: '1' })}
+              onClick={() => selectTab(tab.value)}
+              onKeyDown={handleTabKeyDown}
               role="tab"
               size="sm"
+              tabIndex={mediaType === tab.value ? 0 : -1}
               variant={mediaType === tab.value ? 'solid' : 'outline'}
             >
               {tab.label}
             </Button>
           ))}
         </HStack>
-        <Grid
-          gap={4}
-          templateColumns={{ base: '1fr', md: 'minmax(0, 1fr) 14rem' }}
-        >
-          <Field.Root>
-            <Field.Label>Search by title</Field.Label>
-            <Input
-              onChange={(event) => setInputValue(event.target.value)}
-              placeholder={
-                mediaType === MediaType.Movie ? 'Movie title' : 'TV show title'
-              }
-              type="search"
-              value={inputValue}
-            />
-          </Field.Root>
-          <Field.Root>
-            <Field.Label>Sort results</Field.Label>
-            <NativeSelect.Root>
-              <NativeSelect.Field
-                onChange={(event) => setSort(event.target.value as SortKey)}
-                value={sort}
-              >
-                <option value="popularity">Popularity</option>
-                <option value="rating">Rating</option>
-                <option value="release">Release date</option>
-              </NativeSelect.Field>
-              <NativeSelect.Indicator />
-            </NativeSelect.Root>
-          </Field.Root>
-        </Grid>
+        <form onSubmit={submitSearch}>
+          <Stack gap={4}>
+            <Field.Root>
+              <Field.Label>Search by title</Field.Label>
+              <HStack align="stretch">
+                <Input
+                  onChange={(event) => setInputValue(event.target.value)}
+                  placeholder={
+                    mediaType === MediaType.Movie
+                      ? 'Enter a movie title'
+                      : 'Enter a TV show title'
+                  }
+                  type="search"
+                  value={inputValue}
+                />
+                <Button type="submit">Search</Button>
+              </HStack>
+            </Field.Root>
+            <Grid gap={4} templateColumns={{ base: '1fr', md: '1fr 1fr' }}>
+              <Field.Root disabled={genreList.isLoading}>
+                <Field.Label>Filter by genre</Field.Label>
+                <NativeSelect.Root>
+                  <NativeSelect.Field
+                    onChange={(event) =>
+                      changeParams({
+                        genre: event.target.value || null,
+                        page: '1',
+                      })
+                    }
+                    value={genre}
+                  >
+                    <option value="">All genres</option>
+                    {(genreList.data?.genres ?? []).map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </NativeSelect.Field>
+                  <NativeSelect.Indicator />
+                </NativeSelect.Root>
+                {genreList.isError ? (
+                  <Text color="red.500" fontSize="xs" role="alert">
+                    Genres are unavailable. You can still browse all genres.
+                  </Text>
+                ) : null}
+              </Field.Root>
+              <Field.Root>
+                <Field.Label>Sort results</Field.Label>
+                <NativeSelect.Root>
+                  <NativeSelect.Field
+                    onChange={(event) =>
+                      changeParams({ page: '1', sort: event.target.value })
+                    }
+                    value={sort}
+                  >
+                    <option value="popularity">Popularity</option>
+                    <option value="rating">Rating</option>
+                    <option value="release">Release date</option>
+                  </NativeSelect.Field>
+                  <NativeSelect.Indicator />
+                </NativeSelect.Root>
+              </Field.Root>
+            </Grid>
+            {query ? (
+              <Text color="gray.500" fontSize="xs">
+                TMDB returns title searches by relevance. Genre and sorting
+                apply to the results loaded on this page.
+              </Text>
+            ) : null}
+          </Stack>
+        </form>
       </Stack>
-      {renderResults()}
+      <Stack
+        aria-labelledby={activeTabId}
+        gap={5}
+        id="search-results-panel"
+        role="tabpanel"
+      >
+        {renderResults()}
+      </Stack>
     </PageShell>
   );
 };

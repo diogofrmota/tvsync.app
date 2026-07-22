@@ -6,6 +6,19 @@ Authority: [`UX.md`](UX.md) is the authoritative product and user-experience spe
 
 Scope: the original repository-wide audit is retained below as a baseline. The implementation updates in this section supersede baseline rows for shared shells, navigation, footer, poster cards, shared states, Home, Home tests, Search presentation, responsive grids, authentication requirements 1.3 through 1.6, the authenticated Movies library in section 2.1, and the authenticated TV Shows library in section 2.2.
 
+## Search implementation update
+
+Implementation date: 2026-07-22
+
+| Area | Current status | Implementation and verification |
+| --- | --- | --- |
+| Access and URL state | **Complete** | `/search` remains authenticated and now preserves `type`, `query`, `genre`, `sort`, and `page` in the login callback. The page exposes exactly **Movies / TV Shows** tabs, defaults safely to Movies, honors both Discover entry links, uses router history for committed control changes, and resets or clamps pagination when result-defining state changes. |
+| Provider queries and caching | **Complete** | Termless browsing uses the type-correct TMDB discover endpoint with provider-side `with_genres` and `sort_by`; submitted titles use TMDB's movie/TV search endpoints. Because TMDB Search does not support discover sorting or genre parameters, a visible scope note accurately states that those controls apply to the title results loaded on the current page. Requests remain behind `/api/tmdb`, use SWR endpoint/parameter keys to isolate stale responses, retain the existing one-day proxy cache, and make at most three result requests for a 27-item application page plus one cached genre request. |
+| Controls and result scoping | **Complete** | Search contains only the required title submit, genre selector, and sort selector for **Popularity / Rating / Release date**. Movie release sorting maps to `primary_release_date.desc`; TV release sorting maps to `first_air_date.desc`; ratings are treated as TMDB ratings and are never labelled IMDb. Movie and TV responses are never mixed. |
+| Result grid and pagination | **Complete** | TMDB's 20-item pages are deterministically merged, de-duplicated, and sliced into application pages of no more than 27 items. Pagination plans cover source-page boundaries without gaps, cap at TMDB's 500-page limit, and safely replace out-of-range page state. Results use three columns at the mobile base breakpoint and `auto-fill` width-based columns on desktop. Shared poster cards retain nullable-poster and untitled fallbacks plus type-correct detail routes. |
+| Library actions and statuses | **Complete** | The authenticated route loads the user's complete library state in one owner-scoped Neon query and passes it to the client, removing the former per-card status requests. Unsaved titles expose a duplicate-safe **Add to library** action that defaults to Planned. Saved titles show their current badge and a type-correct selector: the two movie statuses or the five supported TV statuses. Mutations provide pending, success, error, and rollback behavior; the database unique key and conflict-safe insert prevent duplicates. |
+| Search states and tests | **Complete** | Browsing starts immediately without a term. The page has 27-card initial/page loading, empty, provider-error with retry, genre-error, live result-count, and per-item mutation feedback states. `tests/search-ux.test.ts` covers tabs/scoping, submitted and termless queries, genres, all three sorts, the 27-item cap, pagination boundaries, reset/clamp behavior, responsive grids, poster routes/fallbacks, quick add/statuses, duplicate prevention, SWR stale-key isolation, and empty/error/loading states. |
+
 ## Shared UX foundation implementation update
 
 Implementation date: 2026-07-22
@@ -302,19 +315,19 @@ No `middleware.ts`, `proxy.ts`, nested route layout, route-specific `loading.tsx
 
 | ID | Requirement | Status | Current evidence | Expected implementation / blockers |
 | --- | --- | --- | --- | --- |
-| 2.3.1 | Tabs are Movies and TV Shows; selected tab defines searched type. | **Conflicting** | Buttons are All, Movies, TV Shows; no tab semantics. | Remove All, implement accessible tablist/tab/panel behavior, and bind `type=movie\|tv` in the URL. |
-| 2.3.2 | Search by title. | **Complete** | Debounced query and media-specific endpoints work. | Also support explicit submit per UX; decide whether debounce remains as enhancement. |
-| 2.3.3 | Filter by genre. | **Missing** | Static genre names display on cards, but there is no genre control. | Add provider-backed genre configuration/control and `with_genres`; reset page on change. |
-| 2.3.4 | Sort by popularity, rating, and release date. | **Missing** | No sort controls. | Use discover endpoints and type-correct sort values; title search endpoint cannot honor all discover sorting, so define query+filter behavior. |
-| 2.3.5 | Results update on submit or filter change. | **Partially complete** | Query/filter buttons update the URL and fetch; required filters and a submit flow are absent. | Centralize URL state and loading announcements. |
-| 2.3.6 | Browse without a search term. | **Missing** | Empty query renders “Search ... to begin” and makes no request. | Default each tab to a discover/popularity listing. |
-| 2.3.7 | Desktop responsive grid; mobile 3 columns. | **Conflicting** | Results are a one-column stack of horizontal cards at every size. | Create shared poster/status/quick-action grid, base 3 columns, responsive width-based desktop columns. |
-| 2.3.8 | Display up to 27 initially. | **Missing** | TMDB returns its default page (normally 20); there is no 27-item aggregation/limit. | Fetch/merge enough pages or explicitly choose a provider/page strategy; deduplicate and cap at 27. |
-| 2.3.9 | Pagination. | **Complete** | Shared previous/next page control and URL page state exist. | Clamp provider page counts and test tab/filter resets. |
-| 2.3.10 | Poster opens detail. | **Complete** | Result image/title links are correct. | Retain in grid. |
-| 2.3.11 | Quick add-to-watchlist/library action. | **Partially complete** | Add-only watchlist button exists and redirects signed-out users. | Rename/rework as Add to Library with status selection; batch current-state lookup. |
-| 2.3.12 | Existing items show current library status. | **Missing** | Button only shows **In Watchlist**; it does not show Planned/Watching/Finished. | Load all current-user library statuses once and decorate results without N server-action calls. |
-| 2.3.13 | Empty, loading, and error states. | **Partially complete** | Instruction, skeleton, no-results, and TMDB error states exist. | Add browse initial state, filter-specific empty text, retry, page-change live status, and state-preserving errors. |
+| 2.3.1 | Tabs are Movies and TV Shows; selected tab defines searched type. | **Complete** | Exactly two accessible tabs bind `type=movie\|tv` to URL state and never mix response types. | Contract-tested with both Discover entry links. |
+| 2.3.2 | Search by title. | **Complete** | The labelled title form commits on submit and uses TMDB's type-specific Search endpoint. | Input follows URL state on Back/Forward. |
+| 2.3.3 | Filter by genre. | **Complete** | Type-specific genres load from TMDB; browse queries use provider-side `with_genres`, while title-result page filtering is transparently scoped. | Genre changes reset page one. |
+| 2.3.4 | Sort by popularity, rating, and release date. | **Complete** | Browse mode uses provider-wide type-correct discover sorts. Title searches transparently sort the loaded result page because TMDB Search has no sort parameter. | No provider rating is labelled IMDb. |
+| 2.3.5 | Results update on submit or filter change. | **Complete** | Submit, genre, sort, and tab changes commit URL state, reset page one, and update the active SWR key or local title-result projection. | Loading and result-count changes are announced. |
+| 2.3.6 | Browse without a search term. | **Complete** | Both tabs immediately load popularity-sorted Discover results without requiring a term. | Initial state is useful browsing content. |
+| 2.3.7 | Desktop responsive grid; mobile 3 columns. | **Complete** | Base uses exactly three columns; desktop uses available-width `auto-fill` columns. | Covered by the Search contract suite. |
+| 2.3.8 | Display up to 27 initially. | **Complete** | Two or three cached TMDB source pages are merged, de-duplicated, and sliced to 27. | The same stable boundary is used for later application pages. |
+| 2.3.9 | Pagination. | **Complete** | Previous/next controls use gap-free 27-item page plans, reset on defining changes, clamp invalid input, and replace pages beyond provider totals. | Boundary math is unit-tested. |
+| 2.3.10 | Poster opens detail. | **Complete** | Shared cards route movies to `/movie/[id]` and TV shows to `/tv/show/[id]`. | Nullable posters and titles retain fallbacks. |
+| 2.3.11 | Quick add-to-watchlist/library action. | **Complete** | Every unsaved result exposes **Add to library**; saved results expose a type-correct status selector. | Conflict-safe persistence prevents duplicate membership. |
+| 2.3.12 | Existing items show current library status. | **Complete** | One server-side owner-scoped query seeds all current status badges and selectors without per-card reads. | Movie and TV status sets remain distinct. |
+| 2.3.13 | Empty, loading, and error states. | **Complete** | Browse, initial/page loading, no-results, provider error/retry, genre error, live count, and mutation success/error states are present. | Filters remain intact across retry and error states. |
 
 #### 2.4 Profile
 

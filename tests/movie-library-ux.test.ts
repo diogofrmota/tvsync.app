@@ -75,11 +75,11 @@ const insertProfile = async (
 };
 
 test('Movies page has only the required ordered library sections and navigation targets', async () => {
-  const [page, header, poster, search] = await Promise.all([
+  const [page, header, poster, searchState] = await Promise.all([
     read('src/lib/pages/movies/index.tsx'),
     read('src/lib/layout/Header.tsx'),
     read('src/lib/components/shared/PosterCard.tsx'),
-    read('src/lib/pages/search/multi/index.tsx'),
+    read('src/lib/pages/search/search-state.ts'),
   ]);
 
   assertInOrder(page, [
@@ -94,7 +94,7 @@ test('Movies page has only the required ordered library sections and navigation 
   assert.match(page, /href=\{discoverMoviesHref\}/);
   assert.match(page, /const discoverMoviesHref = '\/search\?type=movie'/);
   assert.match(
-    search,
+    searchState,
     /value === MediaType\.Tv \? MediaType\.Tv : MediaType\.Movie/
   );
   assert.match(poster, /movie: '\/movie'/);

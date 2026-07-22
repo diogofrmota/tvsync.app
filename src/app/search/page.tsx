@@ -1,3 +1,4 @@
+import { loadSearchLibraryState } from 'lib/pages/search/load-search-library-state.server';
 import { MultiSearchPage } from 'lib/pages/search/multi';
 import { authOptions } from 'lib/services/auth/index.server';
 import type { Metadata, Route } from 'next';
@@ -17,15 +18,39 @@ export const metadata: Metadata = {
   },
 };
 
-const SearchPage = async () => {
+type SearchPageProps = {
+  searchParams: Promise<Record<string, string | Array<string> | undefined>>;
+};
+
+const getCallbackUrl = (
+  searchParams: Record<string, string | Array<string> | undefined>
+) => {
+  const callbackParams = new URLSearchParams();
+
+  for (const key of ['type', 'query', 'genre', 'sort', 'page']) {
+    const rawValue = searchParams[key];
+    const value = Array.isArray(rawValue) ? rawValue[0] : rawValue;
+    if (value) {
+      callbackParams.set(key, value);
+    }
+  }
+
+  const queryString = callbackParams.toString();
+  return queryString ? `/search?${queryString}` : '/search';
+};
+
+const SearchPage = async ({ searchParams }: SearchPageProps) => {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
-    redirect('/login?callbackUrl=/search' as Route);
+    const callbackUrl = getCallbackUrl(await searchParams);
+    redirect(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}` as Route);
   }
+
+  const initialLibraryItems = await loadSearchLibraryState();
 
   return (
     <Suspense>
-      <MultiSearchPage />
+      <MultiSearchPage initialLibraryItems={initialLibraryItems} />
     </Suspense>
   );
 };
