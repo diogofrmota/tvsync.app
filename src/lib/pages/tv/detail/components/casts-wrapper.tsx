@@ -1,5 +1,5 @@
 import { Avatar, Flex, Grid, Heading, Skeleton, Text } from '@chakra-ui/react';
-import { IMAGE_URL } from 'lib/components/shared/PosterImage';
+import { IMAGE_URL } from 'lib/components/shared/tmdb-image-urls';
 import type { TVCreditsResponse } from 'lib/services/tmdb/tv/credits/types';
 import Link from 'next/link';
 
