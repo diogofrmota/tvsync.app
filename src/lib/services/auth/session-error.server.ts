@@ -16,7 +16,7 @@ export const getProfileAccessIssue = (
   if (message.includes('unauthorized')) {
     return {
       description:
-        'Your login session exists, but TVSync could not authorize private profile data for the current user. Sign out, clear TVSync cookies if needed, and sign in again.',
+        'Your login session exists, but TvSync could not authorize private profile data for the current user. Sign out, clear TvSync cookies if needed, and sign in again.',
       title: 'Profile access could not be authorized',
     };
   }
@@ -24,7 +24,7 @@ export const getProfileAccessIssue = (
   if (message.includes('forbidden')) {
     return {
       description:
-        'TVSync refused the profile request because the session user did not match the private profile owner. Sign out and back in before trying again.',
+        'TvSync refused the profile request because the session user did not match the private profile owner. Sign out and back in before trying again.',
       title: 'Profile access was forbidden',
     };
   }
@@ -55,7 +55,7 @@ export const getAuthSessionIssue = (error: unknown): AuthSessionIssue => {
   ) {
     return {
       description:
-        'The login cookie could not be decoded. This usually happens after AUTH_SECRET changes or when old cookies were created with a different secret. Sign out, clear TVSync cookies, and sign in again after Vercel has the correct AUTH_SECRET.',
+        'The login cookie could not be decoded. This usually happens after AUTH_SECRET changes or when old cookies were created with a different secret. Sign out, clear TvSync cookies, and sign in again after Vercel has the correct AUTH_SECRET.',
       title: 'Auth session cookie could not be decoded',
     };
   }

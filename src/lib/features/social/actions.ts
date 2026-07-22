@@ -6,11 +6,8 @@ import {
 } from 'lib/services/auth/security';
 import {
   addReviewComment,
-  createRecommendation,
   deleteOwnReviewComment,
-  dismissRecommendation,
   followPublicProfile,
-  listFollowedProfilesForRecommendations,
   setReviewLike,
   unfollowProfile,
 } from 'lib/services/database/social.server';
@@ -20,12 +17,6 @@ export type SocialActionState = {
   error?: string;
   isFollowing?: boolean;
   success?: string;
-};
-
-export type RecommendationRecipient = {
-  displayName: string;
-  userId: string;
-  username: string;
 };
 
 const isPositiveInteger = (value: number) =>
@@ -152,67 +143,5 @@ export const deleteReviewCommentAction = async (
     return { success: 'Comment deleted.' };
   } catch {
     return { error: 'Comment could not be deleted.' };
-  }
-};
-
-export const recommendMediaAction = async (
-  _previousState: SocialActionState,
-  formData: FormData
-): Promise<SocialActionState> => {
-  const receiverUserId = readTextField(formData, 'receiverUserId');
-  const mediaType = readTextField(formData, 'mediaType');
-  const tmdbId = Number(readTextField(formData, 'tmdbId'));
-  const note = readTextField(formData, 'note');
-
-  if (
-    !(
-      receiverUserId &&
-      isTrackableMediaType(mediaType) &&
-      isPositiveInteger(tmdbId) &&
-      note.length <= 500
-    )
-  ) {
-    return { error: 'Choose a followed user before recommending this title.' };
-  }
-
-  try {
-    await createRecommendation({
-      mediaType,
-      note,
-      receiverUserId,
-      tmdbId,
-    });
-
-    return { success: 'Recommendation sent.' };
-  } catch {
-    return { error: 'Recommendation could not be sent.' };
-  }
-};
-
-export const getRecommendationRecipients = async (): Promise<
-  Array<RecommendationRecipient>
-> => {
-  try {
-    const rows = await listFollowedProfilesForRecommendations();
-
-    return rows.map((row) => ({
-      displayName: row.display_name || row.username,
-      userId: row.user_id,
-      username: row.username,
-    }));
-  } catch {
-    return [];
-  }
-};
-
-export const dismissRecommendationAction = async (
-  recommendationId: string
-): Promise<SocialActionState> => {
-  try {
-    await dismissRecommendation(recommendationId);
-
-    return { success: 'Recommendation dismissed.' };
-  } catch {
-    return { error: 'Recommendation could not be dismissed.' };
   }
 };

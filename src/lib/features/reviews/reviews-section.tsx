@@ -92,7 +92,7 @@ export const ReviewsSection = ({
           {state.reviews.length > 0
             ? `${state.reviews.length} ${
                 state.reviews.length === 1 ? 'review' : 'reviews'
-              } from TVSync users.`
+              } from TvSync users.`
             : 'No reviews yet.'}
         </Text>
       </Grid>
@@ -171,7 +171,7 @@ export const ReviewsSection = ({
         </Grid>
       ) : (
         <Text color="gray.400">
-          Be the first TVSync user to leave a review.
+          Be the first TvSync user to leave a review.
         </Text>
       )}
     </Grid>

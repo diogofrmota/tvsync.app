@@ -13,7 +13,7 @@ export const MovieImagesPage = ({ movieId }: { movieId: number }) => {
   return (
     <Grid gridGap={[8, 16]} templateColumns="minmax(0,1fr)">
       <Button marginX={8} onClick={() => router.back()}>
-        back
+        Back
       </Button>
 
       <Heading marginX={8}>Images</Heading>

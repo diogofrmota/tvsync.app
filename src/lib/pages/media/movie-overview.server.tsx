@@ -105,13 +105,13 @@ const takeMovieItems = (
 
 export const getMovieSectionMetadata = (section: ListType): Metadata => {
   const title = sectionLabels[section] ?? 'Movies';
-  const description = `Browse ${title.toLowerCase()} from TMDB on TVSync.`;
+  const description = `Browse ${title.toLowerCase()} from TMDB on TvSync.`;
 
   return {
-    title: `${title} | TVSync`,
+    title: `${title} | TvSync`,
     description,
     openGraph: {
-      title: `${title} | TVSync`,
+      title: `${title} | TvSync`,
       description,
       url: `/movies/${section}`,
     },

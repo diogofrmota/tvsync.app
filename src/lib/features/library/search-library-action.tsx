@@ -1,15 +1,11 @@
 'use client';
 
 import { Button, Field, NativeSelect, Stack, Text } from '@chakra-ui/react';
+import { TV_LIBRARY_STATUSES } from 'lib/features/library/tv-library-state';
 import { setMediaWatchStatus } from 'lib/features/tracking/actions';
 import { addToWatchlist } from 'lib/features/watchlist/actions';
 import type { SearchMediaType } from 'lib/pages/search/search-state';
-import {
-  MediaType,
-  MOVIE_WATCH_STATUSES,
-  TV_WATCH_STATUSES,
-  WatchStatus,
-} from 'lib/types';
+import { MediaType, MOVIE_WATCH_STATUSES, WatchStatus } from 'lib/types';
 import { useState, useTransition } from 'react';
 
 type SearchLibraryActionProps = {
@@ -22,8 +18,8 @@ type SearchLibraryActionProps = {
 
 const statusLabels: Record<WatchStatus, string> = {
   [WatchStatus.Completed]: 'Finished',
-  [WatchStatus.Dropped]: 'Dropped',
-  [WatchStatus.Paused]: 'Paused',
+  [WatchStatus.Dropped]: 'Planned to Watch',
+  [WatchStatus.Paused]: 'Planned to Watch',
   [WatchStatus.Planned]: 'Planned to Watch',
   [WatchStatus.Watched]: 'Finished',
   [WatchStatus.Watching]: 'Watching',
@@ -45,7 +41,7 @@ export const SearchLibraryAction = ({
   }>();
   const [isPending, startTransition] = useTransition();
   const options =
-    mediaType === MediaType.Movie ? MOVIE_WATCH_STATUSES : TV_WATCH_STATUSES;
+    mediaType === MediaType.Movie ? MOVIE_WATCH_STATUSES : TV_LIBRARY_STATUSES;
 
   const addToLibrary = () => {
     setFeedback(undefined);

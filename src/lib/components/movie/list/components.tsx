@@ -35,10 +35,6 @@ export const MovieListPageNavButtons = ({
 
     const nextRoute = () => {
       switch (listMode) {
-        case 'section':
-          return `/movies/${section}?${currentSearchParams.toString()}` as const;
-        case 'search':
-          return `/movies/search?${currentSearchParams.toString()}` as const;
         case 'discover':
           return `/movies/genre/${genre}?${currentSearchParams.toString()}` as const;
         default:

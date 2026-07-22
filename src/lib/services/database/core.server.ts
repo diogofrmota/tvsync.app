@@ -91,7 +91,7 @@ export const getDatabaseAvailabilityIssue = (
   ) {
     return {
       description:
-        'TVSync could not connect to Neon with the configured DATABASE_URL. Check that Vercel has the pooled Neon runtime URL for the production environment.',
+        'TvSync could not connect to Neon with the configured DATABASE_URL. Check that Vercel has the pooled Neon runtime URL for the production environment.',
       title: 'Profile database connection failed',
     };
   }

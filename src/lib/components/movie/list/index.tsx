@@ -7,7 +7,6 @@ import {
 } from 'lib/components/movie/list/components';
 import type { MovieListModeKey } from 'lib/components/movie/list/types';
 import MoviesContainer from 'lib/components/movie/MoviesContainer';
-import SearchBox from 'lib/components/movie/SearchBox';
 import { useMovieList } from 'lib/services/tmdb/movie/list/index.client';
 import type {
   ListType,
@@ -32,7 +31,6 @@ export const MovieListContainer = ({
   const searchParams = useSearchParams();
 
   const qPage = searchParams.get('page');
-  const query = searchParams.get('query');
   const includeAdult = searchParams.get('include_adult') ?? undefined;
   const sortBy = searchParams.get('sort_by') ?? undefined;
   const voteAverageGte = searchParams.get('vote_average.gte') ?? undefined;
@@ -42,29 +40,12 @@ export const MovieListContainer = ({
   const page = qPage ? Number(qPage) : 1;
 
   const [totalPages, setTotalPages] = useState<number>(0);
-  const [shouldFetch, setShouldFetch] = useState<boolean>(false);
 
   const [queries, setQueries] = useState<MovieListParams>();
 
   useEffect(() => {
-    if (page || query || genre) {
+    if (page || genre) {
       switch (listMode) {
-        case 'section':
-          setQueries({
-            include_adult: includeAdult,
-            page,
-            sort_by: sortBy,
-            'vote_average.gte': voteAverageGte,
-            'vote_count.gte': voteCountGte,
-            with_genres: withGenres,
-          });
-          break;
-        case 'search':
-          setQueries({
-            page,
-            query: query as string,
-          });
-          break;
         case 'discover':
           setQueries({
             include_adult: includeAdult,
@@ -76,12 +57,19 @@ export const MovieListContainer = ({
           });
           break;
         default:
+          setQueries({
+            include_adult: includeAdult,
+            page,
+            sort_by: sortBy,
+            'vote_average.gte': voteAverageGte,
+            'vote_count.gte': voteCountGte,
+            with_genres: withGenres,
+          });
           break;
       }
     }
   }, [
     page,
-    query,
     genre,
     listMode,
     includeAdult,
@@ -112,9 +100,7 @@ export const MovieListContainer = ({
 
   const { data, isLoading } = useMovieList(
     listMode === 'section' ? section : undefined,
-    queries,
-    undefined,
-    listMode === 'search' ? shouldFetch : undefined
+    queries
   );
 
   useEffect(() => {
@@ -135,17 +121,6 @@ export const MovieListContainer = ({
     }
   }, [data]);
 
-  useEffect(() => {
-    if (
-      (listMode === 'search' && query) ||
-      (listMode === 'discover' && genre)
-    ) {
-      setShouldFetch(true);
-    } else {
-      setShouldFetch(false);
-    }
-  }, [listMode, query, genre]);
-
   const pageNavButtonProps: MovieListPageNavButtonProps = {
     isLoading,
     page,
@@ -155,14 +130,14 @@ export const MovieListContainer = ({
     genre,
   };
 
-  const renderMovieList = () => {
-    if (listMode === 'search' && !shouldFetch) {
-      return null;
-    }
+  return (
+    <Box mb={8} paddingX={8} w="full">
+      <Button borderRadius={24} onClick={() => router.push('/')} width="full">
+        Back
+      </Button>
 
-    return (
-      <>
-        {listMode !== 'search' && section && (
+      <Box marginY={8}>
+        {section && (
           <Heading
             as="h1"
             fontSize={{ base: '2xl', md: '4xl' }}
@@ -178,19 +153,7 @@ export const MovieListContainer = ({
           movies={filterMovies(data?.results)}
         />
         <MovieListPageNavButtons {...pageNavButtonProps} />
-      </>
-    );
-  };
-
-  return (
-    <Box mb={8} paddingX={8} w="full">
-      <Button borderRadius={24} onClick={() => router.push('/')} width="full">
-        back
-      </Button>
-
-      {listMode === 'search' && query && <SearchBox />}
-
-      <Box marginY={8}>{renderMovieList()}</Box>
+      </Box>
     </Box>
   );
 };
