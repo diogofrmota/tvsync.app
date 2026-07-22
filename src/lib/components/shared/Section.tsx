@@ -122,7 +122,7 @@ export const SectionLoading = ({ count = 9 }: { count?: number }) => (
     gridTemplateColumns={{
       base: 'repeat(3, minmax(0, 1fr))',
       md: 'repeat(6, minmax(0, 1fr))',
-      xl: 'repeat(9, minmax(0, 1fr))',
+      lg: 'repeat(9, minmax(0, 1fr))',
     }}
     role="status"
   >

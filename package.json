@@ -27,6 +27,7 @@
     "ultracite:fix": "ultracite fix --error-on-warnings",
     "biome:ci": "biome ci",
     "start": "next start",
+    "test": "node --test tests/home-ux.test.mjs",
     "type:check": "tsc --noEmit",
     "check:turbo": "pnpm turbo ultracite:check type:check",
     "up-interactive": "pnpm up -i",

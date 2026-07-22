@@ -4,7 +4,7 @@ Audit date: 2026-07-22
 
 Authority: [`UX.md`](UX.md) is the authoritative product and user-experience specification for this audit. Where the current application, [`AGENTS.md`](AGENTS.md), or [`README.md`](README.md) disagrees with it, this document records the disagreement as a conflict; it does not reinterpret `UX.md` to match the code.
 
-Scope: the original repository-wide audit is retained below as a baseline. The implementation update in this section supersedes baseline rows for shared shells, navigation, footer, poster cards, shared states, Home, Search presentation, and responsive grids.
+Scope: the original repository-wide audit is retained below as a baseline. The implementation update in this section supersedes baseline rows for shared shells, navigation, footer, poster cards, shared states, Home, Home tests, Search presentation, and responsive grids.
 
 ## Shared UX foundation implementation update
 
@@ -15,13 +15,13 @@ Implementation date: 2026-07-22
 | Public navigation | **Complete** | The primary header contains exactly **Home / Register / Login**, in that order. Active routes use `aria-current` plus a restrained underline. Public mobile uses the header and has no bottom navigation. |
 | Authenticated navigation | **Complete** | Desktop contains exactly **Movies / TV Shows / Search / Profile**. Authenticated mobile hides those header links and exposes the same ordered set in one fixed, safe-area-aware bottom navigation. Session loading no longer displays the signed-out links. |
 | Shared shells | **Complete for the shared foundation** | `PageShell` and `PageHeading` establish an 80rem wide shell, consistent 4/6/8 outer spacing, shared vertical rhythm, responsive headings, and a 48rem narrow legal/contact variant. Auth pages use a separate full-height black shell and centered white card. Detail, media overview, library, profile, public profile, Home, Search, legal, and contact surfaces consume the shared shell or its spacing rules. |
-| Public Home | **Complete for specified shared layout** | Signed-out copy and CTA match `UX.md`; quick search and the login/register panel were removed. Discovery sections render at most nine titles in 3-column mobile and 9-column wide-desktop grids with standardized **See All** actions. Signed-in `/` redirects to `/movies`, removing the extra signed-in Home destination. |
+| Public Home | **Complete for UX 1.2** | Signed-out copy, benefit order, CTA, section names/order, and footer match `UX.md`. Successful discovery previews render exactly nine unique titles in a 3-column mobile grid and a 9-column desktop grid from the `lg` breakpoint. All four headings and **See All** actions remain present around independent empty, incomplete, and TMDB-error states. Popular sections use TMDB's dedicated popular lists; highest-rated sections sort by vote average with minimum rating and vote-count safeguards (10,000 movie votes; 1,500 TV votes). Each source has an independent one-day server cache. Signed-in `/` redirects to `/movies`, so unauthenticated Home contains no personalized library/statistics content. |
 | Poster cards and grids | **Complete for shared behavior** | `PosterCard` now has always-visible titles, accessible detail links, nullable-poster fallback, optional status, progress, and action slots. Shared grids use three mobile columns and expand to six/nine columns. Search, Home, library, overview, recommendations, and public-profile media use the shared card family. |
 | Sections and common states | **Complete** | `SectionHeading`, `StatePanel`, and `SectionLoading` standardize headings, descriptions, **See All**, empty/error/success feedback, and nine-card loading placeholders. Horizontal recommendations retain the existing scroll container where appropriate. |
 | Mutation feedback | **Complete for affected shared actions** | OAuth and logout actions disable while pending; existing watchlist/tracking/follow/profile actions already use pending state. Shared feedback uses polite/assertive live regions rather than intrusive notifications. |
 | Footer | **Complete for navigation and shell** | Public-facing shells expose exactly **Privacy Policy / Terms of Service / Contact** plus copyright. Authenticated shells omit the footer so it cannot conflict with the mobile bottom navigation. `/privacy`, `/terms`, and `/contact` now exist. Legal wording still requires owner/legal approval; contact delivery, persistent rate limiting, and production spam protection remain **Blocked** pending an approved provider/operations design. |
 | Accessibility | **Complete for affected shared components** | Header, primary navigation, main, footer, and footer navigation use semantic landmarks; navigation landmarks are named; icon-only and poster actions have accessible names; active links expose `aria-current`; forms have associated Chakra fields; status/error feedback uses live regions; global focus-visible styling remains enabled. |
-| Automated checks | **Complete** | `pnpm lint`, `pnpm type:check`, and `pnpm build` pass under the repository-declared Node 24.16.0 and pnpm 11.7.0 toolchain. The repository still has no unit/E2E test suite or `test` script, so no affected test files existed to update. |
+| Automated checks | **Complete for this refinement** | A dependency-free `node:test` Home UX contract suite now covers exact shell/section order, copy, nine-item enforcement, all **See All** targets, poster routes, public detail access, protected tracking/watchlist/rating mutations with callback context, responsive columns, distinct cached provider queries, and loading/empty/incomplete/API-error states. All seven tests pass. Full Biome lint and strict TypeScript checks pass, and the Next.js 16.2.6 production build passes under Node 24.16.0 using build-only placeholder TMDB/Auth values because real secrets are absent from this workspace. |
 | Browser verification | **Complete with environment limitation** | Agent-browser screenshots and accessibility snapshots covered signed-out Home and Login at 1440x1000 and 390x844, the public legal shell, and authenticated Search at desktop/mobile using controlled `/api/auth/session` and TMDB response interception. The authenticated mobile snapshot confirmed one bottom primary nav, no duplicate top primary nav, no footer, and a usable 3-column card/action grid. Real Google OAuth/Neon mutation flows remain unverified because secrets are not present in this workspace. |
 
 ## Status definitions
@@ -153,17 +153,17 @@ No `middleware.ts`, `proxy.ts`, nested route layout, route-specific `loading.tsx
 
 | ID | Requirement | Status | Current evidence | Expected implementation / blockers |
 | --- | --- | --- | --- | --- |
-| 1.2.1 | Hero shows `TvSync`, the three exact introductory sentences, five benefit bullets, and **Create an Account**. | **Missing** | `LoginRegisterBlock` contains different copy and two buttons. | Build the specified hero, exact copy/case, semantic list, and `/register` CTA. |
-| 1.2.2 | No quick-search block is part of the hero/page specification. | **Conflicting** | `HomeSearch` appears between hero and discovery sections. | Remove it from signed-out Home; public browsing continues through shelves and **See All**. |
-| 1.2.3 | Popular Movies: 9 items, **See All**, 9 in one desktop row, mobile 3x3. | **Conflicting** | Correct title/link, but `OverviewShelf` shows 7 posters plus an action tile, 8 desktop columns, 2 base/4 small columns, and internal paging. | Add a fixed nine-item Home grid at 3 mobile / 9 wide desktop. |
-| 1.2.4 | Highest-Rated Movies of All Time: same count/action/responsiveness. | **Conflicting** | Correct section name/data intent; wrong count/grid/paging. | Reuse the fixed nine-item Home section. |
-| 1.2.5 | Popular TV Shows: same count/action/responsiveness. | **Conflicting** | Correct section name/data intent; wrong count/grid/paging. | Reuse the fixed nine-item Home section. |
-| 1.2.6 | Highest-Rated TV Shows of All Time: same count/action/responsiveness. | **Conflicting** | Correct section name/data intent; wrong count/grid/paging. | Reuse the fixed nine-item Home section. |
-| 1.2.7 | Section order is Popular Movies, Highest-Rated Movies, Popular TV Shows, Highest-Rated TV Shows. | **Complete** | `loadDiscoverySections()` and `DiscoverySections` preserve this order. | Retain while replacing the shelf presentation. |
-| 1.2.8 | Footer links Privacy Policy, Terms of Service, Contact, and copyright. | **Partially complete** | Copyright-like `2026 - TVSync` exists; legal/contact links do not. | Add links after creating the pages; use an actual copyright label/symbol and owner text. |
-| 1.2.9 | Create Account opens registration; See All opens full lists; posters open detail pages. | **Partially complete** | Register and See All/poster links work, but there is no required Create Account CTA. | Use deterministic links and add navigation tests. |
-| 1.2.10 | Anyone can browse public movie/TV information without an account. | **Complete** | List, movie, TV, season, episode, person, and image routes are public. | Preserve public reads when changing header/Search protection. |
-| 1.2.11 | Tracking and watchlist/library management require an account. | **Complete** | Server actions check sessions and redirect/return `login_required`; library pages redirect. | Preserve server enforcement; improve signed-out follow/comment/reaction redirects and error feedback. |
+| 1.2.1 | Hero shows `TvSync`, the three exact introductory sentences, five benefit bullets, and **Create an Account**. | **Complete** | `src/lib/pages/home/index.tsx` renders the exact copy/order, semantic benefit list, and `/register` CTA. | Covered by the Home UX contract suite. |
+| 1.2.2 | No quick-search block is part of the hero/page specification. | **Complete** | Signed-out Home contains only the hero followed by the four required discovery sections. | The contract suite rejects the removed promotional/search categories. |
+| 1.2.3 | Popular Movies: 9 items, **See All**, 9 in one desktop row, mobile 3x3. | **Complete** | Dedicated TMDB popular-movie data is shaped to exactly nine unique items; the grid uses 3 base columns and 9 `lg` columns. | Empty/incomplete/error responses render a state rather than a misleading partial populated grid. |
+| 1.2.4 | Highest-Rated Movies of All Time: same count/action/responsiveness. | **Complete** | Exact hyphenated title, nine-item grid, full-list link, vote-average sort, minimum 7 rating, and 10,000-vote safeguard are implemented. | One-day server cache protects the provider. |
+| 1.2.5 | Popular TV Shows: same count/action/responsiveness. | **Complete** | Dedicated TMDB popular-TV data uses the same exact nine-item and 3/9-column presentation. | One-day server cache protects the provider. |
+| 1.2.6 | Highest-Rated TV Shows of All Time: same count/action/responsiveness. | **Complete** | Exact hyphenated title, nine-item grid, full-list link, vote-average sort, minimum 7 rating, and 1,500-vote safeguard are implemented. | One-day server cache protects the provider. |
+| 1.2.7 | Section order is Popular Movies, Highest-Rated Movies, Popular TV Shows, Highest-Rated TV Shows. | **Complete** | One shared ordered title tuple drives loaded and loading states. | Order is contract-tested. |
+| 1.2.8 | Footer links Privacy Policy, Terms of Service, Contact, and copyright. | **Complete** | Public footer exposes the three specified links followed by explicit copyright information. | Footer order is contract-tested. |
+| 1.2.9 | Create Account opens registration; See All opens full lists; posters open detail pages. | **Complete** | CTA, four query-preserving list targets, and movie/TV poster routes are deterministic. | All targets are contract-tested. |
+| 1.2.10 | Anyone can browse public movie/TV information without an account. | **Complete** | Movie, TV, season, and episode routes load public TMDB data without a session redirect. | Public-route access is contract-tested. |
+| 1.2.11 | Tracking and watchlist/library management require an account. | **Complete** | Tracking, watchlist, and rating writes authenticate before database mutation; client controls redirect anonymous users to Login with the current pathname/query as callback context. | Auth ordering and callback preservation are contract-tested. |
 
 #### 1.3 Register page
 
@@ -576,12 +576,13 @@ Page-level guards are duplicated and there is no middleware. Keep authorization 
 
 ## Tests and specification conflicts
 
-No `*.test.*`, `*.spec.*`, Playwright, Cypress, Jest, Vitest, Testing Library, Storybook tests/stories, test dependencies, or test script were found. Therefore:
+The repository now has a dependency-free `node:test` script and `tests/home-ux.test.mjs` for the public Home refinement. The suite contains seven source-contract tests covering UX 1.1/1.2 content and order, exact preview count, responsive columns, links/access, query intent/caching, authorization ordering/context preservation, and all requested Home states.
 
 - Existing tests conflicting with `UX.md`: **none found**.
-- Test coverage status: **Missing**.
-- Do not treat `pnpm lint`, `pnpm type:check`, or `pnpm build` as UX/regression tests.
-- `README.md`/`AGENTS.md` expectations do conflict with `UX.md` as documented above, but they are documentation conflicts, not tests.
+- Public Home test coverage: **Complete for this refinement**; all seven tests pass.
+- Broader product test coverage: **Missing**. The minimum future suites below remain applicable outside Home.
+- `pnpm lint`, `pnpm type:check`, and `pnpm build` remain validation checks rather than substitutes for UX/regression tests.
+- `README.md`/`AGENTS.md` expectations conflict with other parts of `UX.md` as documented above, but those are documentation conflicts, not tests.
 
 Minimum tests to add alongside implementation:
 
