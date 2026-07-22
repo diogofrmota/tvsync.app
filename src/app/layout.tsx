@@ -13,9 +13,7 @@ const fontBody = FontBody({
 const umamiWebsiteId = process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID;
 const umamiScriptSrc = process.env.NEXT_PUBLIC_UMAMI_SRC;
 const appUrl = new URL(
-  process.env.NEXTAUTH_URL ??
-    process.env.AUTH_URL ??
-    'https://tvsync-app.vercel.app'
+  process.env.NEXTAUTH_URL ?? process.env.AUTH_URL ?? 'https://tvsync.app'
 );
 
 export const metadata: Metadata = {

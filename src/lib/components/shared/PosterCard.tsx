@@ -1,103 +1,130 @@
 'use client';
 
-import { AspectRatio, Box } from '@chakra-ui/react';
-import MotionBox from 'lib/components/MotionBox';
+import {
+  AspectRatio,
+  Badge,
+  Box,
+  Progress,
+  Stack,
+  Text,
+} from '@chakra-ui/react';
 import PosterImage from 'lib/components/shared/PosterImage';
-import PosterLabel from 'lib/components/shared/PosterLabel';
 import type { MediaType } from 'lib/types';
 import { trackEvent } from 'lib/utils/track-event';
+import type { Route } from 'next';
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 
-const pathMap = {
-  movie: '/movie',
-  tv: '/tv/show',
-  person: '/person',
-} as const;
+const pathMap = { movie: '/movie', tv: '/tv/show', person: '/person' } as const;
 
 type PosterCardProps = {
+  actions?: ReactNode;
   id: number;
-  name?: string;
   imageUrl?: string | null;
-  mediaType: MediaType;
-  layout: 'flex' | 'grid';
   isLastItem?: boolean;
+  layout: 'flex' | 'grid';
+  mediaType: MediaType;
+  name?: string;
   prefetch?: boolean;
+  progress?: number;
+  status?: string | null;
 };
 
 const PosterCard = ({
+  actions,
   id,
-  name,
   imageUrl,
-  mediaType,
-  layout,
   isLastItem,
+  layout,
+  mediaType,
+  name,
   prefetch = true,
+  progress,
+  status,
 }: PosterCardProps) => {
-  const handleClick = () => {
-    trackEvent({
-      eventName: `${mediaType}: ${name ?? 'Untitled'} - ${id}`,
-      eventData: { type: 'navigate' },
-    });
-  };
   const label = name?.trim() || 'Untitled title';
+  const href = `${pathMap[mediaType]}/${id}` as Route;
 
   return (
-    <MotionBox
-      // https://panda-css.com/docs/docs/concepts/conditional-styles#group-selectors
-      className="group"
-      onClick={handleClick}
-      paddingRight={isLastItem ? [8, 6] : undefined}
-      position="relative"
-      textAlign="center"
-      whileHover={{ scale: 1.05 }}
+    <Stack
+      gap={2}
+      minWidth={0}
+      paddingRight={isLastItem ? { base: 4, md: 0 } : undefined}
       width={
-        layout === 'flex'
-          ? { base: '7.5rem', sm: '8.25rem', md: '9rem' }
-          : undefined
+        layout === 'flex' ? { base: '7rem', sm: '8rem', md: '9rem' } : 'full'
       }
-      {...(layout === 'flex' && { flex: '0 0 auto' })}
+      {...(layout === 'flex' ? { flex: '0 0 auto' } : {})}
     >
-      {layout === 'grid' ? (
+      <Box
+        _focusWithin={{
+          outline: '3px solid',
+          outlineColor: 'teal.400',
+          outlineOffset: '3px',
+        }}
+        _hover={{ transform: 'translateY(-2px)' }}
+        borderRadius="md"
+        overflow="hidden"
+        position="relative"
+        transition="transform 120ms ease"
+      >
         <Link
           aria-label={`Open ${label}`}
-          href={`${pathMap[mediaType]}/${id}`}
+          href={href}
+          onClick={() =>
+            trackEvent({
+              eventName: `${mediaType}: ${label} - ${id}`,
+              eventData: { type: 'navigate' },
+            })
+          }
           prefetch={prefetch}
         >
-          <AspectRatio
-            _groupHover={{ backgroundColor: 'black' }}
-            borderRadius="md"
-            overflow="hidden"
-            ratio={3.6 / 5}
-          >
-            <PosterImage
-              alt={`${label} poster`}
-              layout={layout}
-              src={imageUrl}
-            />
+          <AspectRatio ratio={2 / 3}>
+            <PosterImage alt={`${label} poster`} src={imageUrl} />
           </AspectRatio>
         </Link>
-      ) : (
-        <Box
-          _groupHover={{ backgroundColor: 'black' }}
-          asChild
-          borderRadius="md"
-          overflow="hidden"
-        >
-          <Link
-            aria-label={`Open ${label}`}
-            href={`${pathMap[mediaType]}/${id}`}
-            prefetch={prefetch}
+        {status ? (
+          <Badge
+            bottom={2}
+            colorPalette="teal"
+            left={2}
+            position="absolute"
+            textTransform="none"
           >
-            <PosterImage
-              alt={`${label} poster`}
-              layout={layout}
-              src={imageUrl}
-            />
-          </Link>
-        </Box>
-      )}
-      <PosterLabel label={label} />
-    </MotionBox>
+            {status}
+          </Badge>
+        ) : null}
+      </Box>
+      <Text
+        asChild
+        fontSize={{ base: 'xs', md: 'sm' }}
+        fontWeight="600"
+        lineClamp={2}
+        lineHeight="1.25"
+        minHeight={{ base: '2rem', md: '2.5rem' }}
+      >
+        <Link href={href} prefetch={prefetch}>
+          {label}
+        </Link>
+      </Text>
+      {typeof progress === 'number' ? (
+        <Stack gap={1}>
+          <Progress.Root
+            aria-label={`${label} progress`}
+            max={100}
+            size="xs"
+            value={Math.max(0, Math.min(progress, 100))}
+          >
+            <Progress.Track>
+              <Progress.Range />
+            </Progress.Track>
+          </Progress.Root>
+          <Text _dark={{ color: 'gray.100' }} color="gray.600" fontSize="xs">
+            {Math.round(progress)}% watched
+          </Text>
+        </Stack>
+      ) : null}
+      {actions ? <Box>{actions}</Box> : null}
+    </Stack>
   );
 };
 

@@ -9,7 +9,9 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react';
+import { PageShell } from 'lib/components/shared/PageShell';
 import PosterCard from 'lib/components/shared/PosterCard';
+import { StatePanel } from 'lib/components/shared/Section';
 import type {
   PublicProfileData,
   PublicProfileMediaItem,
@@ -56,15 +58,7 @@ const getMediaHref = (mediaType: MediaType.Movie | MediaType.Tv, id: number) =>
   (mediaType === MediaType.Movie ? `/movie/${id}` : `/tv/show/${id}`) as Route;
 
 const EmptyState = ({ children }: { children: React.ReactNode }) => (
-  <Box
-    borderColor="border"
-    borderRadius="md"
-    borderStyle="dashed"
-    borderWidth="1px"
-    padding={6}
-  >
-    <Text color="fg.muted">{children}</Text>
-  </Box>
+  <StatePanel message={String(children)} />
 );
 
 const StatTile = ({ label, value }: { label: string; value: number }) => (
@@ -133,7 +127,10 @@ const MediaSection = ({ emptyText, items, title }: MediaSectionProps) => (
       <Grid
         columnGap={6}
         rowGap={10}
-        templateColumns={['repeat(2, 1fr)', 'repeat(4, 1fr)']}
+        templateColumns={{
+          base: 'repeat(3, minmax(0, 1fr))',
+          md: 'repeat(6, minmax(0, 1fr))',
+        }}
       >
         {items.map((item) => (
           <PosterCard
@@ -188,7 +185,7 @@ export const PublicProfilePage = ({ data }: PublicProfilePageProps) => {
   );
 
   return (
-    <Grid gap={10} marginX="auto" maxWidth="72rem" paddingX={8}>
+    <PageShell>
       <Grid
         alignItems="center"
         gap={6}
@@ -303,6 +300,6 @@ export const PublicProfilePage = ({ data }: PublicProfilePageProps) => {
           <EmptyState>No public reviews yet.</EmptyState>
         )}
       </VStack>
-    </Grid>
+    </PageShell>
   );
 };

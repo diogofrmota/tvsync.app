@@ -171,6 +171,7 @@ AUTH_URL=http://localhost:3000
 NEXTAUTH_URL=http://localhost:3000
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 NEXT_PUBLIC_UMAMI_WEBSITE_ID=
 NEXT_PUBLIC_UMAMI_SRC=
 ```
@@ -180,8 +181,9 @@ NEXT_PUBLIC_UMAMI_SRC=
 - `DATABASE_URL` is required before using Neon-backed Server Components, Server Actions, or Route Handlers.
 - `DATABASE_URL_UNPOOLED` is used by migration tooling and direct `psql` schema application.
 - `AUTH_SECRET` is required for production auth sessions. Generate a strong value and store it only in local/Vercel environment variables.
-- `AUTH_URL` and `NEXTAUTH_URL` should be `http://localhost:3000` locally and the production Vercel URL in Vercel. `NEXTAUTH_URL` is required by NextAuth v4 in many deployments.
+- `AUTH_URL` and `NEXTAUTH_URL` should be `http://localhost:3000` locally and `https://tvsync.app` in the Vercel production environment. `NEXTAUTH_URL` is required by NextAuth v4 in many deployments.
 - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are required for Google OAuth login/register. Without them, the auth pages render a configuration warning and disable Google sign-in.
+- `NEXT_PUBLIC_SITE_URL` controls the canonical sitemap origin. Set it to `http://localhost:3000` locally and `https://tvsync.app` in production.
 - `NEXT_PUBLIC_UMAMI_WEBSITE_ID` and `NEXT_PUBLIC_UMAMI_SRC` are optional. When both are set, the app loads the Umami tracker script and existing UI events are sent through `src/lib/utils/track-event.ts`.
 
 For local development, create `.env.local` from `.env.example` and fill in the TMDB key. Add Neon and Google OAuth values before using authenticated or persistence-backed routes.
@@ -252,7 +254,7 @@ pnpm db:migrate
 
 ### Auth Setup
 
-Create Google OAuth credentials in Google Cloud Console. Add `http://localhost:3000/api/auth/callback/google` for local development and `https://<your-vercel-domain>/api/auth/callback/google` for production. Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `AUTH_SECRET`, and `NEXTAUTH_URL` in the matching local and Vercel environments.
+Create Google OAuth credentials in Google Cloud Console. Add `http://localhost:3000/api/auth/callback/google` for local development and `https://tvsync.app/api/auth/callback/google` for production. Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `AUTH_SECRET`, `AUTH_URL`, and `NEXTAUTH_URL` in the matching local and Vercel environments.
 
 Login and registration intentionally use Google OAuth only. There is no email/password or reset-password flow yet.
 
@@ -267,10 +269,11 @@ The project is prepared for Vercel free tier deployment.
 - Node version: `24`
 - Database: Vercel-managed Neon Postgres store `tvsync-db`
 - Required Vercel environment variables: `TMDB_API_KEY`, `DATABASE_URL`, `AUTH_SECRET`, `NEXTAUTH_URL`, `GOOGLE_CLIENT_ID`, and `GOOGLE_CLIENT_SECRET`.
-- Optional Vercel environment variables: `TMDB_API_URL`, `DATABASE_URL_UNPOOLED`, `AUTH_URL`, `NEXT_PUBLIC_UMAMI_WEBSITE_ID`, and `NEXT_PUBLIC_UMAMI_SRC`.
+- Optional Vercel environment variables: `TMDB_API_URL`, `DATABASE_URL_UNPOOLED`, `AUTH_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_UMAMI_WEBSITE_ID`, and `NEXT_PUBLIC_UMAMI_SRC`.
 - Migration-only variable: keep `DATABASE_URL_UNPOOLED` separate from pooled runtime access and use it only for migration tooling/direct `psql` work.
 - Confirm `DATABASE_URL` is the pooled Neon string in Vercel so runtime Server Components, Server Actions, and Route Handlers stay serverless-friendly.
-- Confirm `NEXTAUTH_URL` and Google callback URLs use the production Vercel domain before switching traffic to production.
+- Set `AUTH_URL`, `NEXTAUTH_URL`, and `NEXT_PUBLIC_SITE_URL` to `https://tvsync.app` in the production environment.
+- Confirm the Google OAuth authorized redirect URI is `https://tvsync.app/api/auth/callback/google` before switching traffic to production.
 
 Vercel free tier constraints for this app:
 

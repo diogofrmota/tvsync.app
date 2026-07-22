@@ -1,4 +1,3 @@
-import { getDashboardData } from 'lib/features/dashboard';
 import { Home, type HomeDiscoverySection } from 'lib/pages/home';
 import {
   mapMovieOverviewItem,
@@ -12,6 +11,7 @@ import { getDiscoverTVShowsServer } from 'lib/services/tmdb/tv/list/index.server
 import type { TVShowListParams } from 'lib/services/tmdb/tv/list/types';
 import { MediaType } from 'lib/types';
 import type { Metadata, Route } from 'next';
+import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
 
 export const dynamic = 'force-dynamic';
@@ -142,19 +142,16 @@ const loadDiscoverySections = async (): Promise<
 export default async function Page() {
   const session = await getServerSession(authOptions);
   const isAuthenticated = Boolean(session?.user?.id);
-  const [dashboardState, discoveryState] = await Promise.all([
-    isAuthenticated
-      ? getSectionState(getDashboardData())
-      : Promise.resolve({ data: undefined, error: undefined }),
-    getSectionState(loadDiscoverySections()),
-  ]);
+  if (isAuthenticated) {
+    redirect('/movies' as Route);
+  }
+
+  const discoveryState = await getSectionState(loadDiscoverySections());
 
   return (
     <Home
-      dashboardState={dashboardState}
+      discoveryError={discoveryState.error}
       discoverySections={discoveryState.data ?? []}
-      isAuthenticated={isAuthenticated}
-      userName={session?.user?.name ?? undefined}
     />
   );
 }

@@ -1,23 +1,40 @@
-import { Box } from '@chakra-ui/react';
+'use client';
+
+import { Box, Flex } from '@chakra-ui/react';
+import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 import Footer from './Footer';
 import Header from './Header';
 
-type LayoutProps = {
-  children: React.ReactNode;
-};
+const authRoutes = new Set(['/login', '/register']);
 
-const Layout = ({ children }: LayoutProps) => {
+const Layout = ({ children }: { children: React.ReactNode }) => {
+  const pathname = usePathname();
+  const { data: session, status } = useSession();
+  const isAuthPage = authRoutes.has(pathname);
+  const isAuthenticated = Boolean(session?.user);
+
+  if (isAuthPage) {
+    return (
+      <Flex as="main" background="black" minHeight="100dvh">
+        {children}
+      </Flex>
+    );
+  }
+
   return (
-    <Box minHeight="100vh" transition="0.5s ease-out">
-      <Box margin="0 auto" maxWidth="96rem" width="100%">
-        <Header />
-        <Box as="main" marginY={22} paddingBottom={[20, 20, 0]}>
-          {children}
-        </Box>
-        <Footer />
+    <Flex direction="column" minHeight="100dvh">
+      <Header />
+      <Box
+        as="main"
+        flex="1"
+        paddingBottom={isAuthenticated ? { base: 20, md: 0 } : 0}
+      >
+        {children}
       </Box>
-    </Box>
+      {status === 'unauthenticated' ? <Footer /> : null}
+    </Flex>
   );
 };
 

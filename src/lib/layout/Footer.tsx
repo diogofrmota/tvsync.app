@@ -1,35 +1,43 @@
-import { Flex, Grid, Link, Text } from '@chakra-ui/react';
-import Image from 'next/image';
+import { Flex, HStack, Text } from '@chakra-ui/react';
+import Link from 'next/link';
 
-const Footer = () => {
-  return (
-    <Flex align="center" as="footer" padding="8" width="full">
-      <Text fontSize="sm">
-        2026 -{' '}
-        <Link
-          fontWeight="bold"
-          href="https://github.com/diogofrmota/tvsync.app"
-          rel="noopener noreferrer"
-          target="_blank"
-        >
-          TVSync
-        </Link>
-      </Text>
+const footerLinks = [
+  { href: '/privacy', label: 'Privacy Policy' },
+  { href: '/terms', label: 'Terms of Service' },
+  { href: '/contact', label: 'Contact' },
+] as const;
 
-      <Grid gap={1} marginLeft="auto" textAlign="right">
-        <Text fontSize="0.6rem" textTransform="lowercase">
-          Powered by
-        </Text>
-        <Link
-          href="https://themoviedb.org"
-          rel="noopener noreferrer"
-          target="_blank"
-        >
-          <Image alt="tmdb" height="20" src="/tmdb.svg" width="50" />
+const Footer = () => (
+  <Flex
+    align={{ base: 'flex-start', sm: 'center' }}
+    as="footer"
+    borderColor="border"
+    borderTopWidth="1px"
+    direction={{ base: 'column', sm: 'row' }}
+    gap={4}
+    justify="space-between"
+    marginX="auto"
+    maxWidth="80rem"
+    paddingX={{ base: 4, sm: 6, lg: 8 }}
+    paddingY={6}
+    width="full"
+  >
+    <HStack
+      aria-label="Footer navigation"
+      as="nav"
+      gap={{ base: 3, sm: 5 }}
+      wrap="wrap"
+    >
+      {footerLinks.map((item) => (
+        <Link href={item.href} key={item.href}>
+          {item.label}
         </Link>
-      </Grid>
-    </Flex>
-  );
-};
+      ))}
+    </HStack>
+    <Text _dark={{ color: 'gray.100' }} color="gray.600" fontSize="sm">
+      © {new Date().getFullYear()} TvSync
+    </Text>
+  </Flex>
+);
 
 export default Footer;

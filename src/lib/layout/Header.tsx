@@ -2,7 +2,6 @@
 
 import {
   Box,
-  Button,
   Flex,
   Heading,
   HStack,
@@ -10,186 +9,195 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react';
-import { trackEvent } from 'lib/utils/track-event';
 import type { Route } from 'next';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { FiHome, FiLogIn, FiMonitor, FiUser, FiUserPlus } from 'react-icons/fi';
-import { MdLocalMovies } from 'react-icons/md';
+import {
+  FiFilm,
+  FiHome,
+  FiLogIn,
+  FiSearch,
+  FiTv,
+  FiUser,
+  FiUserPlus,
+} from 'react-icons/fi';
 
 type NavItem = {
-  href: string;
+  href: Route;
+  icon: React.ElementType;
   label: string;
   match: (pathname: string) => boolean;
-  icon: React.ElementType;
 };
 
 const publicNavItems: Array<NavItem> = [
+  { href: '/', icon: FiHome, label: 'Home', match: (path) => path === '/' },
   {
-    href: '/',
-    label: 'Home',
-    match: (pathname) => pathname === '/',
-    icon: FiHome,
-  },
-  {
-    href: '/movies',
-    label: 'Movies',
-    match: (pathname) =>
-      pathname.startsWith('/movies') || pathname.startsWith('/movie/'),
-    icon: MdLocalMovies,
-  },
-  {
-    href: '/tv-shows',
-    label: 'TV Shows',
-    match: (pathname) =>
-      pathname.startsWith('/tv-shows') || pathname.startsWith('/tv/'),
-    icon: FiMonitor,
+    href: '/register',
+    icon: FiUserPlus,
+    label: 'Register',
+    match: (path) => path.startsWith('/register'),
   },
   {
     href: '/login',
-    label: 'Login',
-    match: (pathname) => pathname.startsWith('/login'),
     icon: FiLogIn,
-  },
-  {
-    href: '/register',
-    label: 'Register',
-    match: (pathname) => pathname.startsWith('/register'),
-    icon: FiUserPlus,
+    label: 'Login',
+    match: (path) => path.startsWith('/login'),
   },
 ];
 
 const authenticatedNavItems: Array<NavItem> = [
   {
-    href: '/',
-    label: 'Home',
-    match: (pathname) => pathname === '/',
-    icon: FiHome,
-  },
-  {
     href: '/movies',
+    icon: FiFilm,
     label: 'Movies',
-    match: (pathname) =>
-      pathname.startsWith('/movies') || pathname.startsWith('/movie/'),
-    icon: MdLocalMovies,
+    match: (path) => path.startsWith('/movies') || path.startsWith('/movie/'),
   },
   {
     href: '/tv-shows',
+    icon: FiTv,
     label: 'TV Shows',
-    match: (pathname) =>
-      pathname.startsWith('/tv-shows') || pathname.startsWith('/tv/'),
-    icon: FiMonitor,
+    match: (path) => path.startsWith('/tv-shows') || path.startsWith('/tv/'),
+  },
+  {
+    href: '/search',
+    icon: FiSearch,
+    label: 'Search',
+    match: (path) => path.startsWith('/search'),
   },
   {
     href: '/profile',
-    label: 'Profile',
-    match: (pathname) => pathname.startsWith('/profile'),
     icon: FiUser,
+    label: 'Profile',
+    match: (path) => path.startsWith('/profile'),
   },
 ];
 
-const Header = () => {
+const NavLink = ({
+  item,
+  mobile = false,
+}: {
+  item: NavItem;
+  mobile?: boolean;
+}) => {
   const pathname = usePathname();
-  const { data: session, status } = useSession();
-  const isAuthenticated = Boolean(session?.user);
-  const isLoadingSession = status === 'loading';
-  const navItems =
-    isAuthenticated && !isLoadingSession
-      ? authenticatedNavItems
-      : publicNavItems;
+  const active = item.match(pathname);
 
-  const handleClickNav = (label: string) => {
-    trackEvent({
-      eventName: `Nav Link: ${label}`,
-      eventData: { type: 'navigate' },
-    });
-  };
-
-  const renderDesktopLink = (item: NavItem) => {
-    const isActive = item.match(pathname);
-
-    return (
-      <Button
-        asChild
-        fontWeight={isActive ? 'bold' : 'medium'}
-        key={item.href}
-        onClick={() => handleClickNav(item.label)}
-        size="sm"
-        variant={isActive ? 'solid' : 'ghost'}
-      >
-        <Link href={item.href as Route}>{item.label}</Link>
-      </Button>
-    );
-  };
-
-  const renderMobileLink = (item: NavItem) => {
-    const isActive = item.match(pathname);
-
+  if (mobile) {
     return (
       <VStack
+        _dark={{ color: active ? 'teal.300' : 'gray.100' }}
         asChild
-        color={isActive ? 'teal.500' : 'fg.muted'}
+        color={active ? 'teal.600' : 'gray.600'}
         flex="1"
         gap={1}
-        key={item.href}
         minWidth={0}
-        onClick={() => handleClickNav(item.label)}
       >
-        <Link href={item.href as Route}>
-          <Icon aria-hidden="true" as={item.icon} boxSize={5} />
-          <Text
-            fontSize="0.65rem"
-            fontWeight={isActive ? 'bold' : 'medium'}
-            lineHeight="1"
-            maxWidth="100%"
-            textAlign="center"
-            wordBreak="break-word"
-          >
+        <Link aria-current={active ? 'page' : undefined} href={item.href}>
+          <Icon aria-hidden as={item.icon} boxSize={5} />
+          <Text fontSize="xs" fontWeight={active ? '700' : '500'}>
             {item.label}
           </Text>
         </Link>
       </VStack>
     );
-  };
+  }
+
+  return (
+    <Box
+      _after={{
+        background: active ? 'teal.300' : 'transparent',
+        borderRadius: 'full',
+        bottom: '-0.4rem',
+        content: '""',
+        height: '2px',
+        left: 0,
+        position: 'absolute',
+        right: 0,
+      }}
+      _dark={{ color: active ? 'white' : 'gray.100' }}
+      _focusVisible={{
+        outline: '3px solid',
+        outlineColor: 'teal.400',
+        outlineOffset: '4px',
+      }}
+      asChild
+      color={active ? 'gray.900' : 'gray.600'}
+      fontWeight={active ? '700' : '500'}
+      position="relative"
+    >
+      <Link aria-current={active ? 'page' : undefined} href={item.href}>
+        {item.label}
+      </Link>
+    </Box>
+  );
+};
+
+const Header = () => {
+  const { data: session, status } = useSession();
+  const isAuthenticated = Boolean(session?.user);
+  const items = isAuthenticated ? authenticatedNavItems : publicNavItems;
 
   return (
     <>
-      <Flex
-        align="center"
+      <Box
         as="header"
-        justify="center"
-        padding={[4, 8]}
-        position="relative"
+        borderBottomWidth="1px"
+        borderColor="border"
         width="full"
       >
-        <Box left={[4, 8]} position="absolute">
-          <Heading asChild fontSize={['xl', '2xl']}>
-            <Link href="/">TVSync</Link>
+        <Flex
+          align="center"
+          height={{ base: '4rem', md: '4.5rem' }}
+          marginX="auto"
+          maxWidth="80rem"
+          paddingX={{ base: 4, sm: 6, lg: 8 }}
+        >
+          <Heading
+            asChild
+            fontSize={{ base: 'xl', md: '2xl' }}
+            fontWeight="700"
+          >
+            <Link href={isAuthenticated ? '/movies' : '/'}>TvSync</Link>
           </Heading>
-        </Box>
-
-        <HStack display={['none', 'none', 'flex']} gap={1} role="navigation">
-          {navItems.map(renderDesktopLink)}
-        </HStack>
-      </Flex>
-
-      <Box
-        as="nav"
-        background="bg"
-        borderTopWidth="1px"
-        bottom={0}
-        display={['block', 'block', 'none']}
-        left={0}
-        paddingBottom="env(safe-area-inset-bottom)"
-        position="fixed"
-        right={0}
-        zIndex={10}
-      >
-        <HStack gap={0} minHeight="64px" paddingX={1}>
-          {navItems.map(renderMobileLink)}
-        </HStack>
+          {status === 'loading' ? null : (
+            <HStack
+              aria-label="Primary navigation"
+              as="nav"
+              display={isAuthenticated ? { base: 'none', md: 'flex' } : 'flex'}
+              gap={{ base: 4, sm: 6 }}
+              marginLeft="auto"
+            >
+              {items.map((item) => (
+                <NavLink item={item} key={item.href} />
+              ))}
+            </HStack>
+          )}
+        </Flex>
       </Box>
+
+      {isAuthenticated && status !== 'loading' ? (
+        <Box
+          aria-label="Primary navigation"
+          as="nav"
+          background="bg"
+          borderColor="border"
+          borderTopWidth="1px"
+          bottom={0}
+          display={{ base: 'block', md: 'none' }}
+          left={0}
+          paddingBottom="env(safe-area-inset-bottom)"
+          position="fixed"
+          right={0}
+          zIndex={20}
+        >
+          <HStack gap={0} minHeight="4rem" paddingX={1}>
+            {items.map((item) => (
+              <NavLink item={item} key={item.href} mobile />
+            ))}
+          </HStack>
+        </Box>
+      ) : null}
     </>
   );
 };

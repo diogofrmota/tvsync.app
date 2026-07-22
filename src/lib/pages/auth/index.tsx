@@ -1,7 +1,7 @@
-import { Box, Grid, Heading, HStack, Text, VStack } from '@chakra-ui/react';
+import { Box, Heading, Stack, Text } from '@chakra-ui/react';
 import type { AuthPageMode } from 'lib/pages/auth/types';
-import type { Route } from 'next';
 import Link from 'next/link';
+import { FiArrowLeft } from 'react-icons/fi';
 
 import { OAuthButtons } from './client-actions';
 
@@ -14,9 +14,9 @@ type AuthPageProps = {
 
 const errorMessages: Record<string, string> = {
   Configuration:
-    'Authentication is not configured yet. Check the OAuth environment variables.',
+    'Authentication is not configured yet. Please try again later.',
   AccessDenied:
-    'Google sign-in was accepted, but TVSync could not finish the session. Please try again.',
+    'Google sign-in was accepted, but TvSync could not finish the session. Please try again.',
   OAuthSignin: 'Google sign-in could not start. Please try again.',
   OAuthCallback:
     'Google could not finish the sign-in request. Please try again.',
@@ -25,13 +25,8 @@ const errorMessages: Record<string, string> = {
   default: 'Sign-in failed. Please try again.',
 };
 
-export const getAuthErrorMessage = (error?: string) => {
-  if (!error) {
-    return null;
-  }
-
-  return errorMessages[error] ?? errorMessages.default;
-};
+export const getAuthErrorMessage = (error?: string) =>
+  error ? (errorMessages[error] ?? errorMessages.default) : null;
 
 export const AuthPage = ({
   callbackUrl,
@@ -39,56 +34,73 @@ export const AuthPage = ({
   googleEnabled,
   mode,
 }: AuthPageProps) => {
-  const isRegister = mode === 'register';
-  const title = isRegister ? 'Create your TVSync account' : 'Log in to TVSync';
-  const intro = isRegister
-    ? 'Use Google to create an account. Email/password registration is not enabled for this auth layer yet.'
-    : 'Use Google to continue. Email/password login and password reset are not enabled yet.';
-  const alternateHref = isRegister ? '/login' : '/register';
-  const alternateLabel = isRegister
-    ? 'Already have an account? Log in'
-    : 'New to TVSync? Create an account';
+  const register = mode === 'register';
   const errorMessage = getAuthErrorMessage(error);
-
   return (
-    <Grid gap={8} marginX="auto" maxWidth="32rem" paddingX={8}>
-      <VStack align="stretch" gap={3} textAlign="center">
-        <Heading as="h1" fontSize={['2xl', '4xl']}>
-          {title}
-        </Heading>
-        <Text color="fg.muted">{intro}</Text>
-      </VStack>
-
-      {errorMessage && (
-        <Box
-          borderColor="red.300"
-          borderRadius="md"
-          borderWidth="1px"
-          color="red.500"
-          padding={4}
-        >
-          {errorMessage}
-        </Box>
-      )}
-
-      {!googleEnabled && (
-        <Box
-          borderColor="orange.300"
-          borderRadius="md"
-          borderWidth="1px"
-          color="orange.500"
-          padding={4}
-        >
-          Google OAuth is unavailable until `GOOGLE_CLIENT_ID` and
-          `GOOGLE_CLIENT_SECRET` are configured.
-        </Box>
-      )}
-
-      <OAuthButtons callbackUrl={callbackUrl} googleEnabled={googleEnabled} />
-
-      <HStack justify="center">
-        <Link href={alternateHref as Route}>{alternateLabel}</Link>
-      </HStack>
-    </Grid>
+    <Stack
+      margin="auto"
+      maxWidth="32rem"
+      padding={{ base: 4, sm: 6 }}
+      width="full"
+    >
+      <Box alignSelf="flex-start" asChild color="white" marginBottom={4}>
+        <Link href="/">
+          <FiArrowLeft aria-hidden /> Back to Home
+        </Link>
+      </Box>
+      <Stack
+        background="white"
+        borderRadius="xl"
+        color="black"
+        gap={6}
+        padding={{ base: 6, sm: 8 }}
+      >
+        <Stack gap={2} textAlign="center">
+          <Text fontSize="xl" fontWeight="700">
+            TvSync
+          </Text>
+          <Heading as="h1" fontSize={{ base: '2xl', sm: '3xl' }}>
+            {register ? 'Create an Account' : 'Login'}
+          </Heading>
+          <Text color="gray.600">
+            Continue securely with your Google account.
+          </Text>
+        </Stack>
+        {errorMessage ? (
+          <Box
+            aria-live="assertive"
+            borderColor="red.500"
+            borderRadius="md"
+            borderWidth="1px"
+            color="red.700"
+            padding={4}
+            role="alert"
+          >
+            {errorMessage}
+          </Box>
+        ) : null}
+        {googleEnabled ? null : (
+          <Box
+            aria-live="polite"
+            borderColor="orange.500"
+            borderRadius="md"
+            borderWidth="1px"
+            color="orange.700"
+            padding={4}
+            role="status"
+          >
+            Google sign-in is temporarily unavailable.
+          </Box>
+        )}
+        <OAuthButtons callbackUrl={callbackUrl} googleEnabled={googleEnabled} />
+        <Text textAlign="center">
+          <Link href={register ? '/login' : '/register'}>
+            {register
+              ? 'Already registered? Log in'
+              : 'New user? Create an account'}
+          </Link>
+        </Text>
+      </Stack>
+    </Stack>
   );
 };

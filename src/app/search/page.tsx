@@ -1,5 +1,8 @@
 import { MultiSearchPage } from 'lib/pages/search/multi';
-import type { Metadata } from 'next';
+import { authOptions } from 'lib/services/auth/index.server';
+import type { Metadata, Route } from 'next';
+import { redirect } from 'next/navigation';
+import { getServerSession } from 'next-auth/next';
 import { Suspense } from 'react';
 
 export const metadata: Metadata = {
@@ -14,7 +17,12 @@ export const metadata: Metadata = {
   },
 };
 
-const SearchPage = () => {
+const SearchPage = async () => {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    redirect('/login?callbackUrl=/search' as Route);
+  }
+
   return (
     <Suspense>
       <MultiSearchPage />

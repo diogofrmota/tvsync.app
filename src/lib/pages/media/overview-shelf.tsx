@@ -161,7 +161,7 @@ export const OverviewShelf = ({
       >
         <SimpleGrid
           columnGap={{ base: 4, md: 5, xl: 6 }}
-          columns={{ base: 2, sm: 4, lg: 8 }}
+          columns={{ base: 3, md: 6, xl: 9 }}
           rowGap={{ base: 7, md: 8 }}
         >
           {showPreviousTile ? (

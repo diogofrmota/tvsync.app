@@ -2,7 +2,7 @@
 const siteUrl = new URL(
   process.env.NEXT_PUBLIC_SITE_URL ??
     process.env.NEXTAUTH_URL ??
-    'https://tvsync-app.vercel.app'
+    'https://tvsync.app'
 ).origin;
 
 const NextSitemapConfig = {

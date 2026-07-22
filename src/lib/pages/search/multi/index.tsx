@@ -1,534 +1,279 @@
 'use client';
 
 import {
-  Badge,
-  Box,
   Button,
   Field,
-  Flex,
   Grid,
-  Heading,
   HStack,
-  Image,
   Input,
-  Skeleton,
+  NativeSelect,
   Stack,
-  Text,
 } from '@chakra-ui/react';
-import type { PageNavButtonProps } from 'lib/components/shared/list/page-nav-buttons';
-import PageNavButtons from 'lib/components/shared/list/page-nav-buttons';
-import { IMAGE_URL } from 'lib/components/shared/PosterImage';
+import PageNavButtons, {
+  type PageNavButtonProps,
+} from 'lib/components/shared/list/page-nav-buttons';
+import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
+import PosterCard from 'lib/components/shared/PosterCard';
+import { SectionLoading, StatePanel } from 'lib/components/shared/Section';
 import { WatchlistStateButton } from 'lib/features/watchlist';
 import { useMovieList } from 'lib/services/tmdb/movie/list/index.client';
 import type { MovieListItemType } from 'lib/services/tmdb/movie/list/types';
-import { useMultiSearchResult } from 'lib/services/tmdb/search/multi/index.client';
-import type { MultiSearchResult } from 'lib/services/tmdb/search/multi/types';
-import { useTVShowSearchResultList } from 'lib/services/tmdb/tv/list/index.client';
+import {
+  useTVShowByList,
+  useTVShowSearchResultList,
+} from 'lib/services/tmdb/tv/list/index.client';
 import type { TVShowItem } from 'lib/services/tmdb/tv/list/types';
 import { MediaType } from 'lib/types';
 import type { Route } from 'next';
-import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-type MediaFilter = 'all' | MediaType.Movie | MediaType.Tv;
-type SearchableMediaResult = MultiSearchResult & {
-  media_type: MediaType.Movie | MediaType.Tv;
+type SearchMediaType = MediaType.Movie | MediaType.Tv;
+type SearchItem = {
+  date: string;
+  id: number;
+  mediaType: SearchMediaType;
+  popularity: number;
+  posterPath: string | null;
+  rating: number;
+  title: string;
 };
-
-const filterOptions: Array<{ label: string; value: MediaFilter }> = [
-  { label: 'All', value: 'all' },
-  { label: 'Movies', value: MediaType.Movie },
-  { label: 'TV Shows', value: MediaType.Tv },
-];
-
-const movieGenreMap: Record<number, string> = {
-  12: 'Adventure',
-  14: 'Fantasy',
-  16: 'Animation',
-  18: 'Drama',
-  27: 'Horror',
-  28: 'Action',
-  35: 'Comedy',
-  36: 'History',
-  37: 'Western',
-  53: 'Thriller',
-  80: 'Crime',
-  99: 'Documentary',
-  878: 'Science Fiction',
-  9648: 'Mystery',
-  10402: 'Music',
-  10749: 'Romance',
-  10751: 'Family',
-  10752: 'War',
-  10770: 'TV Movie',
-};
-
-const tvGenreMap: Record<number, string> = {
-  16: 'Animation',
-  18: 'Drama',
-  35: 'Comedy',
-  37: 'Western',
-  80: 'Crime',
-  99: 'Documentary',
-  9648: 'Mystery',
-  10751: 'Family',
-  10759: 'Action & Adventure',
-  10762: 'Kids',
-  10763: 'News',
-  10764: 'Reality',
-  10765: 'Sci-Fi & Fantasy',
-  10766: 'Soap',
-  10767: 'Talk',
-  10768: 'War & Politics',
-};
-
-const getMediaFilter = (value: string | null): MediaFilter =>
-  value === MediaType.Movie || value === MediaType.Tv ? value : 'all';
+type SortKey = 'popularity' | 'rating' | 'release';
 
 const getPage = (value: string | null) => {
   const page = Number(value);
-
   return Number.isFinite(page) && page > 0 ? page : 1;
 };
-
-const getTitle = (item: MultiSearchResult) =>
-  item.title ||
-  item.name ||
-  item.original_title ||
-  item.original_name ||
-  'Untitled';
-
-const getYear = (item: MultiSearchResult) => {
-  const date =
-    item.media_type === MediaType.Movie
-      ? item.release_date
-      : item.first_air_date;
-
-  return date ? date.slice(0, 4) : 'Year unknown';
-};
-
-const getTypeLabel = (mediaType: MediaType) =>
-  mediaType === MediaType.Movie ? 'Movie' : 'TV Show';
-
-const getDetailHref = (item: MultiSearchResult) =>
-  (item.media_type === MediaType.Movie
-    ? `/movie/${item.id}`
-    : `/tv/show/${item.id}`) as Route;
-
-const getGenreNames = (item: MultiSearchResult) => {
-  const genreMap =
-    item.media_type === MediaType.Movie ? movieGenreMap : tvGenreMap;
-
-  return (item.genre_ids ?? [])
-    .map((genreId) => genreMap[genreId])
-    .filter((genre): genre is string => Boolean(genre))
-    .slice(0, 3);
-};
-
-const isSearchableMediaResult = (
-  item: MultiSearchResult
-): item is SearchableMediaResult =>
-  item.media_type === MediaType.Movie || item.media_type === MediaType.Tv;
-
-const mapMovieSearchResult = (
-  movie: MovieListItemType
-): SearchableMediaResult => ({
-  adult: movie.adult,
-  backdrop_path: movie.backdrop_path,
-  first_air_date: '',
-  genre_ids: movie.genre_ids,
-  id: movie.id,
-  media_type: MediaType.Movie,
-  original_language: movie.original_language,
-  original_title: movie.original_title,
-  overview: movie.overview,
-  popularity: movie.popularity,
-  poster_path: movie.poster_path,
-  release_date: movie.release_date,
-  title: movie.title,
-  video: movie.video,
-  vote_average: movie.vote_average,
-  vote_count: movie.vote_count,
+const getMediaType = (value: string | null): SearchMediaType =>
+  value === MediaType.Tv ? MediaType.Tv : MediaType.Movie;
+const mapMovie = (item: MovieListItemType): SearchItem => ({
+  date: item.release_date,
+  id: item.id,
+  mediaType: MediaType.Movie,
+  popularity: item.popularity,
+  posterPath: item.poster_path,
+  rating: item.vote_average,
+  title: item.title,
 });
-
-const mapTVShowSearchResult = (show: TVShowItem): SearchableMediaResult => ({
-  backdrop_path: show.backdrop_path,
-  first_air_date: show.first_air_date,
-  genre_ids: show.genre_ids,
-  id: show.id,
-  media_type: MediaType.Tv,
-  name: show.name,
-  origin_country: show.origin_country,
-  original_language: show.original_language,
-  original_name: show.original_name,
-  overview: show.overview,
-  popularity: show.popularity,
-  poster_path: show.poster_path,
-  vote_average: show.vote_average,
-  vote_count: show.vote_count,
+const mapTV = (item: TVShowItem): SearchItem => ({
+  date: item.first_air_date,
+  id: item.id,
+  mediaType: MediaType.Tv,
+  popularity: item.popularity,
+  posterPath: item.poster_path,
+  rating: item.vote_average,
+  title: item.name,
 });
-
-const SearchResultCard = ({ item }: { item: SearchableMediaResult }) => {
-  const title = getTitle(item);
-  const genres = getGenreNames(item);
-  const rating = item.vote_average ? item.vote_average.toFixed(1) : 'NR';
-
-  return (
-    <Box
-      _hover={{ borderColor: 'teal.500', transform: 'translateY(-2px)' }}
-      borderColor="gray.300"
-      borderRadius={8}
-      borderWidth={1}
-      overflow="hidden"
-      transition="border-color 120ms ease, transform 120ms ease"
-    >
-      <Grid
-        gap={{ base: 4, md: 5 }}
-        padding={4}
-        templateColumns={{
-          base: '96px minmax(0, 1fr)',
-          md: '128px minmax(0, 1fr)',
-        }}
-      >
-        <Box asChild>
-          <Link href={getDetailHref(item)} prefetch={false}>
-            <Image
-              alt={`${title} poster`}
-              aspectRatio={2 / 3}
-              background="gray.800"
-              borderRadius={6}
-              height="auto"
-              objectFit="cover"
-              src={
-                item.poster_path
-                  ? `${IMAGE_URL}${item.poster_path}`
-                  : '/Movie Night-bro.svg'
-              }
-              width="100%"
-            />
-          </Link>
-        </Box>
-
-        <Stack gap={3} minWidth={0}>
-          <Box asChild>
-            <Link href={getDetailHref(item)} prefetch={false}>
-              <Stack gap={2}>
-                <Heading
-                  as="h2"
-                  fontSize={{ base: 'md', md: 'lg' }}
-                  lineHeight="1.2"
-                >
-                  {title}
-                </Heading>
-                <Flex align="center" gap={2} wrap="wrap">
-                  <Badge>{getTypeLabel(item.media_type)}</Badge>
-                  <Text color="fg.muted" fontSize="sm">
-                    {getYear(item)}
-                  </Text>
-                  <Text color="fg.muted" fontSize="sm">
-                    TMDB {rating}
-                  </Text>
-                </Flex>
-              </Stack>
-            </Link>
-          </Box>
-
-          {genres.length > 0 ? (
-            <Flex gap={2} wrap="wrap">
-              {genres.map((genre) => (
-                <Badge key={genre} variant="outline">
-                  {genre}
-                </Badge>
-              ))}
-            </Flex>
-          ) : null}
-
-          <Text color="fg.muted" fontSize="sm" lineClamp={3}>
-            {item.overview || 'No description available from TMDB.'}
-          </Text>
-          <WatchlistStateButton
-            mediaType={item.media_type}
-            mode="add-only"
-            tmdbId={item.id}
-          />
-        </Stack>
-      </Grid>
-    </Box>
-  );
-};
 
 export const MultiSearchPage = () => {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const pathname = usePathname();
-
+  const searchParams = useSearchParams();
   const page = getPage(searchParams.get('page'));
   const query = searchParams.get('query') ?? '';
-  const mediaFilter = getMediaFilter(searchParams.get('type'));
+  const mediaType = getMediaType(searchParams.get('type'));
   const [inputValue, setInputValue] = useState(query);
+  const [sort, setSort] = useState<SortKey>('popularity');
 
+  useEffect(() => setInputValue(query), [query]);
   useEffect(() => {
-    setInputValue(query);
-  }, [query]);
-
-  useEffect(() => {
-    const trimmedQuery = inputValue.trim();
-
-    if (trimmedQuery === query) {
+    const trimmed = inputValue.trim();
+    if (trimmed === query) {
       return;
     }
-
-    const timeoutId = window.setTimeout(() => {
-      const nextParams = new URLSearchParams(searchParams.toString());
-
-      if (trimmedQuery) {
-        nextParams.set('query', trimmedQuery);
-        nextParams.set('page', '1');
+    const timer = window.setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (trimmed) {
+        params.set('query', trimmed);
       } else {
-        nextParams.delete('query');
-        nextParams.delete('page');
+        params.delete('query');
       }
-
-      router.push(`${pathname}?${nextParams.toString()}` as Route);
+      params.set('page', '1');
+      router.push(`${pathname}?${params}` as Route);
     }, 500);
-
-    return () => window.clearTimeout(timeoutId);
+    return () => window.clearTimeout(timer);
   }, [inputValue, pathname, query, router, searchParams]);
 
-  const shouldSearch = query.length > 0;
-  const shouldSearchAll = shouldSearch && mediaFilter === 'all';
-  const shouldSearchMovies = shouldSearch && mediaFilter === MediaType.Movie;
-  const shouldSearchTVShows = shouldSearch && mediaFilter === MediaType.Tv;
-
-  const multiSearch = useMultiSearchResult(
-    {
-      page,
-      query,
-    },
-    shouldSearchAll
-  );
-  const movieSearch = useMovieList(
+  const movie = useMovieList(
     'popular',
-    {
-      page,
-      query,
-    },
+    { page, query },
     undefined,
-    shouldSearchMovies
+    mediaType === MediaType.Movie
   );
+  const tvBrowse = useTVShowByList({
+    isReady: mediaType === MediaType.Tv && !query,
+    listType: 'popular',
+    params: { page },
+  });
   const tvSearch = useTVShowSearchResultList(
-    {
-      page,
-      query,
-    },
-    shouldSearchTVShows
+    { page, query },
+    mediaType === MediaType.Tv && Boolean(query)
   );
-
-  const handleChangeFilter = useCallback(
-    (updatedFilter: MediaFilter) => {
-      const nextParams = new URLSearchParams(searchParams.toString());
-
-      if (updatedFilter === 'all') {
-        nextParams.delete('type');
-      } else {
-        nextParams.set('type', updatedFilter);
-      }
-
-      nextParams.set('page', '1');
-      router.push(`${pathname}?${nextParams.toString()}` as Route);
-    },
-    [pathname, router, searchParams]
-  );
-
-  const handleChangePage = useCallback(
-    (updatedPage: number) => {
-      const nextParams = new URLSearchParams(searchParams.toString());
-      nextParams.set('page', updatedPage.toString());
-      router.push(`${pathname}?${nextParams.toString()}` as Route);
-    },
-    [pathname, router, searchParams]
-  );
-
-  const totalPages = useMemo(() => {
-    if (mediaFilter === MediaType.Movie) {
-      return movieSearch.data?.total_pages ?? 0;
-    }
-
-    if (mediaFilter === MediaType.Tv) {
-      return tvSearch.data?.total_pages ?? 0;
-    }
-
-    return multiSearch.data?.total_pages ?? 0;
-  }, [
-    mediaFilter,
-    movieSearch.data?.total_pages,
-    multiSearch.data?.total_pages,
-    tvSearch.data?.total_pages,
-  ]);
-
-  const handleClickNext = useCallback(() => {
-    const lastPage = totalPages || 1;
-
-    handleChangePage(page >= lastPage ? page : page + 1);
-  }, [handleChangePage, page, totalPages]);
-
-  const handleClickPrev = useCallback(() => {
-    handleChangePage(page <= 1 ? page : page - 1);
-  }, [handleChangePage, page]);
-
-  const results = useMemo(() => {
-    if (mediaFilter === MediaType.Movie) {
-      return (movieSearch.data?.results ?? []).map(mapMovieSearchResult);
-    }
-
-    if (mediaFilter === MediaType.Tv) {
-      return (tvSearch.data?.results ?? []).map(mapTVShowSearchResult);
-    }
-
-    return (multiSearch.data?.results ?? []).filter(isSearchableMediaResult);
-  }, [
-    mediaFilter,
-    movieSearch.data?.results,
-    multiSearch.data?.results,
-    tvSearch.data?.results,
-  ]);
-
-  let isLoading = multiSearch.isLoading;
-  let isError = multiSearch.isError;
-
-  if (mediaFilter === MediaType.Movie) {
-    isLoading = movieSearch.isLoading;
-    isError = movieSearch.isError;
-  }
-
-  if (mediaFilter === MediaType.Tv) {
+  let isLoading = movie.isLoading;
+  let isError = movie.isError;
+  let totalPages = movie.data?.total_pages ?? 0;
+  if (mediaType === MediaType.Tv && query) {
     isLoading = tvSearch.isLoading;
     isError = tvSearch.isError;
+    totalPages = tvSearch.data?.total_pages ?? 0;
+  } else if (mediaType === MediaType.Tv) {
+    isLoading = tvBrowse.isLoading;
+    isError = tvBrowse.isError;
+    totalPages = tvBrowse.data?.total_pages ?? 0;
   }
-
-  const pageNavButtonProps: PageNavButtonProps = useMemo(
-    () => ({
-      isLoading,
-      page,
-      totalPages,
-      onClickNext: handleClickNext,
-      onClickPrev: handleClickPrev,
-    }),
-    [handleClickNext, handleClickPrev, isLoading, page, totalPages]
+  const rawItems =
+    mediaType === MediaType.Movie
+      ? (movie.data?.results ?? []).map(mapMovie)
+      : ((query ? tvSearch.data?.results : tvBrowse.data?.results) ?? []).map(
+          mapTV
+        );
+  const items = useMemo(
+    () =>
+      rawItems
+        .toSorted((left, right) => {
+          if (sort === 'rating') {
+            return right.rating - left.rating;
+          }
+          if (sort === 'release') {
+            return (right.date || '').localeCompare(left.date || '');
+          }
+          return right.popularity - left.popularity;
+        })
+        .slice(0, 27),
+    [rawItems, sort]
   );
+  const changeParams = useCallback(
+    (updates: Record<string, string>) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(updates)) {
+        params.set(key, value);
+      }
+      router.push(`${pathname}?${params}` as Route);
+    },
+    [pathname, router, searchParams]
+  );
+  const navProps: PageNavButtonProps = {
+    isLoading,
+    page,
+    totalPages,
+    onClickNext: () =>
+      changeParams({ page: String(Math.min(page + 1, totalPages || 1)) }),
+    onClickPrev: () => changeParams({ page: String(Math.max(page - 1, 1)) }),
+  };
 
   const renderResults = () => {
-    if (!query) {
-      return (
-        <Box
-          borderColor="gray.300"
-          borderRadius={8}
-          borderWidth={1}
-          padding={5}
-        >
-          <Text color="white">Search for a movie or TV show to begin.</Text>
-        </Box>
-      );
-    }
-
     if (isError) {
       return (
-        <Box borderColor="red.400" borderRadius={8} borderWidth={1} padding={5}>
-          <Text>
-            TMDB search is unavailable right now. Please try again shortly.
-          </Text>
-        </Box>
+        <StatePanel
+          message="Search is unavailable right now. Please try again shortly."
+          title="Unable to load results"
+          tone="error"
+        />
       );
     }
-
-    if (!isLoading && results.length === 0) {
+    if (isLoading) {
+      return <SectionLoading />;
+    }
+    if (items.length === 0) {
       return (
-        <Box
-          borderColor="gray.300"
-          borderRadius={8}
-          borderWidth={1}
-          padding={5}
-        >
-          <Text color="white">No matching movies or TV shows found.</Text>
-        </Box>
+        <StatePanel
+          message="Try another title or change the selected content type."
+          title="No titles found"
+        />
       );
     }
-
     return (
       <>
-        <PageNavButtons {...pageNavButtonProps} />
-        <Skeleton loading={!!isLoading}>
-          <Stack gap={4}>
-            {results.map((item) => (
-              <SearchResultCard
-                item={item}
-                key={`${item.media_type}-${item.id}`}
-              />
-            ))}
-          </Stack>
-        </Skeleton>
-        <PageNavButtons {...pageNavButtonProps} />
+        <Grid
+          columnGap={{ base: 3, md: 5 }}
+          rowGap={{ base: 7, md: 9 }}
+          templateColumns={{
+            base: 'repeat(3, minmax(0, 1fr))',
+            md: 'repeat(6, minmax(0, 1fr))',
+            xl: 'repeat(9, minmax(0, 1fr))',
+          }}
+        >
+          {items.map((item) => (
+            <PosterCard
+              actions={
+                <WatchlistStateButton
+                  mediaType={item.mediaType}
+                  mode="add-only"
+                  size="xs"
+                  tmdbId={item.id}
+                />
+              }
+              id={item.id}
+              imageUrl={item.posterPath}
+              key={`${item.mediaType}-${item.id}`}
+              layout="grid"
+              mediaType={item.mediaType}
+              name={item.title}
+              prefetch={false}
+            />
+          ))}
+        </Grid>
+        <PageNavButtons {...navProps} />
       </>
     );
   };
 
   return (
-    <Grid
-      gap={6}
-      marginBottom={8}
-      paddingBottom={{ base: 6, md: 10 }}
-      paddingX={{ base: 8, md: 8 }}
-      width="full"
-    >
-      <Stack gap={2}>
-        <Heading as="h1" fontSize={{ base: '2xl', md: '4xl' }} fontWeight="500">
-          Search
-        </Heading>
-        <Text color="white">
-          Discover movies and TV shows from TMDB and save them for later.
-        </Text>
-      </Stack>
-
-      <Stack gap={3}>
-        <Field.Root>
-          <Field.Label>Search TMDB</Field.Label>
-          <Input
-            _focusVisible={{
-              borderColor: 'white',
-              boxShadow: '0 0 0 1px white',
-            }}
-            _hover={{ borderColor: 'white' }}
-            _placeholder={{ color: 'whiteAlpha.700' }}
-            borderColor="white"
-            borderRadius={24}
-            fontSize="sm"
-            onChange={(event) => setInputValue(event.target.value)}
-            placeholder="Movie or TV show"
-            type="search"
-            value={inputValue}
-          />
-        </Field.Root>
-
-        <HStack gap={2} wrap="wrap">
-          {filterOptions.map((option) => {
-            const isActive = mediaFilter === option.value;
-
-            return (
-              <Button
-                key={option.value}
-                onClick={() => handleChangeFilter(option.value)}
-                size="sm"
-                variant={isActive ? 'solid' : 'outline'}
-              >
-                {option.label}
-              </Button>
-            );
-          })}
+    <PageShell>
+      <PageHeading
+        subtitle="Find movies and TV shows, then add them to your library."
+        title="Search"
+      />
+      <Stack gap={4}>
+        <HStack aria-label="Content type" as="div" gap={2} role="tablist">
+          {[
+            { label: 'Movies', value: MediaType.Movie },
+            { label: 'TV Shows', value: MediaType.Tv },
+          ].map((tab) => (
+            <Button
+              aria-selected={mediaType === tab.value}
+              key={tab.value}
+              onClick={() => changeParams({ type: tab.value, page: '1' })}
+              role="tab"
+              size="sm"
+              variant={mediaType === tab.value ? 'solid' : 'outline'}
+            >
+              {tab.label}
+            </Button>
+          ))}
         </HStack>
+        <Grid
+          gap={4}
+          templateColumns={{ base: '1fr', md: 'minmax(0, 1fr) 14rem' }}
+        >
+          <Field.Root>
+            <Field.Label>Search by title</Field.Label>
+            <Input
+              onChange={(event) => setInputValue(event.target.value)}
+              placeholder={
+                mediaType === MediaType.Movie ? 'Movie title' : 'TV show title'
+              }
+              type="search"
+              value={inputValue}
+            />
+          </Field.Root>
+          <Field.Root>
+            <Field.Label>Sort results</Field.Label>
+            <NativeSelect.Root>
+              <NativeSelect.Field
+                onChange={(event) => setSort(event.target.value as SortKey)}
+                value={sort}
+              >
+                <option value="popularity">Popularity</option>
+                <option value="rating">Rating</option>
+                <option value="release">Release date</option>
+              </NativeSelect.Field>
+              <NativeSelect.Indicator />
+            </NativeSelect.Root>
+          </Field.Root>
+        </Grid>
       </Stack>
-
       {renderResults()}
-    </Grid>
+    </PageShell>
   );
 };

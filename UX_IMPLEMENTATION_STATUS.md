@@ -4,7 +4,25 @@ Audit date: 2026-07-22
 
 Authority: [`UX.md`](UX.md) is the authoritative product and user-experience specification for this audit. Where the current application, [`AGENTS.md`](AGENTS.md), or [`README.md`](README.md) disagrees with it, this document records the disagreement as a conflict; it does not reinterpret `UX.md` to match the code.
 
-Scope: repository-wide, read-only UX audit. No product behavior was changed. The audit covered the governing documentation, package manifest and lockfile, App Router route tree and entry points, layouts, shared and route-level UI, Auth.js/NextAuth configuration, Neon schema and server actions, TMDB clients and normalized contracts, static assets, test discovery, and build/deployment configuration.
+Scope: the original repository-wide audit is retained below as a baseline. The implementation update in this section supersedes baseline rows for shared shells, navigation, footer, poster cards, shared states, Home, Search presentation, and responsive grids.
+
+## Shared UX foundation implementation update
+
+Implementation date: 2026-07-22
+
+| Area | Current status | Implementation and verification |
+| --- | --- | --- |
+| Public navigation | **Complete** | The primary header contains exactly **Home / Register / Login**, in that order. Active routes use `aria-current` plus a restrained underline. Public mobile uses the header and has no bottom navigation. |
+| Authenticated navigation | **Complete** | Desktop contains exactly **Movies / TV Shows / Search / Profile**. Authenticated mobile hides those header links and exposes the same ordered set in one fixed, safe-area-aware bottom navigation. Session loading no longer displays the signed-out links. |
+| Shared shells | **Complete for the shared foundation** | `PageShell` and `PageHeading` establish an 80rem wide shell, consistent 4/6/8 outer spacing, shared vertical rhythm, responsive headings, and a 48rem narrow legal/contact variant. Auth pages use a separate full-height black shell and centered white card. Detail, media overview, library, profile, public profile, Home, Search, legal, and contact surfaces consume the shared shell or its spacing rules. |
+| Public Home | **Complete for specified shared layout** | Signed-out copy and CTA match `UX.md`; quick search and the login/register panel were removed. Discovery sections render at most nine titles in 3-column mobile and 9-column wide-desktop grids with standardized **See All** actions. Signed-in `/` redirects to `/movies`, removing the extra signed-in Home destination. |
+| Poster cards and grids | **Complete for shared behavior** | `PosterCard` now has always-visible titles, accessible detail links, nullable-poster fallback, optional status, progress, and action slots. Shared grids use three mobile columns and expand to six/nine columns. Search, Home, library, overview, recommendations, and public-profile media use the shared card family. |
+| Sections and common states | **Complete** | `SectionHeading`, `StatePanel`, and `SectionLoading` standardize headings, descriptions, **See All**, empty/error/success feedback, and nine-card loading placeholders. Horizontal recommendations retain the existing scroll container where appropriate. |
+| Mutation feedback | **Complete for affected shared actions** | OAuth and logout actions disable while pending; existing watchlist/tracking/follow/profile actions already use pending state. Shared feedback uses polite/assertive live regions rather than intrusive notifications. |
+| Footer | **Complete for navigation and shell** | Public-facing shells expose exactly **Privacy Policy / Terms of Service / Contact** plus copyright. Authenticated shells omit the footer so it cannot conflict with the mobile bottom navigation. `/privacy`, `/terms`, and `/contact` now exist. Legal wording still requires owner/legal approval; contact delivery, persistent rate limiting, and production spam protection remain **Blocked** pending an approved provider/operations design. |
+| Accessibility | **Complete for affected shared components** | Header, primary navigation, main, footer, and footer navigation use semantic landmarks; navigation landmarks are named; icon-only and poster actions have accessible names; active links expose `aria-current`; forms have associated Chakra fields; status/error feedback uses live regions; global focus-visible styling remains enabled. |
+| Automated checks | **Complete** | `pnpm lint`, `pnpm type:check`, and `pnpm build` pass under the repository-declared Node 24.16.0 and pnpm 11.7.0 toolchain. The repository still has no unit/E2E test suite or `test` script, so no affected test files existed to update. |
+| Browser verification | **Complete with environment limitation** | Agent-browser screenshots and accessibility snapshots covered signed-out Home and Login at 1440x1000 and 390x844, the public legal shell, and authenticated Search at desktop/mobile using controlled `/api/auth/session` and TMDB response interception. The authenticated mobile snapshot confirmed one bottom primary nav, no duplicate top primary nav, no footer, and a usable 3-column card/action grid. Real Google OAuth/Neon mutation flows remain unverified because secrets are not present in this workspace. |
 
 ## Status definitions
 

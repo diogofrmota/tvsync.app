@@ -13,12 +13,14 @@ type UseTVShowByListArgs = {
   listType: TVShowListType;
   params?: TVShowListParams;
   fallbackData?: TVShowListResponse;
+  isReady?: boolean;
 };
 
 export const useTVShowByList = ({
   listType,
   params,
   fallbackData,
+  isReady,
 }: UseTVShowByListArgs) =>
   useTmdbSWR<TVShowListResponse>({
     path: tvShowListEndpoint({
@@ -31,6 +33,7 @@ export const useTVShowByList = ({
     }),
     params,
     fallbackData,
+    isReady,
     transform: normalizeTVShowListResponse,
   });
 

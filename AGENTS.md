@@ -111,6 +111,7 @@ Optional:
 - `DATABASE_URL_UNPOOLED` for migration tooling.
 - `AUTH_URL`
 - `NEXTAUTH_URL`
+- `NEXT_PUBLIC_SITE_URL`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `NEXT_PUBLIC_UMAMI_WEBSITE_ID`
@@ -133,6 +134,8 @@ TV show detail, season detail, and episode detail pages may include current-user
 ## Deployment Notes
 
 Vercel uses `pnpm build` and should load secrets from Vercel environment variables.
+
+- The canonical production origin is `https://tvsync.app`. Keep `AUTH_URL`, `NEXTAUTH_URL`, `NEXT_PUBLIC_SITE_URL`, metadata, sitemap/robots output, and the Google OAuth callback (`https://tvsync.app/api/auth/callback/google`) aligned with it.
 
 - Keep API routes and Server Actions lightweight for the free tier.
 - Do not rely on always-on background workers.

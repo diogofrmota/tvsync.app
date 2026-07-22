@@ -8,10 +8,10 @@ import {
   HStack,
   Separator,
   SimpleGrid,
-  Stack,
   Text,
   VStack,
 } from '@chakra-ui/react';
+import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
 import { LogoutButton } from 'lib/pages/auth/client-actions';
 import type { AuthSessionIssue } from 'lib/services/auth/session-error.server';
 import type { DatabaseAvailabilityIssue } from 'lib/services/database/core.server';
@@ -52,7 +52,7 @@ const createUsernameFallback = (email?: string | null) =>
     .slice(0, 24) || 'tvsync_user';
 
 export const ProfileAccessIssue = ({ issue }: ProfileAccessIssueProps) => (
-  <Grid gap={6} marginX="auto" maxWidth="40rem" paddingX={8}>
+  <PageShell size="narrow">
     <Box borderColor="red.300" borderRadius="md" borderWidth="1px" padding={5}>
       <Heading as="h1" fontSize={['xl', '2xl']} marginBottom={3}>
         {issue.title}
@@ -64,7 +64,7 @@ export const ProfileAccessIssue = ({ issue }: ProfileAccessIssueProps) => (
         <Link href={'/login?callbackUrl=/profile' as Route}>Log in again</Link>
       </Button>
     </Box>
-  </Grid>
+  </PageShell>
 );
 
 const getInitialValues = ({
@@ -121,15 +121,11 @@ export const ProfilePage = ({
   const avatarName = initialValues.displayName || initialValues.name;
 
   return (
-    <Grid gap={8} marginX="auto" maxWidth="64rem" paddingX={8}>
-      <Stack gap={2}>
-        <Heading as="h1" fontSize={{ base: '2xl', md: '4xl' }} fontWeight="500">
-          Profile
-        </Heading>
-        <Text color="white">
-          Manage your account settings and review your TV show progress.
-        </Text>
-      </Stack>
+    <PageShell>
+      <PageHeading
+        subtitle="Manage your account settings and review your activity."
+        title="Profile"
+      />
 
       <Grid
         alignItems="center"
@@ -234,6 +230,6 @@ export const ProfilePage = ({
           <StatTile label="Dropped" value={tvStats.dropped} />
         </SimpleGrid>
       </Box>
-    </Grid>
+    </PageShell>
   );
 };

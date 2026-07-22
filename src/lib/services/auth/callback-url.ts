@@ -1,5 +1,5 @@
 const DEFAULT_AUTH_CALLBACK_URL = '/profile';
-const DEFAULT_APP_ORIGIN = 'https://tvsync-app.vercel.app';
+const DEFAULT_APP_ORIGIN = 'https://tvsync.app';
 const MAX_NORMALIZE_ATTEMPTS = 3;
 
 const getConfiguredAppOrigin = () => {

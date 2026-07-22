@@ -1,27 +1,28 @@
-import { Grid, Skeleton } from '@chakra-ui/react';
+import { Grid } from '@chakra-ui/react';
+import { SectionLoading } from 'lib/components/shared/Section';
 
-type GridContainerProps = {
+const GridContainer = ({
+  isLoading,
+  children,
+}: {
   isLoading: boolean;
   children: React.ReactNode;
-};
-
-const GridContainer = ({ isLoading, children }: GridContainerProps) => {
+}) => {
+  if (isLoading) {
+    return <SectionLoading />;
+  }
   return (
-    <Skeleton loading={!!isLoading} marginY={8} minHeight="60vh">
-      <Grid
-        columnGap={{ base: 4, md: 5, lg: 6 }}
-        rowGap={{ base: 8, md: 10 }}
-        templateColumns={{
-          base: 'repeat(2, minmax(0, 1fr))',
-          sm: 'repeat(3, minmax(0, 1fr))',
-          md: 'repeat(4, minmax(0, 1fr))',
-          lg: 'repeat(8, minmax(0, 1fr))',
-        }}
-      >
-        {children}
-      </Grid>
-    </Skeleton>
+    <Grid
+      columnGap={{ base: 3, md: 5 }}
+      rowGap={{ base: 7, md: 9 }}
+      templateColumns={{
+        base: 'repeat(3, minmax(0, 1fr))',
+        md: 'repeat(6, minmax(0, 1fr))',
+        xl: 'repeat(9, minmax(0, 1fr))',
+      }}
+    >
+      {children}
+    </Grid>
   );
 };
-
 export default GridContainer;
