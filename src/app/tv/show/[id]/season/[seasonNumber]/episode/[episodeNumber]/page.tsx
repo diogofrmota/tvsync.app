@@ -1,11 +1,14 @@
 import { TVEpisodeDetailPage } from 'lib/pages/tv/episode/detail';
 import { getTVEpisodeDetailsServer } from 'lib/services/tmdb/tv/episode/index.server';
+import { parsePositiveIntegerRouteParam } from 'lib/utils/route-params';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-export const revalidate = 604_800;
-export const dynamic = 'force-static';
+export const dynamic = 'force-dynamic';
 const tmdbOriginalImageUrl = 'https://image.tmdb.org/t/p/original';
+const crawlerMetadata = {
+  robots: { follow: false, index: false },
+} satisfies Metadata;
 
 export async function generateMetadata({
   params,
@@ -13,18 +16,12 @@ export async function generateMetadata({
   params: Promise<{ id: string; seasonNumber: string; episodeNumber: string }>;
 }): Promise<Metadata> {
   const { id, seasonNumber, episodeNumber } = await params;
-  const showId = Number(id);
-  const tvSeasonNumber = Number(seasonNumber);
-  const tvEpisodeNumber = Number(episodeNumber);
+  const showId = parsePositiveIntegerRouteParam(id);
+  const tvSeasonNumber = parsePositiveIntegerRouteParam(seasonNumber);
+  const tvEpisodeNumber = parsePositiveIntegerRouteParam(episodeNumber);
 
-  if (
-    !(
-      Number.isFinite(showId) &&
-      Number.isFinite(tvSeasonNumber) &&
-      Number.isFinite(tvEpisodeNumber)
-    )
-  ) {
-    return {};
+  if (showId === null || tvSeasonNumber === null || tvEpisodeNumber === null) {
+    return crawlerMetadata;
   }
 
   try {
@@ -39,6 +36,7 @@ export async function generateMetadata({
       `View progress and ratings for season ${episode.season_number}, episode ${episode.episode_number}.`;
 
     return {
+      ...crawlerMetadata,
       title: `${title} | TVSync`,
       description,
       openGraph: {
@@ -58,6 +56,7 @@ export async function generateMetadata({
     };
   } catch {
     return {
+      ...crawlerMetadata,
       title: 'TV episode | TVSync',
       description: 'View TV episode progress and ratings on TVSync.',
     };
@@ -70,17 +69,11 @@ export default async function Page({
   params: Promise<{ id: string; seasonNumber: string; episodeNumber: string }>;
 }) {
   const { id, seasonNumber, episodeNumber } = await params;
-  const showId = Number(id);
-  const tvSeasonNumber = Number(seasonNumber);
-  const tvEpisodeNumber = Number(episodeNumber);
+  const showId = parsePositiveIntegerRouteParam(id);
+  const tvSeasonNumber = parsePositiveIntegerRouteParam(seasonNumber);
+  const tvEpisodeNumber = parsePositiveIntegerRouteParam(episodeNumber);
 
-  if (
-    !(
-      Number.isFinite(showId) &&
-      Number.isFinite(tvSeasonNumber) &&
-      Number.isFinite(tvEpisodeNumber)
-    )
-  ) {
+  if (showId === null || tvSeasonNumber === null || tvEpisodeNumber === null) {
     notFound();
   }
 

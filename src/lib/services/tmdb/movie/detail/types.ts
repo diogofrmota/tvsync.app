@@ -19,7 +19,7 @@ export type MovieDetailResponse = Omit<MovieListItemType, 'genre_ids'> & {
   revenue: number;
   runtime?: number;
   spoken_languages: Array<TmdbSpokenLanguage>;
-  status:
+  status?:
     | 'Rumored'
     | 'Planned'
     | 'In Production'

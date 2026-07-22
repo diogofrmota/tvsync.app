@@ -6,7 +6,6 @@ import {
   setOwnFavorite,
 } from 'lib/services/database/profile.server';
 import { MediaType, type TrackableMediaType } from 'lib/types';
-import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth/next';
 
 export type FavoriteActionResult = {
@@ -62,12 +61,6 @@ export const updateFavorite = async (input: {
 
   try {
     await setOwnFavorite(input);
-    revalidatePath('/profile');
-    revalidatePath(
-      input.mediaType === MediaType.Movie
-        ? `/movie/${input.tmdbId}`
-        : `/tv/show/${input.tmdbId}`
-    );
 
     return { favorite: input.favorite, status: 'saved' };
   } catch {

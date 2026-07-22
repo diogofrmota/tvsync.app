@@ -1,12 +1,18 @@
 import { MovieDetailPage } from 'lib/pages/movie/detail';
+import { isMovieDetailViewerAuthenticated } from 'lib/pages/movie/detail/load-viewer.server';
 import { getMovieCreditsServer } from 'lib/services/tmdb/movie/credits/index.server';
 import { getMovieDetailServer } from 'lib/services/tmdb/movie/detail/index.server';
-import { getMovieRecommendationsServer } from 'lib/services/tmdb/movie/list/index.server';
+import { getSimilarMoviesServer } from 'lib/services/tmdb/movie/list/index.server';
+import { getMovieWatchProvidersServer } from 'lib/services/tmdb/movie/providers/index.server';
+import type { MovieWatchProvidersResponse } from 'lib/services/tmdb/movie/providers/types';
+import { normalizeWatchRegion } from 'lib/services/tmdb/movie/providers/utils';
+import { getMovieVideosServer } from 'lib/services/tmdb/movie/videos/index.server';
+import { selectTrustedMovieTrailer } from 'lib/services/tmdb/movie/videos/utils';
+import { parsePositiveIntegerRouteParam } from 'lib/utils/route-params';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-export const revalidate = 604_800;
-export const dynamic = 'force-static';
+export const dynamic = 'force-dynamic';
 const tmdbOriginalImageUrl = 'https://image.tmdb.org/t/p/original';
 
 export async function generateMetadata({
@@ -15,9 +21,9 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const movieId = Number(id);
+  const movieId = parsePositiveIntegerRouteParam(id);
 
-  if (!Number.isFinite(movieId)) {
+  if (movieId === null) {
     return {};
   }
 
@@ -68,23 +74,50 @@ export default async function Page({
   }
 
   try {
-    const movieId = Number(id);
+    const movieId = parsePositiveIntegerRouteParam(id);
 
-    if (!Number.isFinite(movieId)) {
+    if (movieId === null) {
       notFound();
     }
 
-    const [detailData, creditsData, recommendationsData] = await Promise.all([
-      getMovieDetailServer(movieId),
-      getMovieCreditsServer(movieId),
-      getMovieRecommendationsServer(movieId),
-    ]);
+    const detailData = await getMovieDetailServer(movieId);
+    const streamingRegion = normalizeWatchRegion(process.env.TMDB_WATCH_REGION);
+    const [creditsData, similarData, videosData, providersData, session] =
+      await Promise.all([
+        getMovieCreditsServer(movieId).catch(() => ({
+          cast: [],
+          crew: [],
+          id: movieId,
+        })),
+        getSimilarMoviesServer(movieId).catch(() => ({
+          dates: { maximum: '', minimum: '' },
+          page: 1,
+          results: [],
+          total_pages: 0,
+          total_results: 0,
+        })),
+        getMovieVideosServer(movieId).catch(() => ({
+          id: movieId,
+          results: [],
+        })),
+        getMovieWatchProvidersServer(movieId).catch(
+          (): MovieWatchProvidersResponse => ({
+            id: movieId,
+            results: {},
+          })
+        ),
+        isMovieDetailViewerAuthenticated(),
+      ]);
 
     return (
       <MovieDetailPage
         creditsData={creditsData}
         detailData={detailData}
-        recommendationsData={recommendationsData}
+        isAuthenticated={session}
+        similarData={similarData}
+        streamingProviders={providersData.results[streamingRegion] ?? null}
+        streamingRegion={streamingRegion}
+        trailer={selectTrustedMovieTrailer(videosData)}
       />
     );
   } catch {

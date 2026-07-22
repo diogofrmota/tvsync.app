@@ -9,12 +9,16 @@ export default async function Page({
   searchParams,
 }: {
   params: Promise<{ username: string }>;
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ page?: string; q?: string }>;
 }) {
-  const [{ username }, { q = '' }] = await Promise.all([params, searchParams]);
+  const [{ username }, { page, q = '' }] = await Promise.all([
+    params,
+    searchParams,
+  ]);
 
   return loadProfileConnectionsPage({
     kind: 'followers',
+    page: Number(page),
     search: q.slice(0, 80),
     username: decodeURIComponent(username),
   });

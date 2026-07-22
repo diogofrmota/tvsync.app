@@ -7,17 +7,25 @@ import type {
 } from 'lib/types';
 
 import { getDatabaseSql } from './core.server';
+import {
+  COUNT_VISIBLE_FOLLOWERS_QUERY,
+  COUNT_VISIBLE_FOLLOWING_QUERY,
+  FOLLOW_PUBLIC_PROFILE_QUERY,
+  GET_FOLLOW_COUNTS_QUERY,
+  GET_FOLLOWING_STATE_QUERY,
+  GET_SOCIAL_PROFILE_QUERY,
+  LIST_VISIBLE_FOLLOWERS_QUERY,
+  LIST_VISIBLE_FOLLOWING_QUERY,
+  UNFOLLOW_PROFILE_QUERY,
+} from './social-queries';
 import { getAuthenticatedUserId } from './tracking.server';
 
-export type SocialProfileRow = {
-  bio: string;
+export type SocialProfileSummary = {
   display_name: string;
-  privacy_setting: PrivacySetting;
-  user_id: string;
   username: string;
 };
 
-export type SocialProfileListRow = SocialProfileRow & {
+export type SocialProfileListRow = SocialProfileSummary & {
   is_current_user: boolean;
   is_following: boolean;
 };
@@ -25,7 +33,13 @@ export type SocialProfileListRow = SocialProfileRow & {
 export type SocialProfileList = {
   isOwnProfile: boolean;
   items: Array<SocialProfileListRow>;
-  profile: SocialProfileRow;
+  pagination: {
+    page: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+  };
+  profile: SocialProfileSummary;
 };
 
 export type FollowCountsRow = {
@@ -34,9 +48,15 @@ export type FollowCountsRow = {
 };
 
 export type FollowState = FollowCountsRow & {
-  followers: Array<SocialProfileRow>;
-  following: Array<SocialProfileRow>;
   is_following: boolean;
+};
+
+type SocialProfileRecord = {
+  bio: string;
+  display_name: string;
+  privacy_setting: PrivacySetting;
+  user_id: string;
+  username: string;
 };
 
 export type ActivitySource =
@@ -91,7 +111,7 @@ export type RecommendationRow = {
   username: string;
 };
 
-const PUBLIC_PROFILE_LIMIT = 24;
+const CONNECTION_PAGE_SIZE = 24;
 
 export const getFollowStateForProfile = async (
   profileUserId: string
@@ -105,62 +125,25 @@ export const getFollowStateForProfile = async (
     currentUserId = null;
   }
 
-  const countRows = (await sql`
-    select
-      (
-        select count(*)::int
-        from follows
-        inner join profiles on profiles.user_id = follows.follower_user_id
-        where follows.following_user_id = ${profileUserId}
-          and profiles.privacy_setting = 'public'
-      ) as follower_count,
-      (
-        select count(*)::int
-        from follows
-        inner join profiles on profiles.user_id = follows.following_user_id
-        where follows.follower_user_id = ${profileUserId}
-          and profiles.privacy_setting = 'public'
-      ) as following_count
-  `) as Array<FollowCountsRow>;
-  const followingRows = (await sql`
-    select profiles.user_id, profiles.username, profiles.display_name, profiles.bio, profiles.privacy_setting
-    from follows
-    inner join profiles on profiles.user_id = follows.following_user_id
-    where follows.follower_user_id = ${profileUserId}
-      and profiles.privacy_setting = 'public'
-    order by follows.created_at desc
-    limit ${PUBLIC_PROFILE_LIMIT}
-  `) as Array<SocialProfileRow>;
-  const followerRows = (await sql`
-    select profiles.user_id, profiles.username, profiles.display_name, profiles.bio, profiles.privacy_setting
-    from follows
-    inner join profiles on profiles.user_id = follows.follower_user_id
-    where follows.following_user_id = ${profileUserId}
-      and profiles.privacy_setting = 'public'
-    order by follows.created_at desc
-    limit ${PUBLIC_PROFILE_LIMIT}
-  `) as Array<SocialProfileRow>;
-  const stateRows = currentUserId
-    ? ((await sql`
-        select 1 as is_following
-        from follows
-        where follower_user_id = ${currentUserId}
-          and following_user_id = ${profileUserId}
-        limit 1
-      `) as Array<{ is_following: number }>)
-    : [];
+  const [rawCountRows, rawStateRows] = await Promise.all([
+    sql.query(GET_FOLLOW_COUNTS_QUERY, [profileUserId]),
+    currentUserId
+      ? sql.query(GET_FOLLOWING_STATE_QUERY, [currentUserId, profileUserId])
+      : Promise.resolve([]),
+  ]);
+  const countRows = rawCountRows as Array<FollowCountsRow>;
+  const stateRows = rawStateRows as Array<{ is_following: boolean }>;
 
   return {
     follower_count: countRows.at(0)?.follower_count ?? 0,
     following_count: countRows.at(0)?.following_count ?? 0,
-    followers: followerRows,
-    following: followingRows,
-    is_following: stateRows.length > 0,
+    is_following: Boolean(stateRows.at(0)?.is_following),
   };
 };
 
 export const listProfileConnections = async (input: {
   kind: 'followers' | 'following';
+  page?: number;
   search?: string;
   username: string;
 }): Promise<SocialProfileList | null> => {
@@ -173,120 +156,88 @@ export const listProfileConnections = async (input: {
     currentUserId = null;
   }
 
-  const profiles = (await sql`
-    select user_id, username, display_name, bio, privacy_setting
-    from profiles
-    where lower(btrim(username)) = ${input.username.trim().toLowerCase()}
-      and (privacy_setting = 'public' or user_id = ${currentUserId})
-    limit 1
-  `) as Array<SocialProfileRow>;
+  const profiles = (await sql.query(GET_SOCIAL_PROFILE_QUERY, [
+    input.username.normalize('NFKC').trim().toLowerCase(),
+    currentUserId,
+  ])) as Array<SocialProfileSummary & { user_id: string }>;
   const profile = profiles.at(0);
 
   if (!profile) {
     return null;
   }
 
-  const search = input.search?.normalize('NFKC').trim().toLowerCase() ?? '';
-  const items =
+  const search =
+    input.search?.normalize('NFKC').trim().toLowerCase().slice(0, 80) ?? '';
+  const countQuery =
     input.kind === 'followers'
-      ? ((await sql`
-          select connection.user_id, connection.username,
-            connection.display_name, connection.bio,
-            connection.privacy_setting,
-            (connection.user_id = ${currentUserId}) as is_current_user,
-            exists (
-              select 1 from follows current_follow
-              where current_follow.follower_user_id = ${currentUserId}
-                and current_follow.following_user_id = connection.user_id
-            ) as is_following
-          from follows relationship
-          inner join profiles connection
-            on connection.user_id = relationship.follower_user_id
-          where relationship.following_user_id = ${profile.user_id}
-            and connection.privacy_setting = 'public'
-            and (
-              ${search} = ''
-              or lower(connection.username) like ${`%${search}%`}
-              or lower(connection.display_name) like ${`%${search}%`}
-            )
-          order by connection.display_name asc, connection.username asc
-          limit 100
-        `) as Array<SocialProfileListRow>)
-      : ((await sql`
-          select connection.user_id, connection.username,
-            connection.display_name, connection.bio,
-            connection.privacy_setting,
-            (connection.user_id = ${currentUserId}) as is_current_user,
-            exists (
-              select 1 from follows current_follow
-              where current_follow.follower_user_id = ${currentUserId}
-                and current_follow.following_user_id = connection.user_id
-            ) as is_following
-          from follows relationship
-          inner join profiles connection
-            on connection.user_id = relationship.following_user_id
-          where relationship.follower_user_id = ${profile.user_id}
-            and connection.privacy_setting = 'public'
-            and (
-              ${search} = ''
-              or lower(connection.username) like ${`%${search}%`}
-              or lower(connection.display_name) like ${`%${search}%`}
-            )
-          order by connection.display_name asc, connection.username asc
-          limit 100
-        `) as Array<SocialProfileListRow>);
+      ? COUNT_VISIBLE_FOLLOWERS_QUERY
+      : COUNT_VISIBLE_FOLLOWING_QUERY;
+  const listQuery =
+    input.kind === 'followers'
+      ? LIST_VISIBLE_FOLLOWERS_QUERY
+      : LIST_VISIBLE_FOLLOWING_QUERY;
+  const countRows = (await sql.query(countQuery, [
+    profile.user_id,
+    search,
+  ])) as Array<{ total_count: number }>;
+  const totalItems = countRows.at(0)?.total_count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalItems / CONNECTION_PAGE_SIZE));
+  const requestedPage =
+    typeof input.page === 'number' && Number.isSafeInteger(input.page)
+      ? input.page
+      : 1;
+  const page = Math.min(Math.max(1, requestedPage), totalPages);
+  const items = (await sql.query(listQuery, [
+    profile.user_id,
+    currentUserId,
+    search,
+    CONNECTION_PAGE_SIZE,
+    (page - 1) * CONNECTION_PAGE_SIZE,
+  ])) as Array<SocialProfileListRow>;
 
   return {
     isOwnProfile: currentUserId === profile.user_id,
     items,
-    profile,
+    pagination: {
+      page,
+      pageSize: CONNECTION_PAGE_SIZE,
+      totalItems,
+      totalPages,
+    },
+    profile: {
+      display_name: profile.display_name,
+      username: profile.username,
+    },
   };
 };
 
 export const followPublicProfile = async (followingUsername: string) => {
   const followerUserId = await getAuthenticatedUserId();
   const sql = getDatabaseSql();
-  const rows = (await sql`
-    insert into follows (follower_user_id, following_user_id)
-    select ${followerUserId}, profiles.user_id
-    from profiles
-    where lower(btrim(profiles.username)) = ${followingUsername.trim().toLowerCase()}
-      and profiles.privacy_setting = 'public'
-      and profiles.user_id <> ${followerUserId}
-    on conflict (follower_user_id, following_user_id) do nothing
-    returning following_user_id
-  `) as Array<{ following_user_id: string }>;
+  const normalizedUsername = followingUsername
+    .normalize('NFKC')
+    .trim()
+    .toLowerCase();
+  const rows = (await sql.query(FOLLOW_PUBLIC_PROFILE_QUERY, [
+    followerUserId,
+    normalizedUsername,
+  ])) as Array<{ created: boolean; following_user_id: string }>;
 
   if (rows.length === 0) {
-    const existingRows = (await sql`
-      select user_id
-      from profiles
-      where lower(btrim(username)) = ${followingUsername.trim().toLowerCase()}
-        and privacy_setting = 'public'
-        and user_id <> ${followerUserId}
-      limit 1
-    `) as Array<{ user_id: string }>;
-
-    if (existingRows.length === 0) {
-      throw new Error('Only public profiles can be followed.');
-    }
+    throw new Error('This public profile is unavailable.');
   }
 
-  return rows.at(0) ?? null;
+  return rows[0];
 };
 
 export const unfollowProfile = async (followingUsername: string) => {
   const followerUserId = await getAuthenticatedUserId();
   const sql = getDatabaseSql();
 
-  return sql`
-    delete from follows
-    using profiles
-    where follows.follower_user_id = ${followerUserId}
-      and follows.following_user_id = profiles.user_id
-      and lower(btrim(profiles.username)) = ${followingUsername.trim().toLowerCase()}
-    returning following_user_id
-  `;
+  return sql.query(UNFOLLOW_PROFILE_QUERY, [
+    followerUserId,
+    followingUsername.normalize('NFKC').trim().toLowerCase(),
+  ]);
 };
 
 export const listFollowedActivity = async (limit = 40) => {
@@ -472,7 +423,7 @@ export const listFollowedProfilesForRecommendations = async () => {
     where follows.follower_user_id = ${userId}
       and profiles.privacy_setting = 'public'
     order by profiles.display_name asc
-  `) as Array<SocialProfileRow>;
+  `) as Array<SocialProfileRecord>;
 };
 
 export const createRecommendation = async ({

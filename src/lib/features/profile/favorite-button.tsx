@@ -20,14 +20,20 @@ export const FavoriteButton = ({
   const searchParams = useSearchParams();
   const [favorite, setFavorite] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     let mounted = true;
 
     getFavoriteState({ mediaType, tmdbId }).then((result) => {
-      if (mounted && result.status === 'saved') {
-        setFavorite(result.favorite);
+      if (mounted) {
+        if (result.status === 'saved') {
+          setFavorite(result.favorite);
+        } else if (result.status === 'error') {
+          setMessage('Favourite state could not be loaded. Please try again.');
+        }
+        setIsLoaded(true);
       }
     });
 
@@ -70,20 +76,25 @@ export const FavoriteButton = ({
           ? 'Added to Favourite titles.'
           : 'Removed from Favourite titles.'
       );
-      router.refresh();
     });
   };
+  let buttonLabel = 'Loading favourite…';
+
+  if (isLoaded) {
+    buttonLabel = favorite ? 'Remove from Favourites' : 'Mark as Favourite';
+  }
 
   return (
     <>
       <Button
         aria-pressed={favorite}
-        loading={isPending}
+        disabled={!isLoaded || message?.includes('could not be loaded')}
+        loading={!isLoaded || isPending}
         onClick={handleClick}
         type="button"
         variant={favorite ? 'solid' : 'outline'}
       >
-        {favorite ? 'Remove from Favourites' : 'Mark as Favourite'}
+        {buttonLabel}
       </Button>
       {message ? (
         <Text

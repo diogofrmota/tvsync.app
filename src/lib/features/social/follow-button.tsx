@@ -6,7 +6,7 @@ import {
   unfollowProfileAction,
 } from 'lib/features/social/actions';
 import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 
 type FollowButtonProps = {
   callbackUrl?: string;
@@ -27,6 +27,10 @@ export const FollowButton = ({
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setIsFollowing(initialIsFollowing);
+  }, [initialIsFollowing]);
 
   if (isOwnProfile) {
     return null;
@@ -50,7 +54,7 @@ export const FollowButton = ({
         return;
       }
 
-      setIsFollowing(!isFollowing);
+      setIsFollowing(result.isFollowing ?? !isFollowing);
       setMessage(null);
       router.refresh();
     });
@@ -59,7 +63,9 @@ export const FollowButton = ({
   return (
     <>
       <Button
+        aria-label={`${isFollowing ? 'Unfollow' : 'Follow'} @${username}`}
         loading={isPending}
+        loadingText={isFollowing ? 'Unfollowing' : 'Following'}
         onClick={handleClick}
         size="sm"
         variant={isFollowing ? 'outline' : 'solid'}

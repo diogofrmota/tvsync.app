@@ -6,5 +6,5 @@ import { normalizeTVCreditsResponse } from './utils';
 export const getTVShowCreditsServer = (id: number | string) =>
   tmdbServerFetcherCore<TVCreditsResponse>({
     path: `/tv/${id}/credits`,
-    reqInit: { next: { revalidate: 604_800 } },
+    reqInit: { cache: 'no-store' },
   }).then(normalizeTVCreditsResponse);

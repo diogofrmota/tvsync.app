@@ -10,6 +10,7 @@ import { getServerSession } from 'next-auth/next';
 export const loadProfileConnectionsPage = async (input: {
   kind: 'followers' | 'following';
   compare?: boolean;
+  page?: number;
   search: string;
   username: string;
 }) => {
@@ -44,6 +45,7 @@ export const loadProfileConnectionsPage = async (input: {
       isAuthenticated={Boolean(session?.user)}
       kind={input.kind}
       search={input.search}
+      showComparisons={Boolean(input.compare)}
     />
   );
 };

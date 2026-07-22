@@ -69,7 +69,6 @@ const loadPopularMovies = unstable_cache(
   () =>
     getMovieListServer({
       params: { page: 1 },
-      revalidate: HOME_TMDB_REVALIDATE_SECONDS,
       section: 'popular',
     }).then((response) => response.results.map(mapMovieOverviewItem)),
   ['home-popular-movies'],
@@ -80,7 +79,6 @@ const loadTopRatedMovies = unstable_cache(
   () =>
     getMovieListServer({
       params: { page: 1, ...topRatedMovieParams },
-      revalidate: HOME_TMDB_REVALIDATE_SECONDS,
       section: 'top_rated',
     }).then((response) => response.results.map(mapMovieOverviewItem)),
   ['home-top-rated-movies'],
@@ -89,22 +87,19 @@ const loadTopRatedMovies = unstable_cache(
 
 const loadPopularTVShows = unstable_cache(
   () =>
-    getTVShowByListType(
-      'popular',
-      { page: 1 },
-      HOME_TMDB_REVALIDATE_SECONDS
-    ).then((response) => response.results.map(mapTVShowOverviewItem)),
+    getTVShowByListType('popular', { page: 1 }).then((response) =>
+      response.results.map(mapTVShowOverviewItem)
+    ),
   ['home-popular-tv-shows'],
   { revalidate: HOME_TMDB_REVALIDATE_SECONDS }
 );
 
 const loadTopRatedTVShows = unstable_cache(
   () =>
-    getTVShowByListType(
-      'top_rated',
-      { page: 1, ...topRatedTVParams },
-      HOME_TMDB_REVALIDATE_SECONDS
-    ).then((response) => response.results.map(mapTVShowOverviewItem)),
+    getTVShowByListType('top_rated', {
+      page: 1,
+      ...topRatedTVParams,
+    }).then((response) => response.results.map(mapTVShowOverviewItem)),
   ['home-top-rated-tv-shows'],
   { revalidate: HOME_TMDB_REVALIDATE_SECONDS }
 );

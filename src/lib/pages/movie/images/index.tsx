@@ -3,13 +3,12 @@
 import { Button, Grid, Heading } from '@chakra-ui/react';
 import ImageSection from 'lib/components/movie/image/ImageSection';
 import { useMovieImages } from 'lib/services/tmdb/movie/images/index.client';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
-export const MovieImagesPage = () => {
+export const MovieImagesPage = ({ movieId }: { movieId: number }) => {
   const router = useRouter();
-  const { id } = useParams();
 
-  const { data } = useMovieImages(Number(id));
+  const { data } = useMovieImages(movieId);
 
   return (
     <Grid gridGap={[8, 16]} templateColumns="minmax(0,1fr)">

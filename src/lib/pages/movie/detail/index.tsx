@@ -1,156 +1,233 @@
-import { Box, Flex, Grid, Heading, Image, Text } from '@chakra-ui/react';
-import DetailMeta from 'lib/components/shared/DetailMeta';
+import {
+  AspectRatio,
+  Badge,
+  Box,
+  Button,
+  Flex,
+  Grid,
+  Heading,
+  Stack,
+  Text,
+} from '@chakra-ui/react';
 import { PageShell } from 'lib/components/shared/PageShell';
 import PosterCard from 'lib/components/shared/PosterCard';
-import { IMAGE_URL_ORIGINAL } from 'lib/components/shared/PosterImage';
+import PosterImage from 'lib/components/shared/PosterImage';
 import SliderContainer from 'lib/components/shared/SliderContainer';
+import { MovieDetailLibraryControl } from 'lib/features/library/movie-detail-library-control';
 import { FavoriteButton } from 'lib/features/profile/favorite-button';
-import { RatingInput, ReviewsSection } from 'lib/features/reviews';
-import { RecommendForm } from 'lib/features/social/recommend-form';
-import { MediaStatusControl } from 'lib/features/tracking';
-import { WatchlistStateButton } from 'lib/features/watchlist';
-import MovieDetailAdditionalInfo from 'lib/pages/movie/detail/components/additional-info';
-import { BackButton } from 'lib/pages/movie/detail/components/back-button';
+import { RatingInput } from 'lib/features/reviews';
 import CastsWrapper from 'lib/pages/movie/detail/components/casts-wrapper';
 import { GenreList } from 'lib/pages/movie/detail/components/genre-list';
+import { StreamingAvailability } from 'lib/pages/movie/detail/components/streaming-availability';
+import { MovieTrailer } from 'lib/pages/movie/detail/components/trailer';
 import type { MovieCreditsResponse } from 'lib/services/tmdb/movie/credits/types';
 import type { MovieDetailResponse } from 'lib/services/tmdb/movie/detail/types';
 import type { MovieListResponse } from 'lib/services/tmdb/movie/list/types';
+import type { MovieWatchProviderRegion } from 'lib/services/tmdb/movie/providers/types';
+import type { MovieVideo } from 'lib/services/tmdb/movie/videos/types';
 import { MediaType } from 'lib/types';
+import Link from 'next/link';
 
 export type MovieDetailPageProps = {
-  detailData: MovieDetailResponse;
   creditsData: MovieCreditsResponse;
-  recommendationsData: MovieListResponse;
+  detailData: MovieDetailResponse;
+  isAuthenticated: boolean;
+  similarData: MovieListResponse;
+  streamingProviders: MovieWatchProviderRegion | null;
+  streamingRegion: string;
+  trailer: MovieVideo | null;
+};
+
+const getReleaseYear = (releaseDate: string) => {
+  const year = releaseDate
+    ? new Date(releaseDate).getUTCFullYear()
+    : Number.NaN;
+
+  return Number.isFinite(year) ? String(year) : 'Unavailable';
 };
 
 export const MovieDetailPage = ({
-  detailData: data,
+  detailData: movie,
   creditsData: credits,
-  recommendationsData,
+  isAuthenticated,
+  similarData,
+  streamingProviders,
+  streamingRegion,
+  trailer,
 }: MovieDetailPageProps) => {
-  const directorNames = credits.crew
-    .filter((crewMember) => crewMember.job === 'Director')
-    .map((director) => director.name);
-  const recommendations = recommendationsData.results.slice(0, 12);
+  const directors = credits.crew
+    .filter((member) => member.job === 'Director')
+    .map((member) => member.name)
+    .filter(Boolean);
+  const similarMovies = similarData.results
+    .filter((similarMovie) => similarMovie.id > 0)
+    .slice(0, 12);
+  const title = movie.title || movie.original_title || 'Untitled movie';
 
   return (
     <PageShell>
-      <Grid gridGap={[8, 16]}>
-        <Box
-          marginX={{ base: 0, md: -8 }}
-          minHeight={{ base: '220px', md: '360px' }}
-          overflow="hidden"
-          position="relative"
+      <Stack gap={{ base: 10, md: 14 }} paddingX={{ base: 4, md: 0 }}>
+        <Grid
+          alignItems="start"
+          gap={{ base: 8, md: 12 }}
+          templateColumns={{
+            base: 'minmax(0, 1fr)',
+            md: '18rem minmax(0, 1fr)',
+          }}
         >
-          <Image
-            alt={`${data.title} backdrop`}
-            height="100%"
-            inset={0}
-            objectFit="cover"
-            opacity={data.backdrop_path ? 0.55 : 0.2}
-            position="absolute"
-            src={
-              data.backdrop_path
-                ? `${IMAGE_URL_ORIGINAL}${data.backdrop_path}`
-                : '/Movie Night-bro.svg'
-            }
-            width="100%"
-          />
-          <Box
-            background="linear-gradient(180deg, transparent, var(--chakra-colors-bg))"
-            bottom={0}
-            height="55%"
-            left={0}
-            position="absolute"
-            right={0}
-          />
+          <AspectRatio
+            justifySelf={{ base: 'center', md: 'stretch' }}
+            maxWidth={{ base: '18rem', md: 'none' }}
+            ratio={2 / 3}
+            width="full"
+          >
+            <PosterImage alt={`${title} poster`} src={movie.poster_path} />
+          </AspectRatio>
+
+          <Stack gap={5}>
+            <Box>
+              <Heading as="h1" fontSize={{ base: '3xl', md: '5xl' }}>
+                {title}
+              </Heading>
+              <Flex gap={2} marginTop={3} wrap="wrap">
+                <Badge variant="outline">
+                  Release year: {getReleaseYear(movie.release_date)}
+                </Badge>
+                <Badge variant="outline">
+                  Runtime:{' '}
+                  {movie.runtime && movie.runtime > 0
+                    ? `${movie.runtime} min`
+                    : 'Unavailable'}
+                </Badge>
+                <Badge variant="outline">
+                  Status: {movie.status || 'Unavailable'}
+                </Badge>
+              </Flex>
+            </Box>
+
+            {movie.genres.length > 0 ? (
+              <GenreList data={movie} />
+            ) : (
+              <Text color="fg.muted">Genres unavailable</Text>
+            )}
+
+            <Box>
+              <Text fontWeight="600">IMDb rating</Text>
+              <Text color="fg.muted">
+                Unavailable — TMDB provides the IMDb title identifier, but not a
+                genuine IMDb rating value.
+              </Text>
+              {movie.imdb_id ? (
+                <Text asChild fontSize="sm" marginTop={1}>
+                  <a
+                    href={`https://www.imdb.com/title/${movie.imdb_id}`}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    View this title on IMDb
+                  </a>
+                </Text>
+              ) : null}
+            </Box>
+
+            <Box>
+              <Heading fontSize="xl" marginBottom={2}>
+                Description
+              </Heading>
+              <Text color={movie.overview ? undefined : 'fg.muted'}>
+                {movie.overview || 'No description is available from TMDB.'}
+              </Text>
+            </Box>
+
+            <Box as="section">
+              <Heading fontSize="xl" marginBottom={3}>
+                Your movie
+              </Heading>
+              {isAuthenticated ? (
+                <Grid gap={5}>
+                  <MovieDetailLibraryControl tmdbId={movie.id} />
+                  <FavoriteButton
+                    mediaType={MediaType.Movie}
+                    tmdbId={movie.id}
+                  />
+                  <RatingInput
+                    showAverage={false}
+                    target={{ mediaType: MediaType.Movie, tmdbId: movie.id }}
+                  />
+                </Grid>
+              ) : (
+                <Stack
+                  alignItems="flex-start"
+                  borderWidth="1px"
+                  gap={3}
+                  padding={4}
+                >
+                  <Text>
+                    Log in or register to add this movie to your library, choose
+                    its status, mark it as a favourite, or rate it.
+                  </Text>
+                  <Flex gap={3} wrap="wrap">
+                    <Button asChild>
+                      <Link href={`/login?callbackUrl=/movie/${movie.id}`}>
+                        Login
+                      </Link>
+                    </Button>
+                    <Button asChild variant="outline">
+                      <Link href="/register">Register</Link>
+                    </Button>
+                  </Flex>
+                </Stack>
+              )}
+            </Box>
+          </Stack>
+        </Grid>
+
+        <MovieTrailer trailer={trailer} />
+
+        <Box as="section">
+          <Heading fontSize={{ base: 'xl', md: '2xl' }} marginBottom={3}>
+            Director
+          </Heading>
+          <Text color={directors.length > 0 ? undefined : 'fg.muted'}>
+            {directors.length > 0 ? directors.join(', ') : 'Unavailable'}
+          </Text>
         </Box>
 
-        <Grid flexBasis={['100%']} paddingX={{ base: 8, md: 0 }} rowGap={8}>
-          <BackButton />
+        <CastsWrapper credits={credits} />
 
-          <DetailMeta
-            data={{
-              name: data.title,
-              tagline: data.tagline,
-              status: data.status,
-              releasedDate: data.release_date,
-              posterPath: data.poster_path,
-              overview: data.overview,
-            }}
-            extras={
-              <Grid gap={4}>
-                {data.genres.length > 0 ? (
-                  <GenreList data={data} />
-                ) : (
-                  <Text color="gray.400">Genres unavailable</Text>
-                )}
-                <WatchlistStateButton
-                  mediaType={MediaType.Movie}
-                  size="md"
-                  tmdbId={data.id}
-                />
-                <MediaStatusControl
-                  mediaType={MediaType.Movie}
-                  tmdbId={data.id}
-                />
-                <FavoriteButton mediaType={MediaType.Movie} tmdbId={data.id} />
-                <RatingInput
-                  target={{ mediaType: MediaType.Movie, tmdbId: data.id }}
-                />
-                <RecommendForm mediaType={MediaType.Movie} tmdbId={data.id} />
-              </Grid>
-            }
-          />
-        </Grid>
+        <StreamingAvailability
+          providers={streamingProviders}
+          region={streamingRegion}
+        />
 
-        <Grid
-          alignItems="center"
-          flexBasis={['100%']}
-          gap={8}
-          paddingX={{ base: 8, md: 0 }}
-          templateColumns={{ base: 'minmax(0, 1fr)', md: '1fr minmax(0, 2fr)' }}
-        >
-          <MovieDetailAdditionalInfo
-            data={data}
-            directorNames={directorNames}
-            movieId={data.id}
-          />
-
-          <CastsWrapper credits={credits} />
-        </Grid>
-
-        <ReviewsSection mediaType={MediaType.Movie} tmdbId={data.id} />
-
-        <Grid gap={4} paddingX={{ base: 0, md: 0 }}>
-          {recommendations.length > 0 ? (
-            <SliderContainer sectionTitle="Recommended movies">
-              {recommendations.map((movie, idx) => (
+        <Box as="section">
+          {similarMovies.length > 0 ? (
+            <SliderContainer sectionTitle="Similar movies">
+              {similarMovies.map((similarMovie, index) => (
                 <PosterCard
-                  id={movie.id}
-                  imageUrl={movie.poster_path}
-                  isLastItem={idx === recommendations.length - 1}
-                  key={`${movie.title}-${movie.id}`}
+                  id={similarMovie.id}
+                  imageUrl={similarMovie.poster_path}
+                  isLastItem={index === similarMovies.length - 1}
+                  key={similarMovie.id}
                   layout="flex"
                   mediaType={MediaType.Movie}
-                  name={movie.title}
+                  name={similarMovie.title}
                   prefetch={false}
                 />
               ))}
             </SliderContainer>
           ) : (
-            <Flex direction="column" gap={2} paddingX={{ base: 8, md: 0 }}>
-              <Heading fontSize="lg" fontWeight="400" textTransform="uppercase">
-                Recommended movies
+            <Stack gap={2}>
+              <Heading fontSize={{ base: 'xl', md: '2xl' }}>
+                Similar movies
               </Heading>
-              <Text color="gray.400">
-                TMDB does not have recommendations for this movie yet.
+              <Text color="fg.muted">
+                TMDB does not list similar movies for this title yet.
               </Text>
-            </Flex>
+            </Stack>
           )}
-        </Grid>
-      </Grid>
+        </Box>
+      </Stack>
     </PageShell>
   );
 };

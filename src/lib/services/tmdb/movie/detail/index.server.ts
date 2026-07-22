@@ -6,5 +6,5 @@ import { normalizeMovieDetailResponse } from './utils';
 export const getMovieDetailServer = (id: number) =>
   tmdbServerFetcherCore<MovieDetailResponse>({
     path: `/movie/${id}`,
-    reqInit: { next: { revalidate: 604_800 } },
+    reqInit: { cache: 'no-store' },
   }).then(normalizeMovieDetailResponse);

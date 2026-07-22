@@ -86,7 +86,7 @@ TMDB access is split by runtime:
 - Endpoint response contracts live beside each endpoint in `types.ts`.
 - Endpoint normalizers live beside each endpoint in `utils.ts` and defensively normalize missing posters, backdrops, dates, overviews, credits, seasons, and episodes.
 
-Current typed TMDB helpers cover movie lists, movie recommendations, trending movies, trending TV shows, weekly all-media trending, movie details, movie credits, TV show details, TV show credits, TV season details, TV episode details, movie images, person details, TV search, and multi-search. The public search route consumes the multi-search client hook through `/api/tmdb` and presents only movie and TV show results with watchlist save actions gated by login.
+Current typed TMDB helpers cover movie lists, true similar movies, movie videos, regional movie watch providers, trending movies, trending TV shows, weekly all-media trending, movie details, movie credits, TV show details, TV show credits, TV season details, TV episode details, movie images, person details, TV search, and multi-search. The search route consumes its client helpers through `/api/tmdb`; movie details consume server-only helpers and never expose the TMDB key.
 
 Do not pass `TMDB_API_KEY` into client components or `NEXT_PUBLIC_*` variables. Add new TMDB endpoints by creating typed server/client helpers under `src/lib/services/tmdb`, then normalize raw TMDB JSON at that boundary before route-level UI consumes it.
 
@@ -174,6 +174,7 @@ Use `.env.example` as the local environment template.
 ```bash
 TMDB_API_URL=https://api.themoviedb.org/3
 TMDB_API_KEY=your_tmdb_api_key
+TMDB_WATCH_REGION=US
 DATABASE_URL=postgres://user:password@host/database?sslmode=require
 DATABASE_URL_UNPOOLED=postgres://user:password@host/database?sslmode=require
 AUTH_SECRET=generate_a_strong_auth_secret
@@ -191,6 +192,7 @@ NEXT_PUBLIC_UMAMI_SRC=
 
 - `TMDB_API_KEY` is required for server-side TMDB requests and for build-time prerendered pages that fetch TMDB data.
 - `TMDB_API_URL` is optional and defaults to `https://api.themoviedb.org/3`.
+- `TMDB_WATCH_REGION` is an optional ISO 3166-1 country code used for movie streaming availability and defaults to `US`.
 - `DATABASE_URL` is required before using Neon-backed Server Components, Server Actions, or Route Handlers.
 - `DATABASE_URL_UNPOOLED` is used by migration tooling and direct `psql` schema application.
 - `AUTH_SECRET` is required for production auth sessions. Generate a strong value and store it only in local/Vercel environment variables.

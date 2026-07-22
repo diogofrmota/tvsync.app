@@ -6,5 +6,5 @@ import { normalizeMovieCreditsResponse } from './utils';
 export const getMovieCreditsServer = (id: number) =>
   tmdbServerFetcherCore<MovieCreditsResponse>({
     path: `/movie/${id}/credits`,
-    reqInit: { next: { revalidate: 604_800 } },
+    reqInit: { cache: 'no-store' },
   }).then(normalizeMovieCreditsResponse);

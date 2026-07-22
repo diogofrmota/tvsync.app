@@ -32,7 +32,10 @@ type ProfileRow = {
 };
 
 export type OwnProfile = ProfileRow;
-export type PublicProfile = Omit<ProfileRow, 'email'>;
+export type PublicProfile = Pick<
+  ProfileRow,
+  'bio' | 'display_name' | 'privacy_setting' | 'user_id' | 'username'
+>;
 
 export type OwnProfileInput = {
   bio?: string;
@@ -212,9 +215,12 @@ export const isUsernameTakenByAnotherUser = async (username: string) => {
 export const getPublicProfileByUsername = async (username: string) => {
   const sql = getDatabaseSql();
   const rows = (await sql`
-    select user_id, name, username, display_name, bio, privacy_setting, created_at, updated_at
+    select user_id, username, display_name, bio, privacy_setting
     from profiles
-    where lower(username) = lower(${username})
+    where lower(btrim(username)) = ${username
+      .normalize('NFKC')
+      .trim()
+      .toLowerCase()}
       and privacy_setting = 'public'
     limit 1
   `) as Array<PublicProfile>;

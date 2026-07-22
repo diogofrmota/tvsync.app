@@ -15,5 +15,5 @@ export const getTVSeasonDetailsServer = ({
   tmdbServerFetcherCore<TVSeasonDetailsResponse>({
     path: `/tv/${showId}/season/${seasonNumber}`,
     params,
-    reqInit: { next: { revalidate: 604_800 } },
+    reqInit: { cache: 'no-store' },
   }).then(normalizeTVSeasonDetailsResponse);

@@ -28,7 +28,6 @@ import {
   isUsernameTakenByAnotherUser,
 } from 'lib/services/database/tracking.server';
 import { PrivacySetting } from 'lib/types';
-import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth/next';
 
 export type ProfileFormState = {
@@ -181,11 +180,6 @@ const mapProfileUpdateError = (error: unknown): ProfileFormState => {
   return { error: 'Profile updates could not be saved. Please try again.' };
 };
 
-const revalidateProfilePaths = () => {
-  revalidatePath('/profile');
-  revalidatePath('/profile/edit');
-};
-
 export const updateOwnProfile = async (
   _previousState: ProfileFormState,
   formData: FormData
@@ -248,8 +242,6 @@ export const updateOwnProfile = async (
         try {
           await sendEmailChangeVerification(recipient);
         } catch {
-          revalidateProfilePaths();
-
           return {
             emailPending: true,
             error:
@@ -259,16 +251,12 @@ export const updateOwnProfile = async (
         }
       }
 
-      revalidateProfilePaths();
-
       return {
         emailPending: true,
         success:
           'Profile saved. Check the new email address to confirm the change; your current email remains active until then.',
       };
     }
-
-    revalidateProfilePaths();
 
     return { success: 'Profile saved.' };
   } catch (error) {

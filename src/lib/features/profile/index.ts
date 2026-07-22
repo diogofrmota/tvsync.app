@@ -18,7 +18,7 @@ export type PublicProfileData = {
   followState: FollowState;
   isAuthenticated: boolean;
   isOwnProfile: boolean;
-  profile: PublicProfile;
+  profile: Pick<PublicProfile, 'bio' | 'display_name' | 'username'>;
   statistics: ProfileStatistics;
 };
 
@@ -47,7 +47,11 @@ export const getPublicProfileData = async (
     followState,
     isAuthenticated: Boolean(session?.user),
     isOwnProfile: session?.user?.id === profile.user_id,
-    profile,
+    profile: {
+      bio: profile.bio,
+      display_name: profile.display_name,
+      username: profile.username,
+    },
     statistics,
   };
 };

@@ -404,7 +404,7 @@ test('episode and season mutations reconcile status while specials stay independ
 
   assert.match(actions, /setOwnTvEpisodeWatchedAndReconcile\(input\)/);
   assert.match(actions, /setOwnTvSeasonWatchedAndReconcile/);
-  assert.match(actions, /revalidatePath\('\/tv-shows'\)/);
+  assert.doesNotMatch(actions, /revalidatePath/);
   assert.match(
     actions,
     /return \{ status: 'error', watched: !input\.watched \}/
