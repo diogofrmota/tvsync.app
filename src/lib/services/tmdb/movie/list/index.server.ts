@@ -9,11 +9,9 @@ import type { ListType, MovieListParams, MovieListResponse } from './types';
 export const getMovieListServer = ({
   section = 'popular',
   params,
-  revalidate,
 }: {
   section: ListType;
   params?: MovieListParams;
-  revalidate?: number;
 }) =>
   tmdbServerFetcherCore<MovieListResponse>({
     path: movieListEndpoint({
@@ -26,7 +24,7 @@ export const getMovieListServer = ({
       with_genres: params?.with_genres,
     }),
     params,
-    reqInit: { next: { revalidate } },
+    reqInit: { cache: 'no-store' },
   }).then(normalizeMovieListResponse);
 
 export const getTrendingMoviesServer = (
@@ -46,5 +44,12 @@ export const getMovieRecommendationsServer = (
   tmdbServerFetcherCore<MovieListResponse>({
     path: `/movie/${id}/recommendations`,
     params,
-    reqInit: { next: { revalidate: 604_800 } },
+    reqInit: { cache: 'no-store' },
+  }).then(normalizeMovieListResponse);
+
+export const getSimilarMoviesServer = (id: number, params?: MovieListParams) =>
+  tmdbServerFetcherCore<MovieListResponse>({
+    path: `/movie/${id}/similar`,
+    params,
+    reqInit: { cache: 'no-store' },
   }).then(normalizeMovieListResponse);

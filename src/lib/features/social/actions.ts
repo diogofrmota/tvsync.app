@@ -1,6 +1,10 @@
 'use server';
 
 import {
+  normalizeUsername,
+  validateUsername,
+} from 'lib/services/auth/security';
+import {
   addReviewComment,
   createRecommendation,
   deleteOwnReviewComment,
@@ -11,10 +15,10 @@ import {
   unfollowProfile,
 } from 'lib/services/database/social.server';
 import { MediaType } from 'lib/types';
-import { revalidatePath } from 'next/cache';
 
 export type SocialActionState = {
   error?: string;
+  isFollowing?: boolean;
   success?: string;
 };
 
@@ -36,50 +40,70 @@ const readTextField = (formData: FormData, name: string) => {
   return typeof value === 'string' ? value.trim() : '';
 };
 
+const getFollowErrorMessage = (error: unknown) => {
+  if (error instanceof Error && error.message.startsWith('Unauthorized:')) {
+    return 'Sign in to follow profiles.';
+  }
+
+  if (
+    error instanceof Error &&
+    error.message === 'This public profile is unavailable.'
+  ) {
+    return error.message;
+  }
+
+  return 'This profile could not be followed.';
+};
+
 export const followProfileAction = async (
   username: string
 ): Promise<SocialActionState> => {
-  try {
-    await followPublicProfile(username);
-    revalidatePath(`/profile/${username}`);
-    revalidatePath('/');
+  const normalizedUsername = normalizeUsername(username);
 
-    return { success: 'Followed.' };
+  if (validateUsername(normalizedUsername)) {
+    return { error: 'This public profile is unavailable.' };
+  }
+
+  try {
+    await followPublicProfile(normalizedUsername);
+
+    return { isFollowing: true, success: 'Followed.' };
   } catch (error) {
-    return {
-      error:
-        error instanceof Error
-          ? error.message
-          : 'This profile could not be followed.',
-    };
+    return { error: getFollowErrorMessage(error) };
   }
 };
 
 export const unfollowProfileAction = async (
   username: string
 ): Promise<SocialActionState> => {
-  try {
-    await unfollowProfile(username);
-    revalidatePath(`/profile/${username}`);
-    revalidatePath('/');
+  const normalizedUsername = normalizeUsername(username);
 
-    return { success: 'Unfollowed.' };
-  } catch {
+  if (validateUsername(normalizedUsername)) {
     return { error: 'This profile could not be unfollowed.' };
+  }
+
+  try {
+    await unfollowProfile(normalizedUsername);
+
+    return { isFollowing: false, success: 'Unfollowed.' };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error && error.message.startsWith('Unauthorized:')
+          ? 'Sign in to manage follows.'
+          : 'This profile could not be unfollowed.',
+    };
   }
 };
 
 export const setReviewLikeAction = async (
   reviewId: string,
   liked: boolean,
-  tmdbId: number,
-  mediaType: MediaType.Movie | MediaType.Tv
+  _tmdbId: number,
+  _mediaType: MediaType.Movie | MediaType.Tv
 ): Promise<SocialActionState> => {
   try {
     await setReviewLike(reviewId, liked);
-    revalidatePath(
-      mediaType === MediaType.Movie ? `/movie/${tmdbId}` : `/tv/show/${tmdbId}`
-    );
 
     return { success: liked ? 'Liked.' : 'Unliked.' };
   } catch {
@@ -110,9 +134,6 @@ export const addReviewCommentAction = async (
 
   try {
     await addReviewComment(reviewId, body);
-    revalidatePath(
-      mediaType === MediaType.Movie ? `/movie/${tmdbId}` : `/tv/show/${tmdbId}`
-    );
 
     return { success: 'Comment added.' };
   } catch {
@@ -122,14 +143,11 @@ export const addReviewCommentAction = async (
 
 export const deleteReviewCommentAction = async (
   commentId: string,
-  tmdbId: number,
-  mediaType: MediaType.Movie | MediaType.Tv
+  _tmdbId: number,
+  _mediaType: MediaType.Movie | MediaType.Tv
 ): Promise<SocialActionState> => {
   try {
     await deleteOwnReviewComment(commentId);
-    revalidatePath(
-      mediaType === MediaType.Movie ? `/movie/${tmdbId}` : `/tv/show/${tmdbId}`
-    );
 
     return { success: 'Comment deleted.' };
   } catch {
@@ -164,7 +182,6 @@ export const recommendMediaAction = async (
       receiverUserId,
       tmdbId,
     });
-    revalidatePath('/recommendations');
 
     return { success: 'Recommendation sent.' };
   } catch {
@@ -193,7 +210,6 @@ export const dismissRecommendationAction = async (
 ): Promise<SocialActionState> => {
   try {
     await dismissRecommendation(recommendationId);
-    revalidatePath('/recommendations');
 
     return { success: 'Recommendation dismissed.' };
   } catch {

@@ -7,7 +7,6 @@ import {
   removeOwnLibraryItem,
 } from 'lib/services/database/tracking.server';
 import { MediaType } from 'lib/types';
-import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth/next';
 
 type WatchlistMediaType = MediaType.Movie | MediaType.Tv;
@@ -66,9 +65,6 @@ export const addToWatchlist = async (
   }
 
   await addOwnLibraryItem(input);
-  revalidatePath('/search');
-  revalidatePath('/watchlist');
-  revalidatePath(input.mediaType === MediaType.Movie ? '/movies' : '/tv-shows');
 
   return { isSaved: true, status: 'saved' };
 };
@@ -85,9 +81,6 @@ export const removeFromWatchlist = async (
   }
 
   await removeOwnLibraryItem(input.tmdbId, input.mediaType);
-  revalidatePath('/search');
-  revalidatePath('/watchlist');
-  revalidatePath(input.mediaType === MediaType.Movie ? '/movies' : '/tv-shows');
 
   return { isSaved: false, status: 'removed' };
 };

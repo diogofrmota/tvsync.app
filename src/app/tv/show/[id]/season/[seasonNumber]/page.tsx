@@ -1,10 +1,10 @@
 import { TVSeasonDetailPage } from 'lib/pages/tv/season/detail';
 import { getTVSeasonDetailsServer } from 'lib/services/tmdb/tv/season/index.server';
+import { parsePositiveIntegerRouteParam } from 'lib/utils/route-params';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-export const revalidate = 604_800;
-export const dynamic = 'force-static';
+export const dynamic = 'force-dynamic';
 const tmdbOriginalImageUrl = 'https://image.tmdb.org/t/p/original';
 
 export async function generateMetadata({
@@ -13,10 +13,10 @@ export async function generateMetadata({
   params: Promise<{ id: string; seasonNumber: string }>;
 }): Promise<Metadata> {
   const { id, seasonNumber } = await params;
-  const showId = Number(id);
-  const tvSeasonNumber = Number(seasonNumber);
+  const showId = parsePositiveIntegerRouteParam(id);
+  const tvSeasonNumber = parsePositiveIntegerRouteParam(seasonNumber);
 
-  if (!(Number.isFinite(showId) && Number.isFinite(tvSeasonNumber))) {
+  if (showId === null || tvSeasonNumber === null) {
     return {};
   }
 
@@ -61,10 +61,10 @@ export default async function Page({
   params: Promise<{ id: string; seasonNumber: string }>;
 }) {
   const { id, seasonNumber } = await params;
-  const showId = Number(id);
-  const tvSeasonNumber = Number(seasonNumber);
+  const showId = parsePositiveIntegerRouteParam(id);
+  const tvSeasonNumber = parsePositiveIntegerRouteParam(seasonNumber);
 
-  if (!(Number.isFinite(showId) && Number.isFinite(tvSeasonNumber))) {
+  if (showId === null || tvSeasonNumber === null) {
     notFound();
   }
 

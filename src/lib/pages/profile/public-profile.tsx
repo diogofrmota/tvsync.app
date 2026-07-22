@@ -75,7 +75,7 @@ const Favorites = ({
 
 export const PublicProfilePage = ({ data }: { data: PublicProfileData }) => {
   const { profile } = data;
-  const displayName = profile.display_name || profile.name || profile.username;
+  const displayName = profile.display_name || profile.username;
   const profilePath = `/profile/${profile.username}`;
   const favoriteMovies = data.favorites.filter(
     (item) => item.mediaType === 'movie'
@@ -87,7 +87,7 @@ export const PublicProfilePage = ({ data }: { data: PublicProfileData }) => {
   return (
     <PageShell>
       <PageHeading
-        subtitle="Public profile information and watch activity."
+        subtitle="Public profile information."
         title="User Profile"
       />
 

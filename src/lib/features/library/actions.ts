@@ -2,6 +2,7 @@
 
 import { setOwnTvLibraryIntent } from 'lib/features/library/tv-library.server';
 import type { TvLibrarySectionStatus } from 'lib/features/library/types';
+import { authOptions } from 'lib/services/auth/index.server';
 import {
   removeOwnLibraryItem,
   setOwnMovieLibraryStatus,
@@ -12,7 +13,7 @@ import {
   type MovieWatchStatus,
   WatchStatus,
 } from 'lib/types';
-import { revalidatePath } from 'next/cache';
+import { getServerSession } from 'next-auth/next';
 
 type MovieLibraryMutationInput = {
   status: MovieWatchStatus;
@@ -30,7 +31,7 @@ type TvLibraryMutationInput = {
 
 export type MovieLibraryMutationResult = {
   message: string;
-  status: 'error' | 'removed' | 'saved';
+  status: 'error' | 'login_required' | 'removed' | 'saved';
   watchStatus: MovieWatchStatus | null;
 };
 
@@ -46,6 +47,9 @@ export type TvLibraryMutationResult = {
 const isPositiveInteger = (value: number) =>
   Number.isInteger(value) && value > 0;
 
+const isAuthenticated = async () =>
+  Boolean((await getServerSession(authOptions))?.user?.id);
+
 const isMovieWatchStatus = (
   value: MovieWatchStatus
 ): value is MovieWatchStatus =>
@@ -57,12 +61,6 @@ const isTvLibraryStatus = (
   value === WatchStatus.Planned ||
   value === WatchStatus.Watching ||
   value === WatchStatus.Completed;
-
-const revalidateMovieLibraryPaths = (tmdbId: number) => {
-  revalidatePath('/movies');
-  revalidatePath('/watchlist');
-  revalidatePath(`/movie/${tmdbId}`);
-};
 
 export const updateMovieLibraryStatus = async ({
   status,
@@ -76,9 +74,16 @@ export const updateMovieLibraryStatus = async ({
     };
   }
 
+  if (!(await isAuthenticated())) {
+    return {
+      message: 'Sign in before changing your movie library.',
+      status: 'login_required',
+      watchStatus: null,
+    };
+  }
+
   try {
     await setOwnMovieLibraryStatus(tmdbId, status);
-    revalidateMovieLibraryPaths(tmdbId);
 
     return {
       message: 'Your movie status was saved automatically.',
@@ -105,9 +110,16 @@ export const removeMovieFromLibrary = async ({
     };
   }
 
+  if (!(await isAuthenticated())) {
+    return {
+      message: 'Sign in before changing your movie library.',
+      status: 'login_required',
+      watchStatus: null,
+    };
+  }
+
   try {
     await removeOwnLibraryItem(tmdbId, MediaType.Movie);
-    revalidateMovieLibraryPaths(tmdbId);
 
     return {
       message: 'The movie was removed from your library.',
@@ -142,9 +154,6 @@ export const updateTvLibraryStatus = async ({
 
   try {
     const projection = await setOwnTvLibraryIntent(tmdbId, status);
-    revalidatePath('/tv-shows');
-    revalidatePath('/watchlist');
-    revalidatePath(`/tv/show/${tmdbId}`);
 
     return {
       ...projection,
@@ -170,9 +179,6 @@ export const removeTvShowFromLibrary = async ({
 
   try {
     await removeOwnLibraryItem(tmdbId, MediaType.Tv);
-    revalidatePath('/tv-shows');
-    revalidatePath('/watchlist');
-    revalidatePath(`/tv/show/${tmdbId}`);
 
     return {
       message: 'The TV show was removed from your library.',

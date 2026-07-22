@@ -188,8 +188,8 @@ test('follower and following pages search, navigate, and follow without exposing
   assert.match(followButton, /Follow/);
   assert.match(followButton, /Unfollow/);
   assert.match(followButton, /\/login\?callbackUrl=/);
-  assert.match(actions, /followPublicProfile\(username\)/);
-  assert.match(actions, /unfollowProfile\(username\)/);
+  assert.match(actions, /followPublicProfile\(normalizedUsername\)/);
+  assert.match(actions, /unfollowProfile\(normalizedUsername\)/);
   assert.doesNotMatch(followButton, /profileUserId|providerAccountId/);
   assert.match(followers, /kind: 'followers'/);
   assert.match(following, /kind: 'following'/);

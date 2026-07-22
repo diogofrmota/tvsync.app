@@ -28,7 +28,6 @@ import {
   TV_WATCH_STATUSES,
   WatchStatus,
 } from 'lib/types';
-import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth/next';
 
 type TrackingActionStatus = 'error' | 'login_required' | 'removed' | 'saved';
@@ -116,38 +115,6 @@ const getLastWatchedAtForStatus = (status: WatchStatus) =>
     ? new Date()
     : null;
 
-const revalidateMediaPaths = (
-  tmdbId: number,
-  mediaType: TrackableMediaType
-) => {
-  revalidatePath('/search');
-  revalidatePath('/watchlist');
-  revalidatePath(mediaType === MediaType.Movie ? '/movies' : '/tv-shows');
-
-  if (mediaType === MediaType.Movie) {
-    revalidatePath(`/movie/${tmdbId}`);
-    return;
-  }
-
-  revalidatePath(`/tv/show/${tmdbId}`);
-};
-
-const revalidateEpisodePaths = (
-  tmdbShowId: number,
-  seasonNumber: number,
-  episodeNumber?: number
-) => {
-  revalidatePath(`/tv/show/${tmdbShowId}`);
-  revalidatePath('/tv-shows');
-  revalidatePath(`/tv/show/${tmdbShowId}/season/${seasonNumber}`);
-
-  if (episodeNumber) {
-    revalidatePath(
-      `/tv/show/${tmdbShowId}/season/${seasonNumber}/episode/${episodeNumber}`
-    );
-  }
-};
-
 export const getMediaTrackingState = async ({
   mediaType,
   tmdbId,
@@ -213,7 +180,6 @@ export const setMediaWatchStatus = async (
         input.tmdbId,
         input.status
       );
-      revalidateMediaPaths(input.tmdbId, input.mediaType);
 
       return { status: 'saved', watchStatus: projection.status };
     }
@@ -224,7 +190,6 @@ export const setMediaWatchStatus = async (
       tmdbId: input.tmdbId,
       watchStatus: input.status,
     });
-    revalidateMediaPaths(input.tmdbId, input.mediaType);
 
     return { status: 'saved', watchStatus: input.status };
   } catch {
@@ -285,11 +250,6 @@ export const setEpisodeWatched = async (
 
   try {
     await setOwnTvEpisodeWatchedAndReconcile(input);
-    revalidateEpisodePaths(
-      input.tmdbShowId,
-      input.seasonNumber,
-      input.episodeNumber
-    );
 
     return { status: 'saved', watched: input.watched };
   } catch {
@@ -352,7 +312,6 @@ export const setSeasonWatched = async (
       tmdbShowId: input.tmdbShowId,
       watched: input.watched,
     });
-    revalidateEpisodePaths(input.tmdbShowId, input.seasonNumber);
 
     return {
       status: 'saved',

@@ -3,11 +3,11 @@ import TvShowDetailPage, {
 } from 'lib/pages/tv/detail';
 import { getTVShowCreditsServer } from 'lib/services/tmdb/tv/credits/index.server';
 import { getTvShowDetail } from 'lib/services/tmdb/tv/detail/index.server';
+import { parsePositiveIntegerRouteParam } from 'lib/utils/route-params';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-export const revalidate = 604_800;
-export const dynamic = 'force-static';
+export const dynamic = 'force-dynamic';
 const tmdbOriginalImageUrl = 'https://image.tmdb.org/t/p/original';
 
 export async function generateMetadata({
@@ -16,9 +16,9 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const showId = Number(id);
+  const showId = parsePositiveIntegerRouteParam(id);
 
-  if (!Number.isFinite(showId)) {
+  if (showId === null) {
     return {};
   }
 
@@ -69,9 +69,9 @@ export default async function Page({
   }
 
   try {
-    const showId = Number(id);
+    const showId = parsePositiveIntegerRouteParam(id);
 
-    if (!Number.isFinite(showId)) {
+    if (showId === null) {
       notFound();
     }
 

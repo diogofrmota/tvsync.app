@@ -13,13 +13,12 @@ import { BionifiedParagraph } from 'lib/components/BionifiedParagraph';
 import PosterImage from 'lib/components/shared/PosterImage';
 import { usePersonDetail } from 'lib/services/tmdb/person/detail/index.client';
 import { countAge } from 'lib/utils/count-age';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
-export const PersonDetailPage = () => {
+export const PersonDetailPage = ({ personId }: { personId: number }) => {
   const router = useRouter();
-  const { id } = useParams();
 
-  const { data, isLoading } = usePersonDetail(Number(id));
+  const { data, isLoading } = usePersonDetail(personId);
 
   return (
     <Grid gap={8} marginX={8}>

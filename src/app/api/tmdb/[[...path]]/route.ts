@@ -1,7 +1,7 @@
 import { tmdbServerFetcherCore } from 'lib/services/tmdb/utils.server';
 import { type NextRequest, NextResponse } from 'next/server';
 
-export const revalidate = 86_400;
+export const dynamic = 'force-dynamic';
 
 const allowedProxyParamNames = new Set([
   'first_air_date_year',
@@ -26,7 +26,7 @@ const blockedProxyParamNames = new Set([
   'request_token',
   'session_id',
 ]);
-const numericPathSegmentRegex = /^\d+$/;
+const positiveIntegerPathSegmentRegex = /^[1-9]\d*$/;
 const movieListSections = new Set([
   'now_playing',
   'popular',
@@ -45,7 +45,11 @@ const trendingResources = new Set(['movie', 'tv']);
 const trendingTimeWindows = new Set(['day', 'week']);
 
 const isPositiveIntegerPathSegment = (segment?: string) =>
-  Boolean(segment && numericPathSegmentRegex.test(segment));
+  Boolean(
+    segment &&
+      positiveIntegerPathSegmentRegex.test(segment) &&
+      Number.isSafeInteger(Number(segment))
+  );
 
 type ProxyPathValidator = (
   idOrSection?: string,
@@ -124,11 +128,14 @@ export async function GET(
   const data = await tmdbServerFetcherCore({
     path: requestPath,
     params: queryParams,
+    reqInit: { cache: 'no-store' },
   });
 
   return NextResponse.json(data, {
     headers: {
-      'Cache-Control': 's-maxage=86400, stale-while-revalidate=600',
+      'Cache-Control': 'public, max-age=0, must-revalidate',
+      'Vercel-CDN-Cache-Control':
+        'public, s-maxage=86400, stale-while-revalidate=600',
     },
   });
 }

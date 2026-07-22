@@ -8,6 +8,16 @@ import {
 
 import type { MovieDetailResponse } from './types';
 
+const movieStatuses = new Set<MovieDetailResponse['status']>([
+  'Rumored',
+  'Planned',
+  'In Production',
+  'Post Production',
+  'Released',
+  'Canceled',
+]);
+const imdbIdRegex = /^tt\d{7,10}$/;
+
 export const normalizeMovieDetailResponse = (
   response: Partial<MovieDetailResponse> | undefined
 ): MovieDetailResponse => ({
@@ -19,7 +29,9 @@ export const normalizeMovieDetailResponse = (
     name: normalizeText(genre.name),
   })),
   homepage: normalizeText(response?.homepage),
-  imdb_id: normalizeText(response?.imdb_id),
+  imdb_id: imdbIdRegex.test(normalizeText(response?.imdb_id))
+    ? normalizeText(response?.imdb_id)
+    : undefined,
   production_companies: normalizeObjectArray(
     response?.production_companies,
     (company) => ({
@@ -43,6 +55,6 @@ export const normalizeMovieDetailResponse = (
     iso_639_1: normalizeText(lang.iso_639_1),
     name: normalizeText(lang.name),
   })),
-  status: response?.status ?? 'Released',
+  status: movieStatuses.has(response?.status) ? response?.status : undefined,
   tagline: normalizeText(response?.tagline),
 });

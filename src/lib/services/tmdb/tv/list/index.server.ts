@@ -17,8 +17,7 @@ import type {
 
 export const getTVShowByListType = (
   listType: TVShowListType,
-  params?: TVShowListParams,
-  revalidate?: number
+  params?: TVShowListParams
 ) =>
   tmdbServerFetcherCore<TVShowListResponse>({
     path: tvShowListEndpoint({
@@ -30,7 +29,7 @@ export const getTVShowByListType = (
       with_genres: params?.with_genres,
     }),
     params,
-    reqInit: { next: { revalidate } },
+    reqInit: { cache: 'no-store' },
   }).then(normalizeTVShowListResponse);
 
 export const getDiscoverTVShowsServer = (params?: TVShowListParams) =>

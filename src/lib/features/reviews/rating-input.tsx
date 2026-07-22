@@ -16,6 +16,7 @@ import { RatingDisplay } from './rating-display';
 
 type RatingInputProps = {
   label?: string;
+  showAverage?: boolean;
   target: RatingTarget;
 };
 
@@ -37,12 +38,14 @@ const emptyState: RatingStateResult = {
 
 export const RatingInput = ({
   label = 'Your rating',
+  showAverage = true,
   target,
 }: RatingInputProps) => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [state, setState] = useState<RatingStateResult>(emptyState);
+  const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -51,6 +54,9 @@ export const RatingInput = ({
     getRatingState(target).then((result) => {
       if (isMounted) {
         setState(result);
+        if (result.status === 'error') {
+          setMessage('Your rating could not be loaded. Please try again.');
+        }
       }
     });
 
@@ -66,6 +72,7 @@ export const RatingInput = ({
   const handleChange = (value: string) => {
     const previousState = state;
     const rating = Number(value);
+    setMessage(null);
 
     setState((current) => ({
       ...current,
@@ -83,16 +90,18 @@ export const RatingInput = ({
 
       if (result.status === 'error') {
         setState(previousState);
+        setMessage('Your rating could not be saved. Please try again.');
         return;
       }
 
       setState(result);
-      router.refresh();
+      setMessage('Your rating was saved.');
     });
   };
 
   const handleRemove = () => {
     const previousState = state;
+    setMessage(null);
 
     setState((current) => ({
       ...current,
@@ -110,11 +119,12 @@ export const RatingInput = ({
 
       if (result.status === 'error') {
         setState(previousState);
+        setMessage('Your rating could not be removed. Please try again.');
         return;
       }
 
       setState(result);
-      router.refresh();
+      setMessage('Your rating was removed.');
     });
   };
 
@@ -128,7 +138,7 @@ export const RatingInput = ({
             value={state.rating ?? ''}
           >
             <option disabled value="">
-              Not rated
+              {state.status === 'error' ? 'Rating unavailable' : 'Not rated'}
             </option>
             {ratingOptions.map((rating) => (
               <option key={rating} value={rating}>
@@ -140,11 +150,13 @@ export const RatingInput = ({
         </NativeSelect.Root>
       </Field.Root>
 
-      <RatingDisplay
-        count={state.ratingCount}
-        label="Average user rating"
-        rating={state.averageRating}
-      />
+      {showAverage ? (
+        <RatingDisplay
+          count={state.ratingCount}
+          label="Average user rating"
+          rating={state.averageRating}
+        />
+      ) : null}
 
       {state.rating ? (
         <Button
@@ -161,6 +173,16 @@ export const RatingInput = ({
           Save a rating from 1.0 to 10.0.
         </Text>
       )}
+
+      {message ? (
+        <Text
+          color={message.includes('could not') ? 'red.500' : 'fg.muted'}
+          fontSize="sm"
+          role={message.includes('could not') ? 'alert' : 'status'}
+        >
+          {message}
+        </Text>
+      ) : null}
     </Grid>
   );
 };

@@ -1,21 +1,7 @@
-'use client';
-
-import {
-  Avatar,
-  Button,
-  Dialog,
-  Field,
-  Flex,
-  Grid,
-  Input,
-  Skeleton,
-  Text,
-} from '@chakra-ui/react';
+import { Avatar, Flex, Grid, Heading, Skeleton, Text } from '@chakra-ui/react';
 import { IMAGE_URL } from 'lib/components/shared/PosterImage';
 import type { MovieCreditsResponse } from 'lib/services/tmdb/movie/credits/types';
 import Link from 'next/link';
-import type { ChangeEvent } from 'react';
-import { useMemo, useState } from 'react';
 
 type CastsWrapperProps = {
   isLoadingCredits?: boolean;
@@ -23,127 +9,61 @@ type CastsWrapperProps = {
 };
 
 const CastsWrapper = ({ isLoadingCredits, credits }: CastsWrapperProps) => {
-  const [keyword, setKeyword] = useState<string>('');
-  const hasCast = (credits?.cast.length ?? 0) > 0;
-
-  const handleChangeKeyword = (event: ChangeEvent<HTMLInputElement>) =>
-    setKeyword(event.target.value);
-
-  const casts = useMemo(() => {
-    if (credits) {
-      return credits.cast
-        .filter(
-          (unfilteredCast) =>
-            unfilteredCast.name.toLowerCase().indexOf(keyword.toLowerCase()) >
-            -1
-        )
-        .map((movieCast) => (
-          <Flex
-            alignItems="center"
-            asChild
-            cursor="pointer"
-            gridColumnGap={2}
-            key={`${movieCast.name}-${movieCast.id}`}
-          >
-            <Link href={`/person/${movieCast.id}`} prefetch={false}>
-              <Avatar.Root size="lg">
-                <Avatar.Fallback name={movieCast.name} />
-                {movieCast.profile_path ? (
-                  <Avatar.Image src={`${IMAGE_URL}${movieCast.profile_path}`} />
-                ) : null}
-              </Avatar.Root>
-              <Text>{movieCast.name}</Text>
-            </Link>
-          </Flex>
-        ));
-    }
-
-    return [];
-  }, [credits, keyword]);
+  const cast =
+    credits?.cast.filter(
+      (member) => member.id > 0 && member.name.trim().length > 0
+    ) ?? [];
+  const hasCast = cast.length > 0;
 
   return (
-    <Skeleton loading={!!isLoadingCredits}>
-      <Dialog.Root placement="center" scrollBehavior="inside">
+    <Skeleton asChild loading={!!isLoadingCredits}>
+      <Grid as="section" gap={4}>
+        <Heading fontSize={{ base: 'xl', md: '2xl' }}>Cast</Heading>
         {credits && hasCast ? (
-          <Flex
-            alignItems="center"
-            gridGap={3}
-            minHeight={24}
-            overflowX="scroll"
+          <Grid
+            gap={4}
+            templateColumns={{
+              base: 'repeat(2, minmax(0, 1fr))',
+              md: 'repeat(4, minmax(0, 1fr))',
+              xl: 'repeat(6, minmax(0, 1fr))',
+            }}
           >
-            <Dialog.Trigger asChild>
-              <Button
-                aria-label="Open full movie cast"
-                borderRadius="50%"
-                padding={8}
-              >
-                Cast
-              </Button>
-            </Dialog.Trigger>
-            {credits.cast.slice(0, 20).map((movieCast) => (
-              <Avatar.Root
-                asChild
-                cursor="pointer"
-                key={`${movieCast.name}-${movieCast.id}`}
-                size="lg"
-              >
+            {cast.slice(0, 12).map((movieCast) => (
+              <Flex alignItems="center" asChild gap={3} key={movieCast.id}>
                 <Link
-                  aria-label={`Open ${movieCast.name} profile`}
+                  aria-label={`View ${movieCast.name}`}
                   href={`/person/${movieCast.id}`}
+                  prefetch={false}
                 >
-                  <Avatar.Fallback name={movieCast.name} />
-                  {movieCast.profile_path ? (
-                    <Avatar.Image
-                      src={`${IMAGE_URL}${movieCast.profile_path}`}
-                    />
-                  ) : null}
+                  <Avatar.Root size="lg">
+                    <Avatar.Fallback name={movieCast.name} />
+                    {movieCast.profile_path ? (
+                      <Avatar.Image
+                        alt=""
+                        src={`${IMAGE_URL}${movieCast.profile_path}`}
+                      />
+                    ) : null}
+                  </Avatar.Root>
+                  <Grid gap={0} minWidth={0}>
+                    <Text fontWeight="600" lineClamp={2}>
+                      {movieCast.name}
+                    </Text>
+                    {movieCast.character ? (
+                      <Text color="fg.muted" fontSize="sm" lineClamp={2}>
+                        {movieCast.character}
+                      </Text>
+                    ) : null}
+                  </Grid>
                 </Link>
-              </Avatar.Root>
+              </Flex>
             ))}
-            <Dialog.Trigger asChild>
-              <Button
-                aria-label="Open more movie cast"
-                borderRadius="50%"
-                padding={8}
-              >
-                More
-              </Button>
-            </Dialog.Trigger>
-          </Flex>
+          </Grid>
         ) : (
-          <Text color="gray.400">
+          <Text color="fg.muted">
             No cast information is available from TMDB.
           </Text>
         )}
-
-        <Dialog.Backdrop />
-
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.Header flexDirection="column">
-              <Dialog.Title>Casts</Dialog.Title>
-              <Field.Root marginY={2}>
-                <Input
-                  aria-label="Search movie cast"
-                  onChange={handleChangeKeyword}
-                  placeholder="Search cast"
-                  type="text"
-                  value={keyword}
-                />
-              </Field.Root>
-            </Dialog.Header>
-            <Dialog.CloseTrigger />
-
-            <Dialog.Body>
-              <Grid gap={4} templateColumns={['repeat(1, 1fr)']}>
-                {casts}
-              </Grid>
-            </Dialog.Body>
-
-            <Dialog.Footer />
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Dialog.Root>
+      </Grid>
     </Skeleton>
   );
 };

@@ -16,7 +16,6 @@ import {
   upsertOwnReview,
 } from 'lib/services/database/tracking.server';
 import { MediaType, PrivacySetting, type RatingTarget } from 'lib/types';
-import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth/next';
 
 type ActionStatus = 'deleted' | 'error' | 'login_required' | 'saved';
@@ -102,25 +101,6 @@ const isValidRating = (rating: number) =>
   rating <= 10 &&
   normalizeRating(rating) === rating;
 
-const getReviewPath = (tmdbId: number, mediaType: string) =>
-  mediaType === MediaType.Movie ? `/movie/${tmdbId}` : `/tv/show/${tmdbId}`;
-
-const getRatingPath = (target: RatingTarget) => {
-  if (target.mediaType === MediaType.Movie) {
-    return `/movie/${target.tmdbId}`;
-  }
-
-  if (target.mediaType === MediaType.Tv) {
-    return `/tv/show/${target.tmdbId}`;
-  }
-
-  if (target.mediaType === 'tv_season') {
-    return `/tv/show/${target.tmdbId}/season/${target.seasonNumber}`;
-  }
-
-  return `/tv/show/${target.tmdbId}/season/${target.seasonNumber}/episode/${target.episodeNumber}`;
-};
-
 const mapReview = (
   review: Awaited<ReturnType<typeof listPublicReviewsForMedia>>[number],
   currentUserId: string | null,
@@ -203,7 +183,6 @@ export const saveRating = async (
   try {
     await upsertOwnRating({ ...target, rating: nextRating });
     const summary = await getRatingSummary(target);
-    revalidatePath(getRatingPath(target));
 
     return {
       averageRating: summary.average_rating,
@@ -247,7 +226,6 @@ export const removeRating = async (
   try {
     await deleteOwnRating(target);
     const summary = await getRatingSummary(target);
-    revalidatePath(getRatingPath(target));
 
     return {
       averageRating: summary.average_rating,
@@ -367,7 +345,6 @@ export const saveReview = async (
       title,
       tmdbId,
     });
-    revalidatePath(getReviewPath(tmdbId, mediaType));
 
     return { success: 'Review saved.' };
   } catch {
@@ -391,7 +368,6 @@ export const removeReview = async (
 
   try {
     await deleteOwnReview(tmdbId, mediaType);
-    revalidatePath(getReviewPath(tmdbId, mediaType));
 
     return getReviewsState(tmdbId, mediaType);
   } catch {

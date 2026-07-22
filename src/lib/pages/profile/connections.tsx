@@ -26,15 +26,37 @@ export const ProfileConnectionsPage = ({
   isAuthenticated,
   kind,
   search,
+  showComparisons = false,
 }: {
   data: SocialProfileList;
   comparisons?: Record<string, ProfileStatistics>;
   isAuthenticated: boolean;
   kind: 'followers' | 'following';
   search: string;
+  showComparisons?: boolean;
 }) => {
   const title = kind === 'followers' ? 'Followers' : 'Following';
   const pagePath = `/profile/${data.profile.username}/${kind}`;
+  const getPageHref = (page: number) => {
+    const query = new URLSearchParams();
+
+    if (search) {
+      query.set('q', search);
+    }
+
+    if (showComparisons) {
+      query.set('compare', 'statistics');
+    }
+
+    if (page > 1) {
+      query.set('page', String(page));
+    }
+
+    const queryString = query.toString();
+
+    return `${pagePath}${queryString ? `?${queryString}` : ''}` as Route;
+  };
+  const callbackUrl = getPageHref(data.pagination.page);
 
   return (
     <PageShell size="narrow">
@@ -58,6 +80,9 @@ export const ProfileConnectionsPage = ({
 
       <form action={pagePath} method="get">
         <Flex align="end" gap={3}>
+          {showComparisons ? (
+            <input name="compare" type="hidden" value="statistics" />
+          ) : null}
           <Field.Root>
             <Field.Label>Search users</Field.Label>
             <Input
@@ -85,7 +110,7 @@ export const ProfileConnectionsPage = ({
                 borderRadius="lg"
                 borderWidth="1px"
                 gap={4}
-                key={item.user_id}
+                key={item.username}
                 padding={4}
                 role="listitem"
               >
@@ -94,7 +119,10 @@ export const ProfileConnectionsPage = ({
                     <Avatar.Fallback name={displayName} />
                   </Avatar.Root>
                   <Box asChild flex="1" minWidth={0}>
-                    <Link href={`/profile/${item.username}` as Route}>
+                    <Link
+                      aria-label={`Open ${displayName}'s profile`}
+                      href={`/profile/${item.username}` as Route}
+                    >
                       <Text fontWeight="semibold" truncate>
                         {displayName}
                       </Text>
@@ -103,13 +131,19 @@ export const ProfileConnectionsPage = ({
                       </Text>
                     </Link>
                   </Box>
-                  <FollowButton
-                    callbackUrl={pagePath}
-                    initialIsFollowing={Boolean(item.is_following)}
-                    isAuthenticated={isAuthenticated}
-                    isOwnProfile={Boolean(item.is_current_user)}
-                    username={item.username}
-                  />
+                  {item.is_current_user ? (
+                    <Text color="fg.muted" fontSize="sm" fontWeight="semibold">
+                      You
+                    </Text>
+                  ) : (
+                    <FollowButton
+                      callbackUrl={callbackUrl}
+                      initialIsFollowing={Boolean(item.is_following)}
+                      isAuthenticated={isAuthenticated}
+                      isOwnProfile={false}
+                      username={item.username}
+                    />
+                  )}
                 </Flex>
                 {comparison ? (
                   <ProfileStatRail
@@ -158,6 +192,33 @@ export const ProfileConnectionsPage = ({
           }
         />
       )}
+
+      {data.pagination.totalPages > 1 ? (
+        <Flex
+          align="center"
+          aria-label={`${title} pagination`}
+          as="nav"
+          justify="space-between"
+        >
+          {data.pagination.page > 1 ? (
+            <Button asChild variant="outline">
+              <Link href={getPageHref(data.pagination.page - 1)}>Previous</Link>
+            </Button>
+          ) : (
+            <Box />
+          )}
+          <Text color="fg.muted" fontSize="sm" role="status">
+            Page {data.pagination.page} of {data.pagination.totalPages}
+          </Text>
+          {data.pagination.page < data.pagination.totalPages ? (
+            <Button asChild variant="outline">
+              <Link href={getPageHref(data.pagination.page + 1)}>Next</Link>
+            </Button>
+          ) : (
+            <Box />
+          )}
+        </Flex>
+      ) : null}
     </PageShell>
   );
 };
