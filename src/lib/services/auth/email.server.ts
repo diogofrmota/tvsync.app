@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { getApplicationOrigin } from 'lib/services/auth/callback-url';
+import { escapeHtml } from 'lib/utils/html';
 import { Resend } from 'resend';
 
 let resendClient: Resend | null = null;
@@ -28,13 +29,7 @@ const getResend = () => {
   return resendClient;
 };
 
-export const escapeEmailHtml = (value: string) =>
-  value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
+export const escapeEmailHtml = escapeHtml;
 
 const getAuthLink = (pathname: string, token: string) => {
   const url = new URL(pathname, getApplicationOrigin());

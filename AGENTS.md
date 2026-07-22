@@ -86,6 +86,7 @@ The authentication lifecycle schema is in `database/migrations/0005_auth_lifecyc
 - Row-level security is not enabled yet. Authorization is enforced in the application/query layer by deriving `session.user.id` from NextAuth and scoping personal reads/mutations to that id.
 - Users may only modify their own personal tracking rows. Public profile/review reads must honor `privacy_setting = 'public'` where practical.
 - If RLS is added later, document exactly how the app sets transaction-local Neon context, such as `set_config('app.current_user_id', userId, true)`, and keep server-side query authorization checks as defense in depth.
+- The public Contact form reuses the existing scope-keyed `auth_rate_limits` table (via `consumeAuthRateLimit` in `src/lib/services/database/auth.server.ts`) for both submission throttling and short-window duplicate-submission detection instead of adding a new table.
 
 ## Navigation Notes
 
@@ -109,6 +110,7 @@ Required:
 - `DATABASE_URL` before using Neon-backed features.
 - `AUTH_SECRET` before production auth sessions are enabled.
 - `RESEND_API_KEY` and `AUTH_EMAIL_FROM` before credential registration, verification, or password-reset email delivery is enabled.
+- `CONTACT_EMAIL_TO` before the public Contact form can deliver mail. Contact reuses `RESEND_API_KEY` and falls back to `AUTH_EMAIL_FROM` when `CONTACT_EMAIL_FROM` is unset.
 
 Optional:
 
@@ -120,6 +122,7 @@ Optional:
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `AUTH_EMAIL_REPLY_TO`
+- `CONTACT_EMAIL_FROM`
 - `NEXT_PUBLIC_UMAMI_WEBSITE_ID`
 - `NEXT_PUBLIC_UMAMI_SRC`
 
