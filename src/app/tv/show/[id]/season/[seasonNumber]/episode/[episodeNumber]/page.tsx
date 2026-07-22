@@ -1,5 +1,15 @@
+import {
+  getEpisodeProgressState,
+  getTvProgressSummary,
+} from 'lib/features/tracking/actions';
 import { TVEpisodeDetailPage } from 'lib/pages/tv/episode/detail';
+import { getTvShowDetail } from 'lib/services/tmdb/tv/detail/index.server';
 import { getTVEpisodeDetailsServer } from 'lib/services/tmdb/tv/episode/index.server';
+import {
+  findAdjacentSeasonNumber,
+  resolveEpisodeNeighbors,
+} from 'lib/services/tmdb/tv/episode/navigation';
+import { getTVSeasonDetailsServer } from 'lib/services/tmdb/tv/season/index.server';
 import { parsePositiveIntegerRouteParam } from 'lib/utils/route-params';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
@@ -78,13 +88,81 @@ export default async function Page({
   }
 
   try {
-    const data = await getTVEpisodeDetailsServer({
+    const [data, show, currentSeason] = await Promise.all([
+      getTVEpisodeDetailsServer({
+        episodeNumber: tvEpisodeNumber,
+        seasonNumber: tvSeasonNumber,
+        showId,
+      }),
+      getTvShowDetail(showId),
+      getTVSeasonDetailsServer({ seasonNumber: tvSeasonNumber, showId }),
+    ]);
+
+    const previousSeasonNumber = findAdjacentSeasonNumber(
+      show.seasons,
+      tvSeasonNumber,
+      'previous'
+    );
+    const nextSeasonNumber = findAdjacentSeasonNumber(
+      show.seasons,
+      tvSeasonNumber,
+      'next'
+    );
+    const currentIndex = currentSeason.episodes
+      .toSorted((left, right) => left.episode_number - right.episode_number)
+      .findIndex((episode) => episode.episode_number === tvEpisodeNumber);
+    const needsPreviousSeason =
+      currentIndex <= 0 && previousSeasonNumber !== null;
+    const needsNextSeason =
+      currentIndex === currentSeason.episodes.length - 1 &&
+      nextSeasonNumber !== null;
+
+    const [previousSeason, nextSeason, progressState, progressSummary] =
+      await Promise.all([
+        needsPreviousSeason
+          ? getTVSeasonDetailsServer({
+              seasonNumber: previousSeasonNumber as number,
+              showId,
+            }).catch(() => null)
+          : Promise.resolve(null),
+        needsNextSeason
+          ? getTVSeasonDetailsServer({
+              seasonNumber: nextSeasonNumber as number,
+              showId,
+            }).catch(() => null)
+          : Promise.resolve(null),
+        getEpisodeProgressState({
+          episodeNumber: tvEpisodeNumber,
+          seasonNumber: tvSeasonNumber,
+          tmdbShowId: showId,
+        }),
+        getTvProgressSummary(showId),
+      ]);
+
+    const { next, previous } = resolveEpisodeNeighbors({
+      currentSeasonEpisodes: currentSeason.episodes,
+      currentSeasonNumber: tvSeasonNumber,
       episodeNumber: tvEpisodeNumber,
-      seasonNumber: tvSeasonNumber,
-      showId,
+      nextSeasonEpisodes: nextSeason?.episodes ?? null,
+      nextSeasonNumber,
+      previousSeasonEpisodes: previousSeason?.episodes ?? null,
+      previousSeasonNumber,
     });
 
-    return <TVEpisodeDetailPage data={data} />;
+    return (
+      <TVEpisodeDetailPage
+        data={data}
+        initialNextEpisode={
+          progressSummary.status === 'saved'
+            ? progressSummary.nextEpisode
+            : null
+        }
+        initialWatched={progressState.watched}
+        next={next}
+        previous={previous}
+        showName={show.name || show.original_name || 'Untitled TV show'}
+      />
+    );
   } catch {
     notFound();
   }
