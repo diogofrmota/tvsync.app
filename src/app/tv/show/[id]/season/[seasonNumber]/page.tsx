@@ -1,4 +1,6 @@
+import { getSeasonProgressState } from 'lib/features/tracking/actions';
 import { TVSeasonDetailPage } from 'lib/pages/tv/season/detail';
+import { getTvShowDetail } from 'lib/services/tmdb/tv/detail/index.server';
 import { getTVSeasonDetailsServer } from 'lib/services/tmdb/tv/season/index.server';
 import { parsePositiveIntegerRouteParam } from 'lib/utils/route-params';
 import type { Metadata } from 'next';
@@ -69,12 +71,26 @@ export default async function Page({
   }
 
   try {
-    const data = await getTVSeasonDetailsServer({
-      seasonNumber: tvSeasonNumber,
-      showId,
-    });
+    const [data, show, progressState] = await Promise.all([
+      getTVSeasonDetailsServer({
+        seasonNumber: tvSeasonNumber,
+        showId,
+      }),
+      getTvShowDetail(showId).catch(() => null),
+      getSeasonProgressState({
+        seasonNumber: tvSeasonNumber,
+        tmdbShowId: showId,
+      }),
+    ]);
 
-    return <TVSeasonDetailPage data={data} showId={showId} />;
+    return (
+      <TVSeasonDetailPage
+        data={data}
+        initialWatchedEpisodeNumbers={progressState.watchedEpisodeNumbers}
+        showId={showId}
+        showName={show?.name || show?.original_name || 'Untitled TV show'}
+      />
+    );
   } catch {
     notFound();
   }
