@@ -2,9 +2,9 @@
 
 import { authOptions } from 'lib/services/auth/index.server';
 import {
-  deleteOwnWatchlistItem,
-  getOwnWatchlistItem,
-  upsertOwnWatchlistItem,
+  addOwnLibraryItem,
+  getOwnMedia,
+  removeOwnLibraryItem,
 } from 'lib/services/database/tracking.server';
 import { MediaType } from 'lib/types';
 import { revalidatePath } from 'next/cache';
@@ -49,7 +49,7 @@ export const getWatchlistSavedState = async (
     return { isSaved: false, status: 'login_required' };
   }
 
-  const item = await getOwnWatchlistItem(input.tmdbId, input.mediaType);
+  const item = await getOwnMedia(input.tmdbId, input.mediaType);
 
   return { isSaved: Boolean(item), status: item ? 'saved' : 'removed' };
 };
@@ -65,8 +65,9 @@ export const addToWatchlist = async (
     return { isSaved: false, status: 'login_required' };
   }
 
-  await upsertOwnWatchlistItem(input);
+  await addOwnLibraryItem(input);
   revalidatePath('/watchlist');
+  revalidatePath(input.mediaType === MediaType.Movie ? '/movies' : '/tv-shows');
 
   return { isSaved: true, status: 'saved' };
 };
@@ -82,8 +83,9 @@ export const removeFromWatchlist = async (
     return { isSaved: false, status: 'login_required' };
   }
 
-  await deleteOwnWatchlistItem(input.tmdbId, input.mediaType);
+  await removeOwnLibraryItem(input.tmdbId, input.mediaType);
   revalidatePath('/watchlist');
+  revalidatePath(input.mediaType === MediaType.Movie ? '/movies' : '/tv-shows');
 
   return { isSaved: false, status: 'removed' };
 };

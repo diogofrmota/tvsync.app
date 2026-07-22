@@ -31,6 +31,7 @@ const migrationNames = [
   '0003_ratings_reviews_targets.sql',
   '0004_social_activity_recommendations.sql',
   '0005_auth_lifecycle.sql',
+  '0006_unify_library_membership.sql',
 ] as const;
 const emailUniqueConstraintPattern = /profiles_email_normalized_unique/;
 const usernameUniqueConstraintPattern = /profiles_username_normalized_unique/;
@@ -82,7 +83,7 @@ test('PostgreSQL auth lifecycle enforces identity, token, reset, and throttle gu
   const db = await PGlite.create({ extensions: { pgcrypto } });
 
   try {
-    for (const migrationName of migrationNames.slice(0, -1)) {
+    for (const migrationName of migrationNames.slice(0, 4)) {
       await runMigration(db, migrationName);
     }
 
@@ -99,7 +100,8 @@ test('PostgreSQL auth lifecycle enforces identity, token, reset, and throttle gu
         values ('legacy-google-user', 'Legacy', 'legacy', 'Legacy', 'legacy@example.com', 'private')
       `
     );
-    await runMigration(db, migrationNames.at(-1) as string);
+    await runMigration(db, migrationNames[4]);
+    await runMigration(db, migrationNames[5]);
 
     await t.test(
       'migration backfills legacy Google identities safely',

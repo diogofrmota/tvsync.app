@@ -25,11 +25,11 @@ type MediaStatusControlProps = {
 };
 
 const statusLabels: Record<WatchStatus, string> = {
-  [WatchStatus.Completed]: 'Completed',
+  [WatchStatus.Completed]: 'Finished',
   [WatchStatus.Dropped]: 'Dropped',
   [WatchStatus.Paused]: 'Paused',
-  [WatchStatus.Planned]: 'Planned',
-  [WatchStatus.Watched]: 'Watched',
+  [WatchStatus.Planned]: 'Planned to Watch',
+  [WatchStatus.Watched]: 'Finished',
   [WatchStatus.Watching]: 'Watching',
 };
 

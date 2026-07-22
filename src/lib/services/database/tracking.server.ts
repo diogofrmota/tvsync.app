@@ -2,6 +2,7 @@ import 'server-only';
 
 import { authOptions } from 'lib/services/auth/index.server';
 import type {
+  MovieWatchStatus,
   PrivacySetting,
   RatingTargetType,
   TrackableMediaType,
@@ -10,6 +11,11 @@ import type {
 import { getServerSession } from 'next-auth/next';
 
 import { getDatabaseSql } from './core.server';
+import {
+  ADD_OWN_LIBRARY_ITEM_QUERY,
+  REMOVE_OWN_LIBRARY_ITEM_QUERY,
+  SET_OWN_MOVIE_LIBRARY_STATUS_QUERY,
+} from './library-queries';
 
 type ProfileRow = {
   bio: string;
@@ -261,6 +267,19 @@ export const listOwnMedia = async () => {
   `) as Array<UserMediaRow>;
 };
 
+export const listOwnMediaByType = async (mediaType: TrackableMediaType) => {
+  const userId = await getAuthenticatedUserId();
+  const sql = getDatabaseSql();
+
+  return (await sql`
+    select id, user_id, tmdb_id, media_type, watch_status, date_added, last_watched_at, privacy_setting, created_at, updated_at
+    from user_media
+    where user_id = ${userId}
+      and media_type = ${mediaType}
+    order by date_added desc
+  `) as Array<UserMediaRow>;
+};
+
 export const listPublicMediaForProfile = async (username: string) => {
   const sql = getDatabaseSql();
 
@@ -397,6 +416,32 @@ export const deleteOwnMedia = async (
       and media_type = ${mediaType}
     returning id
   `;
+};
+
+export const setOwnMovieLibraryStatus = async (
+  tmdbId: number,
+  watchStatus: MovieWatchStatus
+) => {
+  const userId = await getAuthenticatedUserId();
+  const sql = getDatabaseSql();
+  const lastWatchedAt = watchStatus === 'watched' ? new Date() : null;
+
+  return sql.query(SET_OWN_MOVIE_LIBRARY_STATUS_QUERY, [
+    userId,
+    tmdbId,
+    watchStatus,
+    lastWatchedAt,
+  ]);
+};
+
+export const removeOwnLibraryItem = async (
+  tmdbId: number,
+  mediaType: TrackableMediaType
+) => {
+  const userId = await getAuthenticatedUserId();
+  const sql = getDatabaseSql();
+
+  return sql.query(REMOVE_OWN_LIBRARY_ITEM_QUERY, [userId, tmdbId, mediaType]);
 };
 
 export const upsertOwnEpisodeProgress = async (input: EpisodeProgressInput) => {
@@ -688,6 +733,18 @@ export const upsertOwnWatchlistItem = async (input: WatchlistItemInput) => {
       updated_at = now()
     returning *
   `;
+};
+
+export const addOwnLibraryItem = async (input: WatchlistItemInput) => {
+  const userId = await getAuthenticatedUserId();
+  const sql = getDatabaseSql();
+
+  return sql.query(ADD_OWN_LIBRARY_ITEM_QUERY, [
+    userId,
+    input.tmdbId,
+    input.mediaType,
+    input.note ?? '',
+  ]);
 };
 
 export const listOwnWatchlistItems = async () => {

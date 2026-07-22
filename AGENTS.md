@@ -89,11 +89,11 @@ The authentication lifecycle schema is in `database/migrations/0005_auth_lifecyc
 
 ## Navigation Notes
 
-Primary navigation currently lives in `src/lib/layout/Header.tsx` and is centered on desktop. Signed-out users see Home, Movies, TV Shows, and Login / Register. Signed-in users see Home, Movies, TV Shows, Watchlist, and Profile.
+Primary navigation currently lives in `src/lib/layout/Header.tsx` and is centered on desktop. Signed-out users see Home, Register, and Login. Signed-in users see Movies, TV Shows, Search, and Profile.
 
-- Use `/movies/popular` as the main Movies link.
-- Use `/tv/popular` as the main TV Shows link.
-- Keep `/watchlist` auth-protected. It should load saved rows from Neon, hydrate items with TMDB details, separate movies from TV shows, support local search/filter/sort, and remove items through server-only actions.
+- Use `/movies` as the authenticated Movies library link and `/tv-shows` as the authenticated TV Shows library link. Public discovery lists remain available through their existing deep routes.
+- Use `/search` as the authenticated Search link.
+- Keep the legacy `/watchlist` route auth-protected while library behavior migrates to the Movies and TV Shows routes; do not restore it to primary navigation.
 - Watchlist items should show and update the current user's saved watch status where available.
 - Keep `/profile` auth-protected. It should follow the left-aligned route title/subtitle page pattern. Current-user profile editing should save name, username, display name, bio, and privacy setting to Neon through server-only code; Google email remains auth-owned unless the auth design changes.
 - Maintain both desktop active-route styling and the mobile bottom navigation when adding or changing primary routes.

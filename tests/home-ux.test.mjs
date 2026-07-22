@@ -165,7 +165,7 @@ test('tracking, watchlist, and rating mutations authenticate before writes and p
   const watchlistMutation = getExportBody(watchlist, 'addToWatchlist');
   assert.ok(
     watchlistMutation.indexOf('await ensureAuthenticated()') <
-      watchlistMutation.indexOf('await upsertOwnWatchlistItem')
+      watchlistMutation.indexOf('await addOwnLibraryItem')
   );
   assert.match(watchlistMutation, /status: 'login_required'/);
 
