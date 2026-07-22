@@ -38,7 +38,7 @@ export type MovieLibraryMutationResult = {
 export type TvLibraryMutationResult = {
   message: string;
   progressPercent: number;
-  status: 'error' | 'removed' | 'saved';
+  status: 'error' | 'login_required' | 'removed' | 'saved';
   totalEpisodeCount: number;
   watchStatus: TvLibrarySectionStatus | null;
   watchedEpisodeCount: number;
@@ -152,6 +152,13 @@ export const updateTvLibraryStatus = async ({
     return tvMutationError('Choose a valid TV show status and try again.');
   }
 
+  if (!(await isAuthenticated())) {
+    return {
+      ...tvMutationError('Sign in before changing your TV show library.'),
+      status: 'login_required',
+    };
+  }
+
   try {
     const projection = await setOwnTvLibraryIntent(tmdbId, status);
 
@@ -175,6 +182,13 @@ export const removeTvShowFromLibrary = async ({
     return tvMutationError(
       'We could not remove that TV show. Please try again.'
     );
+  }
+
+  if (!(await isAuthenticated())) {
+    return {
+      ...tvMutationError('Sign in before changing your TV show library.'),
+      status: 'login_required',
+    };
   }
 
   try {
