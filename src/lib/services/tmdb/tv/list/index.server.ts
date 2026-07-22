@@ -54,3 +54,13 @@ export const getTrendingTVShowsServer = (
     params,
     reqInit: { next: { revalidate: 43_200 } },
   }).then(normalizeTVShowListResponse);
+
+export const getSimilarTVShowsServer = (
+  id: number | string,
+  params?: TVShowListParams
+) =>
+  tmdbServerFetcherCore<TVShowListResponse>({
+    path: `/tv/${id}/similar`,
+    params,
+    reqInit: { cache: 'no-store' },
+  }).then(normalizeTVShowListResponse);

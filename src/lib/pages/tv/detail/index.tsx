@@ -1,132 +1,234 @@
-'use client';
-
-import { Badge, Box, Flex, Grid, Image, Text } from '@chakra-ui/react';
-import DetailMeta from 'lib/components/shared/DetailMeta';
+import {
+  AspectRatio,
+  Badge,
+  Box,
+  Button,
+  Flex,
+  Grid,
+  Heading,
+  Stack,
+  Text,
+} from '@chakra-ui/react';
 import { PageShell } from 'lib/components/shared/PageShell';
-import { IMAGE_URL_ORIGINAL } from 'lib/components/shared/PosterImage';
-import { useColorMode } from 'lib/components/ui/color-mode';
+import PosterCard from 'lib/components/shared/PosterCard';
+import PosterImage from 'lib/components/shared/PosterImage';
+import SliderContainer from 'lib/components/shared/SliderContainer';
+import { TvDetailLibraryControl } from 'lib/features/library/tv-detail-library-control';
 import { FavoriteButton } from 'lib/features/profile/favorite-button';
-import { RatingInput, ReviewsSection } from 'lib/features/reviews';
-import { RecommendForm } from 'lib/features/social/recommend-form';
-import { MediaStatusControl, TvProgressSummary } from 'lib/features/tracking';
-import { WatchlistStateButton } from 'lib/features/watchlist';
-import { BackButton } from 'lib/pages/movie/detail/components/back-button';
+import { RatingInput } from 'lib/features/reviews';
+import { TvProgressSummary } from 'lib/features/tracking';
+import { TvCastsWrapper } from 'lib/pages/tv/detail/components/casts-wrapper';
+import { SeasonsList } from 'lib/pages/tv/detail/components/seasons-list';
+import { TvStreamingAvailability } from 'lib/pages/tv/detail/components/streaming-availability';
+import { TvTrailer } from 'lib/pages/tv/detail/components/trailer';
 import type { TVCreditsResponse } from 'lib/services/tmdb/tv/credits/types';
 import type { TvShowDetail } from 'lib/services/tmdb/tv/detail/types';
+import type { TVShowListResponse } from 'lib/services/tmdb/tv/list/types';
+import type { TvWatchProviderRegion } from 'lib/services/tmdb/tv/providers/types';
+import type { TvVideo } from 'lib/services/tmdb/tv/videos/types';
 import { MediaType } from 'lib/types';
-
-import { TvShowAdditionalInfo } from './components/additional-info';
-import { TvCastsWrapper } from './components/casts-wrapper';
-import { SeasonsList } from './components/seasons-list';
+import Link from 'next/link';
 
 export type TvShowDetailPageProps = {
   creditsData: TVCreditsResponse;
   data: TvShowDetail;
+  imdbId: string | null;
+  isAuthenticated: boolean;
+  similarData: TVShowListResponse;
+  streamingProviders: TvWatchProviderRegion | null;
+  streamingRegion: string;
+  trailer: TvVideo | null;
 };
 
-const TvShowDetailPage = ({ creditsData, data }: TvShowDetailPageProps) => {
-  const { colorMode } = useColorMode();
+const getReleaseYear = (date: string) => {
+  const year = date ? new Date(date).getUTCFullYear() : Number.NaN;
+
+  return Number.isFinite(year) ? String(year) : 'Unavailable';
+};
+
+const TvShowDetailPage = ({
+  creditsData: credits,
+  data: show,
+  imdbId,
+  isAuthenticated,
+  similarData,
+  streamingProviders,
+  streamingRegion,
+  trailer,
+}: TvShowDetailPageProps) => {
+  const similarShows = similarData.results
+    .filter((similarShow) => similarShow.id > 0)
+    .slice(0, 12);
+  const title = show.name || show.original_name || 'Untitled TV show';
 
   return (
     <PageShell>
-      <Grid gridGap={[8, 16]}>
-        <Box
-          marginX={{ base: 0, md: -8 }}
-          minHeight={{ base: '220px', md: '360px' }}
-          overflow="hidden"
-          position="relative"
-        >
-          <Image
-            alt={
-              data.backdrop_path ? `${data.name} backdrop` : 'TV show backdrop'
-            }
-            height="100%"
-            inset={0}
-            objectFit="cover"
-            opacity={data.backdrop_path ? 0.55 : 0.2}
-            position="absolute"
-            src={
-              data.backdrop_path
-                ? `${IMAGE_URL_ORIGINAL}${data.backdrop_path}`
-                : '/Movie Night-bro.svg'
-            }
-            width="100%"
-          />
-          <Box
-            background="linear-gradient(180deg, transparent, var(--chakra-colors-bg))"
-            bottom={0}
-            height="55%"
-            left={0}
-            position="absolute"
-            right={0}
-          />
-        </Box>
-
-        <Grid flexBasis={['100%']} paddingX={{ base: 8, md: 0 }} rowGap={8}>
-          <BackButton />
-
-          <DetailMeta
-            data={{
-              name: data.name,
-              posterPath: data.poster_path,
-              status: data.status,
-              releasedDate: data.first_air_date,
-              tagline: data.tagline,
-              overview: data.overview,
-            }}
-            extras={
-              <Grid gap={4}>
-                {data.genres.length > 0 ? (
-                  <Flex gridGap={2} wrap="wrap">
-                    {data.genres.map((genre) => (
-                      <Badge
-                        colorScheme="gray"
-                        cursor="default"
-                        key={`${genre.name}-${genre.id}`}
-                        variant={colorMode === 'light' ? 'solid' : 'outline'}
-                      >
-                        {genre.name}
-                      </Badge>
-                    ))}
-                  </Flex>
-                ) : (
-                  <Text color="gray.400">Genres unavailable</Text>
-                )}
-                <WatchlistStateButton
-                  mediaType={MediaType.Tv}
-                  size="md"
-                  tmdbId={data.id}
-                />
-                <MediaStatusControl mediaType={MediaType.Tv} tmdbId={data.id} />
-                <FavoriteButton mediaType={MediaType.Tv} tmdbId={data.id} />
-                <RatingInput
-                  target={{ mediaType: MediaType.Tv, tmdbId: data.id }}
-                />
-                <RecommendForm mediaType={MediaType.Tv} tmdbId={data.id} />
-                <TvProgressSummary tmdbShowId={data.id} />
-              </Grid>
-            }
-          />
-        </Grid>
-
+      <Stack gap={{ base: 10, md: 14 }} paddingX={{ base: 4, md: 0 }}>
         <Grid
-          alignItems="center"
-          flexBasis={['100%']}
-          gap={8}
-          paddingX={{ base: 8, md: 0 }}
-          templateColumns={{ base: 'minmax(0, 1fr)', md: '1fr minmax(0, 2fr)' }}
+          alignItems="start"
+          gap={{ base: 8, md: 12 }}
+          templateColumns={{
+            base: 'minmax(0, 1fr)',
+            md: '18rem minmax(0, 1fr)',
+          }}
         >
-          <TvShowAdditionalInfo data={data} />
+          <AspectRatio
+            justifySelf={{ base: 'center', md: 'stretch' }}
+            maxWidth={{ base: '18rem', md: 'none' }}
+            ratio={2 / 3}
+            width="full"
+          >
+            <PosterImage alt={`${title} poster`} src={show.poster_path} />
+          </AspectRatio>
 
-          <TvCastsWrapper credits={creditsData} />
+          <Stack gap={5}>
+            <Box>
+              <Heading as="h1" fontSize={{ base: '3xl', md: '5xl' }}>
+                {title}
+              </Heading>
+              <Flex gap={2} marginTop={3} wrap="wrap">
+                <Badge variant="outline">
+                  Release year: {getReleaseYear(show.first_air_date)}
+                </Badge>
+                <Badge variant="outline">
+                  Seasons:{' '}
+                  {show.number_of_seasons > 0
+                    ? show.number_of_seasons
+                    : 'Unavailable'}
+                </Badge>
+                <Badge variant="outline">
+                  Episodes:{' '}
+                  {show.number_of_episodes > 0
+                    ? show.number_of_episodes
+                    : 'Unavailable'}
+                </Badge>
+                <Badge variant="outline">
+                  Status: {show.status || 'Unavailable'}
+                </Badge>
+              </Flex>
+            </Box>
+
+            {show.genres.length > 0 ? (
+              <Flex gap={2} wrap="wrap">
+                {show.genres.map((genre) => (
+                  <Badge key={genre.id} variant="subtle">
+                    {genre.name}
+                  </Badge>
+                ))}
+              </Flex>
+            ) : (
+              <Text color="fg.muted">Genres unavailable</Text>
+            )}
+
+            <Box>
+              <Text fontWeight="600">IMDb rating</Text>
+              <Text color="fg.muted">
+                Unavailable — TMDB provides the IMDb title identifier, but not a
+                genuine IMDb rating value.
+              </Text>
+              {imdbId ? (
+                <Text asChild fontSize="sm" marginTop={1}>
+                  <a
+                    href={`https://www.imdb.com/title/${imdbId}`}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    View this title on IMDb
+                  </a>
+                </Text>
+              ) : null}
+            </Box>
+
+            <Box>
+              <Heading fontSize="xl" marginBottom={2}>
+                Description
+              </Heading>
+              <Text color={show.overview ? undefined : 'fg.muted'}>
+                {show.overview || 'No description is available from TMDB.'}
+              </Text>
+            </Box>
+
+            <Box as="section">
+              <Heading fontSize="xl" marginBottom={3}>
+                Your TV show
+              </Heading>
+              {isAuthenticated ? (
+                <Grid gap={5}>
+                  <TvDetailLibraryControl tmdbId={show.id} />
+                  <TvProgressSummary tmdbShowId={show.id} />
+                  <FavoriteButton mediaType={MediaType.Tv} tmdbId={show.id} />
+                  <RatingInput
+                    showAverage={false}
+                    target={{ mediaType: MediaType.Tv, tmdbId: show.id }}
+                  />
+                </Grid>
+              ) : (
+                <Stack
+                  alignItems="flex-start"
+                  borderWidth="1px"
+                  gap={3}
+                  padding={4}
+                >
+                  <Text>
+                    Log in or register to add this TV show to your library,
+                    choose its status, track episode progress, mark it as a
+                    favourite, or rate it.
+                  </Text>
+                  <Flex gap={3} wrap="wrap">
+                    <Button asChild>
+                      <Link href={`/login?callbackUrl=/tv/show/${show.id}`}>
+                        Login
+                      </Link>
+                    </Button>
+                    <Button asChild variant="outline">
+                      <Link href="/register">Register</Link>
+                    </Button>
+                  </Flex>
+                </Stack>
+              )}
+            </Box>
+          </Stack>
         </Grid>
 
-        <Grid paddingX={{ base: 8, md: 0 }}>
-          <SeasonsList seasons={data.seasons} showId={data.id} />
-        </Grid>
+        <TvTrailer trailer={trailer} />
 
-        <ReviewsSection mediaType={MediaType.Tv} tmdbId={data.id} />
-      </Grid>
+        <TvCastsWrapper credits={credits} />
+
+        <TvStreamingAvailability
+          providers={streamingProviders}
+          region={streamingRegion}
+        />
+
+        <SeasonsList seasons={show.seasons} showId={show.id} />
+
+        <Box as="section">
+          {similarShows.length > 0 ? (
+            <SliderContainer sectionTitle="Similar TV shows">
+              {similarShows.map((similarShow, index) => (
+                <PosterCard
+                  id={similarShow.id}
+                  imageUrl={similarShow.poster_path}
+                  isLastItem={index === similarShows.length - 1}
+                  key={similarShow.id}
+                  layout="flex"
+                  mediaType={MediaType.Tv}
+                  name={similarShow.name}
+                  prefetch={false}
+                />
+              ))}
+            </SliderContainer>
+          ) : (
+            <Stack gap={2}>
+              <Heading fontSize={{ base: 'xl', md: '2xl' }}>
+                Similar TV shows
+              </Heading>
+              <Text color="fg.muted">
+                TMDB does not list similar TV shows for this title yet.
+              </Text>
+            </Stack>
+          )}
+        </Box>
+      </Stack>
     </PageShell>
   );
 };
