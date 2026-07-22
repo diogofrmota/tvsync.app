@@ -24,6 +24,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 
 type TvsyncJwt = JWT & {
+  authenticatedAt?: number;
   sessionInvalidated?: boolean;
   sessionVersion?: number;
 };
@@ -72,6 +73,7 @@ const providers: NextAuthOptions['providers'] = [
       }
 
       return {
+        authenticatedAt: Date.now(),
         email: account.email,
         id: account.user_id,
         name: account.name,
@@ -135,6 +137,7 @@ export const authOptions: NextAuthOptions = {
         const sessionVersion = await getSessionVersion(userId);
 
         user.id = userId;
+        (user as User).authenticatedAt = Date.now();
         (user as User).sessionVersion = sessionVersion ?? 0;
         return true;
       } catch (error) {
@@ -147,6 +150,7 @@ export const authOptions: NextAuthOptions = {
       const tvsyncToken = token as TvsyncJwt;
 
       if (user) {
+        tvsyncToken.authenticatedAt = user.authenticatedAt ?? Date.now();
         tvsyncToken.sessionInvalidated = false;
         tvsyncToken.sessionVersion = user.sessionVersion ?? 0;
         tvsyncToken.sub = user.id;
@@ -175,6 +179,7 @@ export const authOptions: NextAuthOptions = {
       const tvsyncToken = token as TvsyncJwt;
 
       if (session.user && tvsyncToken.sub && !tvsyncToken.sessionInvalidated) {
+        session.user.authenticatedAt = tvsyncToken.authenticatedAt ?? 0;
         session.user.id = tvsyncToken.sub;
       } else {
         session.user = undefined;

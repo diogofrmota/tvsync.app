@@ -9,16 +9,18 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 
 type FollowButtonProps = {
+  callbackUrl?: string;
   initialIsFollowing: boolean;
+  isAuthenticated?: boolean;
   isOwnProfile: boolean;
-  profileUserId: string;
   username: string;
 };
 
 export const FollowButton = ({
+  callbackUrl,
   initialIsFollowing,
+  isAuthenticated = true,
   isOwnProfile,
-  profileUserId,
   username,
 }: FollowButtonProps) => {
   const router = useRouter();
@@ -31,10 +33,17 @@ export const FollowButton = ({
   }
 
   const handleClick = () => {
+    if (!isAuthenticated) {
+      router.push(
+        `/login?callbackUrl=${encodeURIComponent(callbackUrl ?? `/profile/${username}`)}`
+      );
+      return;
+    }
+
     startTransition(async () => {
       const result = isFollowing
-        ? await unfollowProfileAction(profileUserId, username)
-        : await followProfileAction(profileUserId, username);
+        ? await unfollowProfileAction(username)
+        : await followProfileAction(username);
 
       if (result.error) {
         setMessage(result.error);
@@ -58,7 +67,7 @@ export const FollowButton = ({
         {isFollowing ? 'Unfollow' : 'Follow'}
       </Button>
       {message ? (
-        <Text color="red.300" fontSize="sm">
+        <Text color="red.500" fontSize="sm" role="alert">
           {message}
         </Text>
       ) : null}

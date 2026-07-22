@@ -97,3 +97,32 @@ export const sendPasswordResetEmail = async (input: {
     to: input.email,
   });
 };
+
+export const sendEmailChangeVerification = async (input: {
+  email: string;
+  token: string;
+  username: string;
+}) => {
+  const link = getAuthLink('/verify-email-change', input.token);
+  const safeUsername = escapeEmailHtml(input.username);
+  const safeLink = escapeEmailHtml(link);
+
+  await sendAuthEmail({
+    html: `<p>Hello ${safeUsername},</p><p>Confirm this as your new TvSync email address:</p><p><a href="${safeLink}">Confirm email change</a></p><p>This link expires in 24 hours and can be used once. Your current email remains active until you confirm.</p>`,
+    subject: 'Confirm your new TvSync email',
+    text: `Hello ${input.username},\n\nConfirm this as your new TvSync email address: ${link}\n\nThis link expires in 24 hours and can be used once. Your current email remains active until you confirm.`,
+    to: input.email,
+  });
+};
+
+export const sendEmailChangedNotice = async (input: {
+  email: string;
+  newEmail: string;
+}) => {
+  await sendAuthEmail({
+    html: `<p>Your TvSync account email was changed to ${escapeEmailHtml(input.newEmail)}.</p><p>If you did not make this change, contact TvSync immediately and reset your password.</p>`,
+    subject: 'Your TvSync email was changed',
+    text: `Your TvSync account email was changed to ${input.newEmail}.\n\nIf you did not make this change, contact TvSync immediately and reset your password.`,
+    to: input.email,
+  });
+};

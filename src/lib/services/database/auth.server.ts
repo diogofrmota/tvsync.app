@@ -196,11 +196,7 @@ const findProfileUserIdByEmail = async (email: string) => {
   return rows.at(0)?.user_id ?? null;
 };
 
-const updateGoogleProfile = async (input: {
-  email: string;
-  name: string;
-  userId: string;
-}) => {
+const updateGoogleProfile = async (input: { name: string; userId: string }) => {
   const sql = getDatabaseSql();
   await sql`
     update profiles
@@ -210,7 +206,6 @@ const updateGoogleProfile = async (input: {
         when display_name = '' then ${input.name}
         else display_name
       end,
-      email = ${input.email},
       email_verified_at = coalesce(email_verified_at, now()),
       updated_at = now()
     where user_id = ${input.userId}
@@ -248,17 +243,13 @@ export const ensureGoogleAuthIdentity = async (input: GoogleIdentityInput) => {
   const emailUserId = await findProfileUserIdByEmail(email);
 
   if (mappedUserId) {
-    if (emailUserId && emailUserId !== mappedUserId) {
-      throw new AuthAccountConflictError();
-    }
-
-    await updateGoogleProfile({ email, name, userId: mappedUserId });
+    await updateGoogleProfile({ name, userId: mappedUserId });
     return mappedUserId;
   }
 
   if (emailUserId) {
     await linkGoogleAccount(emailUserId, input.providerAccountId);
-    await updateGoogleProfile({ email, name, userId: emailUserId });
+    await updateGoogleProfile({ name, userId: emailUserId });
     return emailUserId;
   }
 
@@ -306,7 +297,7 @@ export const ensureGoogleAuthIdentity = async (input: GoogleIdentityInput) => {
 
       if (resolvedUserId) {
         await linkGoogleAccount(resolvedUserId, input.providerAccountId);
-        await updateGoogleProfile({ email, name, userId: resolvedUserId });
+        await updateGoogleProfile({ name, userId: resolvedUserId });
         return resolvedUserId;
       }
     }

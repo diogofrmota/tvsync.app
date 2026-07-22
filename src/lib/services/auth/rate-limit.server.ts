@@ -5,9 +5,12 @@ import { consumeAuthRateLimit } from 'lib/services/database/auth.server';
 import { headers } from 'next/headers';
 
 export const AUTH_RATE_LIMITS = {
+  accountDelete: { limit: 3, windowSeconds: 60 * 60 },
+  emailChange: { limit: 3, windowSeconds: 60 * 60 },
   forgotPassword: { limit: 5, windowSeconds: 60 * 60 },
   login: { limit: 10, windowSeconds: 15 * 60 },
   register: { limit: 5, windowSeconds: 60 * 60 },
+  passwordChange: { limit: 5, windowSeconds: 60 * 60 },
   resendVerification: { limit: 3, windowSeconds: 60 * 60 },
   resetPassword: { limit: 5, windowSeconds: 60 * 60 },
 } as const;

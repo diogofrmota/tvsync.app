@@ -1,305 +1,179 @@
+import { Avatar, Box, Flex, Heading, Stack, Text } from '@chakra-ui/react';
 import {
-  Avatar,
-  Badge,
-  Box,
-  Grid,
-  Heading,
-  HStack,
-  SimpleGrid,
-  Text,
-  VStack,
-} from '@chakra-ui/react';
-import { PageShell } from 'lib/components/shared/PageShell';
+  type ProfileStatCard,
+  ProfileStatRail,
+} from 'lib/components/profile/ProfileStatRail';
+import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
 import PosterCard from 'lib/components/shared/PosterCard';
-import { StatePanel } from 'lib/components/shared/Section';
-import type {
-  PublicProfileData,
-  PublicProfileMediaItem,
-  PublicProfileReviewItem,
-} from 'lib/features/profile';
+import { SectionHeading, StatePanel } from 'lib/components/shared/Section';
+import type { PublicProfileData } from 'lib/features/profile';
+import type { ProfileFavoriteItem } from 'lib/features/profile/profile-favorites.server';
+import {
+  formatWatchTime,
+  type ProfileStatistics,
+} from 'lib/features/profile/profile-statistics';
 import { FollowButton } from 'lib/features/social/follow-button';
-import { MediaType } from 'lib/types';
 import type { Route } from 'next';
 import Link from 'next/link';
 
-type PublicProfilePageProps = {
-  data: PublicProfileData;
-};
+const runtimeDetail = (missingCount: number) =>
+  missingCount > 0
+    ? `Partial total: ${missingCount} ${
+        missingCount === 1 ? 'runtime is' : 'runtimes are'
+      } unavailable.`
+    : undefined;
 
-type MediaSectionProps = {
-  emptyText: string;
-  items: Array<PublicProfileMediaItem>;
-  title: string;
-};
+const getStatCards = (
+  statistics: ProfileStatistics
+): Array<ProfileStatCard> => [
+  { label: 'Movies Watched', value: statistics.moviesWatched },
+  {
+    detail: runtimeDetail(statistics.missingMovieRuntimeCount),
+    label: 'Time Spent Watching Movies',
+    value: formatWatchTime(statistics.movieMinutesWatched),
+  },
+  { label: 'TV Shows Watched', value: statistics.tvShowsWatched },
+  {
+    detail: runtimeDetail(statistics.missingTvRuntimeCount),
+    label: 'Time Spent Watching TV Shows',
+    value: formatWatchTime(statistics.tvMinutesWatched),
+  },
+  { label: 'Episodes Watched', value: statistics.episodesWatched },
+];
 
-type ReviewCardProps = {
-  review: PublicProfileReviewItem;
-};
-
-const avatarPalettes = ['teal', 'cyan', 'blue', 'green', 'pink', 'orange'];
-
-const getGeneratedAvatarPalette = (text: string) => {
-  const hash = Array.from(text).reduce(
-    (value, character) => value + character.charCodeAt(0),
-    0
-  );
-
-  return avatarPalettes[hash % avatarPalettes.length];
-};
-
-const formatDate = (value: string) =>
-  new Intl.DateTimeFormat('en', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(value));
-
-const getMediaHref = (mediaType: MediaType.Movie | MediaType.Tv, id: number) =>
-  (mediaType === MediaType.Movie ? `/movie/${id}` : `/tv/show/${id}`) as Route;
-
-const EmptyState = ({ children }: { children: React.ReactNode }) => (
-  <StatePanel message={String(children)} />
-);
-
-const StatTile = ({ label, value }: { label: string; value: number }) => (
-  <Box borderColor="border" borderRadius="md" borderWidth="1px" padding={4}>
-    <Text color="fg.muted" fontSize="sm">
-      {label}
-    </Text>
-    <Text fontSize="2xl" fontWeight="bold">
-      {value}
-    </Text>
-  </Box>
-);
-
-const FollowList = ({
+const Favorites = ({
+  emptyMessage,
   items,
   title,
 }: {
-  items: PublicProfileData['followState']['followers'];
+  emptyMessage: string;
+  items: Array<ProfileFavoriteItem>;
   title: string;
 }) => (
-  <VStack align="stretch" gap={3}>
-    <Heading as="h2" fontSize="md">
-      {title}
-    </Heading>
+  <Stack gap={4}>
+    <SectionHeading title={title} />
     {items.length > 0 ? (
-      <VStack align="stretch" gap={2}>
-        {items.slice(0, 8).map((item) => (
-          <HStack asChild gap={3} key={item.user_id}>
-            <Link href={`/profile/${item.username}` as Route}>
-              <Avatar.Root
-                aria-label={`${item.display_name || item.username} profile avatar`}
-                size="sm"
-              >
-                <Avatar.Fallback name={item.display_name || item.username} />
-              </Avatar.Root>
-              <Box minWidth={0}>
-                <Text
-                  fontSize="sm"
-                  fontWeight="semibold"
-                  wordBreak="break-word"
-                >
-                  {item.display_name || item.username}
-                </Text>
-                <Text color="fg.muted" fontSize="xs">
-                  @{item.username}
-                </Text>
-              </Box>
-            </Link>
-          </HStack>
+      <Flex gap={4} overflowX="auto" paddingBottom={3} role="list">
+        {items.map((item, index) => (
+          <Box key={`${item.mediaType}-${item.id}`} role="listitem">
+            <PosterCard
+              id={item.id}
+              imageUrl={item.posterPath}
+              isLastItem={index === items.length - 1}
+              layout="flex"
+              mediaType={item.mediaType}
+              name={item.name}
+            />
+          </Box>
         ))}
-      </VStack>
+      </Flex>
     ) : (
-      <Text color="fg.muted" fontSize="sm">
-        No public users here yet.
-      </Text>
+      <StatePanel message={emptyMessage} />
     )}
-  </VStack>
+  </Stack>
 );
 
-const MediaSection = ({ emptyText, items, title }: MediaSectionProps) => (
-  <VStack align="stretch" gap={4}>
-    <Heading as="h2" fontSize="xl">
-      {title}
-    </Heading>
-    {items.length > 0 ? (
-      <Grid
-        columnGap={6}
-        rowGap={10}
-        templateColumns={{
-          base: 'repeat(3, minmax(0, 1fr))',
-          md: 'repeat(6, minmax(0, 1fr))',
-        }}
-      >
-        {items.map((item) => (
-          <PosterCard
-            id={item.tmdbId}
-            imageUrl={item.posterPath}
-            key={`${item.mediaType}-${item.tmdbId}`}
-            layout="grid"
-            mediaType={item.mediaType}
-            name={item.title}
-          />
-        ))}
-      </Grid>
-    ) : (
-      <EmptyState>{emptyText}</EmptyState>
-    )}
-  </VStack>
-);
-
-const ReviewCard = ({ review }: ReviewCardProps) => (
-  <Box borderColor="border" borderRadius="md" borderWidth="1px" padding={5}>
-    <VStack align="stretch" gap={3}>
-      <HStack flexWrap="wrap" gap={2}>
-        <Badge textTransform="none" variant="surface">
-          {review.mediaType === MediaType.Movie ? 'Movie' : 'TV Show'}
-        </Badge>
-        <Text color="fg.muted" fontSize="sm">
-          {formatDate(review.updatedAt)}
-        </Text>
-      </HStack>
-      <Box>
-        <Heading as="h3" fontSize="md">
-          {review.title || 'Untitled review'}
-        </Heading>
-        <Text asChild color="fg.muted" fontSize="sm">
-          <Link href={getMediaHref(review.mediaType, review.tmdbId)}>
-            {review.mediaTitle}
-          </Link>
-        </Text>
-      </Box>
-      <Text lineClamp={5} whiteSpace="pre-wrap">
-        {review.body}
-      </Text>
-    </VStack>
-  </Box>
-);
-
-export const PublicProfilePage = ({ data }: PublicProfilePageProps) => {
+export const PublicProfilePage = ({ data }: { data: PublicProfileData }) => {
   const { profile } = data;
-  const avatarName = profile.display_name || profile.name || profile.username;
-  const avatarPalette = getGeneratedAvatarPalette(
-    `${profile.username}:${avatarName}`
+  const displayName = profile.display_name || profile.name || profile.username;
+  const profilePath = `/profile/${profile.username}`;
+  const favoriteMovies = data.favorites.filter(
+    (item) => item.mediaType === 'movie'
+  );
+  const favoriteTvShows = data.favorites.filter(
+    (item) => item.mediaType === 'tv'
   );
 
   return (
     <PageShell>
-      <Grid
-        alignItems="center"
-        gap={6}
-        templateColumns={['1fr', 'auto minmax(0, 1fr)']}
+      <PageHeading
+        subtitle="Public profile information and watch activity."
+        title="User Profile"
+      />
+
+      <Flex
+        align={{ base: 'flex-start', sm: 'center' }}
+        borderColor="border"
+        borderRadius="lg"
+        borderWidth="1px"
+        direction={{ base: 'column', sm: 'row' }}
+        gap={5}
+        padding={5}
       >
-        <Avatar.Root
-          aria-label={`${avatarName} profile avatar`}
-          colorPalette={avatarPalette}
-          size="2xl"
-        >
-          <Avatar.Fallback name={avatarName} />
+        <Avatar.Root aria-label={`${displayName} profile avatar`} size="2xl">
+          <Avatar.Fallback name={displayName} />
         </Avatar.Root>
-
-        <VStack align="stretch" gap={3}>
-          <HStack flexWrap="wrap" gap={3}>
-            <Heading as="h1" fontSize={['2xl', '4xl']} wordBreak="break-word">
-              {profile.display_name}
-            </Heading>
-            <Badge textTransform="none" variant="subtle">
-              @{profile.username}
-            </Badge>
-          </HStack>
-          {profile.bio ? (
-            <Text color="fg.muted" maxWidth="48rem" whiteSpace="pre-wrap">
-              {profile.bio}
-            </Text>
-          ) : (
-            <Text color="fg.muted">This TVSync profile has no bio yet.</Text>
-          )}
-          <HStack align="center" flexWrap="wrap" gap={4}>
-            <FollowButton
-              initialIsFollowing={data.followState.is_following}
-              isOwnProfile={data.isOwnProfile}
-              profileUserId={profile.user_id}
-              username={profile.username}
-            />
-            <Text color="fg.muted" fontSize="sm">
-              {data.followState.follower_count} followers
-            </Text>
-            <Text color="fg.muted" fontSize="sm">
-              {data.followState.following_count} following
-            </Text>
-          </HStack>
-        </VStack>
-      </Grid>
-
-      <SimpleGrid columns={[2, 4]} gap={4}>
-        <StatTile
-          label="Watching"
-          value={data.stats.currently_watching_count}
+        <Stack flex="1" gap={2} minWidth={0}>
+          <Heading as="h2" fontSize={{ base: '2xl', md: '3xl' }}>
+            {displayName}
+          </Heading>
+          <Text color="fg.muted">@{profile.username}</Text>
+          <Text color="fg.muted">
+            {profile.bio || 'This TvSync profile has no biography yet.'}
+          </Text>
+        </Stack>
+        <FollowButton
+          callbackUrl={profilePath}
+          initialIsFollowing={data.followState.is_following}
+          isAuthenticated={data.isAuthenticated}
+          isOwnProfile={data.isOwnProfile}
+          username={profile.username}
         />
-        <StatTile label="Completed" value={data.stats.completed_show_count} />
-        <StatTile label="Movies" value={data.stats.watched_movie_count} />
-        <StatTile label="Reviews" value={data.stats.public_review_count} />
-      </SimpleGrid>
+      </Flex>
 
-      <SimpleGrid columns={[1, 2]} gap={6}>
-        <FollowList items={data.followState.followers} title="Followers" />
-        <FollowList items={data.followState.following} title="Following" />
-      </SimpleGrid>
+      <Stack gap={4}>
+        <SectionHeading title="Social Information" />
+        <Flex gap={4}>
+          <Box
+            _hover={{ borderColor: 'teal.400' }}
+            asChild
+            borderColor="border"
+            borderRadius="lg"
+            borderWidth="1px"
+            flex="1"
+            padding={5}
+          >
+            <Link href={`${profilePath}/following` as Route}>
+              <Text fontSize="2xl" fontWeight="bold">
+                {data.followState.following_count}
+              </Text>
+              <Text color="fg.muted">Following</Text>
+            </Link>
+          </Box>
+          <Box
+            _hover={{ borderColor: 'teal.400' }}
+            asChild
+            borderColor="border"
+            borderRadius="lg"
+            borderWidth="1px"
+            flex="1"
+            padding={5}
+          >
+            <Link href={`${profilePath}/followers` as Route}>
+              <Text fontSize="2xl" fontWeight="bold">
+                {data.followState.follower_count}
+              </Text>
+              <Text color="fg.muted">Followers</Text>
+            </Link>
+          </Box>
+        </Flex>
+      </Stack>
 
-      <VStack align="stretch" gap={4}>
-        <Heading as="h2" fontSize="xl">
-          Favorite genres
-        </Heading>
-        {data.favoriteGenres.length > 0 ? (
-          <HStack flexWrap="wrap" gap={2}>
-            {data.favoriteGenres.map((genre) => (
-              <Badge key={genre} textTransform="none" variant="surface">
-                {genre}
-              </Badge>
-            ))}
-          </HStack>
-        ) : (
-          <EmptyState>
-            Favorite genres will appear after this user shares public tracking
-            activity.
-          </EmptyState>
-        )}
-      </VStack>
+      <Stack gap={4}>
+        <SectionHeading title="Statistics" />
+        <ProfileStatRail cards={getStatCards(data.statistics)} />
+      </Stack>
 
-      <MediaSection
-        emptyText="No currently watching shows are public yet."
-        items={data.currentlyWatching}
-        title="Currently watching"
+      <Favorites
+        emptyMessage="No favourite movies are public yet."
+        items={favoriteMovies}
+        title="Favourite Movies"
       />
-      <MediaSection
-        emptyText="No completed shows are public yet."
-        items={data.completedShows}
-        title="Completed shows"
+      <Favorites
+        emptyMessage="No favourite TV shows are public yet."
+        items={favoriteTvShows}
+        title="Favourite TV Shows"
       />
-      <MediaSection
-        emptyText="No watched movies are public yet."
-        items={data.watchedMovies}
-        title="Watched movies"
-      />
-
-      <VStack align="stretch" gap={4}>
-        <Heading as="h2" fontSize="xl">
-          Reviews
-        </Heading>
-        {data.reviews.length > 0 ? (
-          <SimpleGrid columns={[1, 2]} gap={4}>
-            {data.reviews.map((review) => (
-              <ReviewCard
-                key={`${review.mediaType}-${review.tmdbId}`}
-                review={review}
-              />
-            ))}
-          </SimpleGrid>
-        ) : (
-          <EmptyState>No public reviews yet.</EmptyState>
-        )}
-      </VStack>
     </PageShell>
   );
 };

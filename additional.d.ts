@@ -16,11 +16,13 @@ declare global {
 
 declare module 'next-auth' {
   interface User {
+    authenticatedAt?: number;
     sessionVersion?: number;
   }
 
   interface Session {
     user?: DefaultSession['user'] & {
+      authenticatedAt: number;
       id: string;
     };
   }

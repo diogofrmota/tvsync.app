@@ -4,6 +4,7 @@ export const AUTH_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 export const PASSWORD_MIN_LENGTH = 12;
 export const PASSWORD_MAX_LENGTH = 128;
 export const PASSWORD_MAX_BYTES = 72;
+export const RECENT_AUTH_MAX_AGE_MS = 15 * 60 * 1000;
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const passwordLetterPattern = /[A-Za-z]/;
@@ -115,6 +116,15 @@ export const getAuthTokenExpiry = (now = new Date()) =>
 
 export const isAuthTokenFresh = (expiresAt: Date | string, now = new Date()) =>
   new Date(expiresAt).getTime() > now.getTime();
+
+export const isRecentAuthentication = (
+  authenticatedAt: number | null | undefined,
+  now = Date.now()
+) =>
+  typeof authenticatedAt === 'number' &&
+  Number.isFinite(authenticatedAt) &&
+  authenticatedAt <= now &&
+  now - authenticatedAt <= RECENT_AUTH_MAX_AGE_MS;
 
 export const digestRateLimitKey = (value: string, secret: string) =>
   createHmac('sha256', secret).update(value).digest('hex');

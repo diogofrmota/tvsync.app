@@ -5,6 +5,7 @@ import DetailMeta from 'lib/components/shared/DetailMeta';
 import { PageShell } from 'lib/components/shared/PageShell';
 import { IMAGE_URL_ORIGINAL } from 'lib/components/shared/PosterImage';
 import { useColorMode } from 'lib/components/ui/color-mode';
+import { FavoriteButton } from 'lib/features/profile/favorite-button';
 import { RatingInput, ReviewsSection } from 'lib/features/reviews';
 import { RecommendForm } from 'lib/features/social/recommend-form';
 import { MediaStatusControl, TvProgressSummary } from 'lib/features/tracking';
@@ -97,6 +98,7 @@ const TvShowDetailPage = ({ creditsData, data }: TvShowDetailPageProps) => {
                   tmdbId={data.id}
                 />
                 <MediaStatusControl mediaType={MediaType.Tv} tmdbId={data.id} />
+                <FavoriteButton mediaType={MediaType.Tv} tmdbId={data.id} />
                 <RatingInput
                   target={{ mediaType: MediaType.Tv, tmdbId: data.id }}
                 />

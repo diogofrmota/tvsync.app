@@ -20,14 +20,31 @@ export const metadata: Metadata = {
 type LoginPageProps = {
   searchParams: Promise<{
     callbackUrl?: string;
+    account?: string;
     error?: string;
     reset?: string;
   }>;
 };
 
+const getAccountSuccessMessage = (account?: string) => {
+  if (account === 'deleted') {
+    return 'Your account and related personal data were permanently deleted.';
+  }
+
+  if (account === 'email-updated') {
+    return 'Email updated. Sign in with your updated account.';
+  }
+
+  if (account === 'password-updated') {
+    return 'Password updated. Sign in again to continue.';
+  }
+
+  return undefined;
+};
+
 export default async function Page({ searchParams }: LoginPageProps) {
   const session = await getServerSession(authOptions);
-  const { callbackUrl, error, reset } = await searchParams;
+  const { account, callbackUrl, error, reset } = await searchParams;
   const safeCallbackUrl = getSafeCallbackUrl(callbackUrl);
 
   if (session?.user) {
@@ -42,6 +59,7 @@ export default async function Page({ searchParams }: LoginPageProps) {
         process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
       )}
       passwordReset={reset === 'success'}
+      successMessage={getAccountSuccessMessage(account)}
     />
   );
 }

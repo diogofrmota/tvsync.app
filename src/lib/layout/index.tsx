@@ -13,6 +13,7 @@ const authRoutes = new Set([
   '/register',
   '/reset-password',
   '/verify-email',
+  '/verify-email-change',
 ]);
 
 const Layout = ({ children }: { children: React.ReactNode }) => {

@@ -30,7 +30,7 @@ export async function generateMetadata({
     data.profile.display_name || data.profile.name || data.profile.username;
   const description =
     data.profile.bio ||
-    `See ${displayName}'s public watch history, favorite genres, and reviews on TVSync.`;
+    `See ${displayName}'s public watch statistics and favourites on TvSync.`;
 
   return {
     title: `${displayName} (@${data.profile.username}) | TVSync`,

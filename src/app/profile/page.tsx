@@ -1,67 +1,22 @@
-import {
-  ProfileAccessIssue,
-  ProfilePage,
-  type ProfileTVStats,
-} from 'lib/pages/profile';
+import { getOwnProfileFavorites } from 'lib/features/profile/profile-favorites.server';
+import { getOwnProfileStatistics } from 'lib/features/profile/profile-statistics.server';
+import { ProfileAccessIssue, ProfilePage } from 'lib/pages/profile';
 import { authOptions } from 'lib/services/auth/index.server';
-import {
-  getAuthSessionIssue,
-  getProfileAccessIssue,
-} from 'lib/services/auth/session-error.server';
-import {
-  type DatabaseAvailabilityIssue,
-  getDatabaseAvailabilityIssue,
-} from 'lib/services/database/core.server';
-import {
-  getOwnProfile,
-  listOwnMedia,
-  type OwnProfile,
-} from 'lib/services/database/tracking.server';
-import { MediaType, WatchStatus } from 'lib/types';
+import { getAuthSessionIssue } from 'lib/services/auth/session-error.server';
+import { getDatabaseAvailabilityIssue } from 'lib/services/database/core.server';
+import { getFollowStateForProfile } from 'lib/services/database/social.server';
+import { getOwnProfile } from 'lib/services/database/tracking.server';
 import type { Metadata, Route } from 'next';
 import { redirect } from 'next/navigation';
 import type { Session } from 'next-auth';
 import { getServerSession } from 'next-auth/next';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
-  title: 'Your profile | TVSync',
   description:
-    'Manage your TVSync profile, generated avatar, username, display name, bio, and privacy setting.',
-  openGraph: {
-    title: 'Your profile | TVSync',
-    description:
-      'Manage your TVSync profile, generated avatar, username, display name, bio, and privacy setting.',
-    url: '/profile',
-  },
-};
-
-const emptyTVStats: ProfileTVStats = {
-  completed: 0,
-  dropped: 0,
-  paused: 0,
-  planned: 0,
-  total: 0,
-  watching: 0,
-};
-
-const getOwnTVStats = async (): Promise<ProfileTVStats> => {
-  const rows = await listOwnMedia();
-  const tvRows = rows.filter((row) => row.media_type === MediaType.Tv);
-
-  return {
-    completed: tvRows.filter(
-      (row) => row.watch_status === WatchStatus.Completed
-    ).length,
-    dropped: tvRows.filter((row) => row.watch_status === WatchStatus.Dropped)
-      .length,
-    paused: tvRows.filter((row) => row.watch_status === WatchStatus.Paused)
-      .length,
-    planned: tvRows.filter((row) => row.watch_status === WatchStatus.Planned)
-      .length,
-    total: tvRows.length,
-    watching: tvRows.filter((row) => row.watch_status === WatchStatus.Watching)
-      .length,
-  };
+    'View your TvSync profile, activity, favourites, and statistics.',
+  title: 'Your Profile | TvSync',
 };
 
 export default async function Page() {
@@ -73,49 +28,49 @@ export default async function Page() {
     return <ProfileAccessIssue issue={getAuthSessionIssue(error)} />;
   }
 
-  if (!session?.user) {
+  if (!session?.user?.id) {
     redirect('/login?callbackUrl=/profile' as Route);
   }
 
-  if (!session.user.id) {
+  try {
+    const profile = await getOwnProfile();
+
+    if (!profile) {
+      return (
+        <ProfileAccessIssue
+          issue={{
+            description:
+              'Your authenticated account does not have a profile record. Sign in again or contact support before tracking activity.',
+            title: 'Profile data is missing',
+          }}
+        />
+      );
+    }
+
+    const [statistics, favorites, followState] = await Promise.all([
+      getOwnProfileStatistics(),
+      getOwnProfileFavorites(),
+      getFollowStateForProfile(profile.user_id),
+    ]);
+
     return (
-      <ProfileAccessIssue
-        issue={{
-          description:
-            'Your login session exists, but TVSync could not find the user id needed to load private profile data. Sign out, clear TVSync cookies if needed, and sign in again. If it keeps happening, check the NextAuth JWT/session callbacks and AUTH_SECRET in Vercel.',
-          title: 'Profile access could not be authorized',
+      <ProfilePage
+        favorites={favorites}
+        followCounts={{
+          follower_count: followState.follower_count,
+          following_count: followState.following_count,
         }}
+        profile={profile}
+        statistics={statistics}
       />
     );
-  }
-
-  let databaseIssue: DatabaseAvailabilityIssue | null = null;
-  let profile: OwnProfile | null = null;
-  let tvStats: ProfileTVStats = emptyTVStats;
-
-  try {
-    [profile, tvStats] = await Promise.all([getOwnProfile(), getOwnTVStats()]);
   } catch (error) {
-    const profileAccessIssue = getProfileAccessIssue(error);
+    const issue = getDatabaseAvailabilityIssue(error);
 
-    if (profileAccessIssue) {
-      return <ProfileAccessIssue issue={profileAccessIssue} />;
-    }
-
-    databaseIssue = getDatabaseAvailabilityIssue(error);
-
-    if (!databaseIssue) {
+    if (!issue) {
       throw error;
     }
-  }
 
-  return (
-    <ProfilePage
-      databaseIssue={databaseIssue}
-      email={session.user.email}
-      name={session.user.name}
-      profile={profile}
-      tvStats={tvStats}
-    />
-  );
+    return <ProfileAccessIssue issue={issue} />;
+  }
 }

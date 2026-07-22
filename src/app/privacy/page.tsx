@@ -26,8 +26,15 @@ export default function PrivacyPage() {
         Optional analytics only run when configured.
       </LegalSection>
       <LegalSection title="Your choices and contact">
-        You can update your profile in TvSync. To request a copy or deletion of
-        your data, use the Contact page.
+        You can update your profile and permanently delete your account from
+        Edit Profile. Confirmed deletion removes the profile and relational
+        personal data stored for it, including library activity, episode
+        progress, favourites, ratings, reviews, comments, authentication
+        provider links, verification/reset tokens, and social relationships.
+        Operational security logs and provider backups may remain for their
+        limited legal, fraud-prevention, and disaster-recovery retention periods
+        before automatic expiry; they are not kept as an active TvSync account.
+        Use the Contact page for access or privacy questions.
       </LegalSection>
     </LegalPage>
   );

@@ -228,11 +228,13 @@ export const LoginForm = ({
   errorMessage,
   googleEnabled,
   passwordReset,
+  successMessage,
 }: {
   callbackUrl: string;
   errorMessage: string | null;
   googleEnabled: boolean;
   passwordReset?: boolean;
+  successMessage?: string;
 }) => {
   const router = useRouter();
   const [identifier, setIdentifier] = useState('');
@@ -284,9 +286,10 @@ export const LoginForm = ({
       <Feedback
         error={loginError}
         success={
-          passwordReset
+          successMessage ??
+          (passwordReset
             ? 'Password reset. Log in with your new password.'
-            : undefined
+            : undefined)
         }
       />
       <form onSubmit={handleSubmit}>

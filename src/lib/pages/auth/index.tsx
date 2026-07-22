@@ -85,6 +85,7 @@ export const LoginAuthPage = (props: {
   error?: string;
   googleEnabled: boolean;
   passwordReset?: boolean;
+  successMessage?: string;
 }) => (
   <AuthShell backHref="/" backLabel="Back to Home" heading="Login">
     <LoginForm
@@ -92,6 +93,7 @@ export const LoginAuthPage = (props: {
       errorMessage={getAuthErrorMessage(props.error)}
       googleEnabled={props.googleEnabled}
       passwordReset={props.passwordReset}
+      successMessage={props.successMessage}
     />
   </AuthShell>
 );
@@ -149,6 +151,32 @@ export const VerifyEmailAuthPage = ({ verified }: { verified: boolean }) => (
           {verified
             ? 'Continue to Login'
             : 'Return to Login to request a new link'}
+        </Link>
+      </Box>
+    </Stack>
+  </AuthShell>
+);
+
+export const EmailChangeVerificationPage = ({
+  changed,
+}: {
+  changed: boolean;
+}) => (
+  <AuthShell heading={changed ? 'Email Updated' : 'Email Change Link Invalid'}>
+    <Stack gap={5} textAlign="center">
+      <Text color="gray.700" role={changed ? 'status' : 'alert'}>
+        {changed
+          ? 'Your email address was updated. For your security, sign in again with the updated account.'
+          : 'This email-change link is invalid, expired, already used, or the address is no longer available.'}
+      </Text>
+      <Box
+        _hover={{ textDecoration: 'underline' }}
+        asChild
+        color="teal.700"
+        fontWeight="600"
+      >
+        <Link href={changed ? '/login?account=email-updated' : '/profile/edit'}>
+          {changed ? 'Continue to Login' : 'Return to Edit Profile'}
         </Link>
       </Box>
     </Stack>

@@ -21,7 +21,10 @@ export default function TermsPage() {
       </LegalSection>
       <LegalSection title="Accounts">
         Accounts may be restricted or terminated when these terms are violated.
-        You may request account deletion through the Contact page.
+        You may permanently delete your account from Edit Profile after explicit
+        confirmation. Deletion removes submitted reviews and comments rather
+        than anonymising them, along with the rest of the account data described
+        in the Privacy Policy.
       </LegalSection>
       <LegalSection title="Liability and changes">
         TvSync is provided without guarantees of uninterrupted availability.

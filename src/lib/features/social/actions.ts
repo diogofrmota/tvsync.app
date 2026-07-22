@@ -37,11 +37,10 @@ const readTextField = (formData: FormData, name: string) => {
 };
 
 export const followProfileAction = async (
-  profileUserId: string,
   username: string
 ): Promise<SocialActionState> => {
   try {
-    await followPublicProfile(profileUserId);
+    await followPublicProfile(username);
     revalidatePath(`/profile/${username}`);
     revalidatePath('/');
 
@@ -57,11 +56,10 @@ export const followProfileAction = async (
 };
 
 export const unfollowProfileAction = async (
-  profileUserId: string,
   username: string
 ): Promise<SocialActionState> => {
   try {
-    await unfollowProfile(profileUserId);
+    await unfollowProfile(username);
     revalidatePath(`/profile/${username}`);
     revalidatePath('/');
 

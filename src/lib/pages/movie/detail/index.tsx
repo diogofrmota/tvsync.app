@@ -4,6 +4,7 @@ import { PageShell } from 'lib/components/shared/PageShell';
 import PosterCard from 'lib/components/shared/PosterCard';
 import { IMAGE_URL_ORIGINAL } from 'lib/components/shared/PosterImage';
 import SliderContainer from 'lib/components/shared/SliderContainer';
+import { FavoriteButton } from 'lib/features/profile/favorite-button';
 import { RatingInput, ReviewsSection } from 'lib/features/reviews';
 import { RecommendForm } from 'lib/features/social/recommend-form';
 import { MediaStatusControl } from 'lib/features/tracking';
@@ -94,6 +95,7 @@ export const MovieDetailPage = ({
                   mediaType={MediaType.Movie}
                   tmdbId={data.id}
                 />
+                <FavoriteButton mediaType={MediaType.Movie} tmdbId={data.id} />
                 <RatingInput
                   target={{ mediaType: MediaType.Movie, tmdbId: data.id }}
                 />
