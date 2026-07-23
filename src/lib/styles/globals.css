@@ -15,3 +15,14 @@ img,
 svg {
   max-width: 100%;
 }
+
+.poster-hover {
+  transition:
+    transform 120ms ease,
+    border-color 120ms ease;
+}
+
+.poster-hover:hover {
+  border-color: var(--chakra-colors-border-strong);
+  transform: translateY(-2px);
+}

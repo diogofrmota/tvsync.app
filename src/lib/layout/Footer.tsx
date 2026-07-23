@@ -34,7 +34,7 @@ const Footer = () => (
         </Link>
       ))}
     </HStack>
-    <Text _dark={{ color: 'gray.100' }} color="gray.600" fontSize="sm">
+    <Text color="fg.muted" fontSize="sm">
       Copyright &copy; {new Date().getFullYear()} TvSync
     </Text>
   </Flex>

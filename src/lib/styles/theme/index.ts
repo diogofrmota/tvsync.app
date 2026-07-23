@@ -2,12 +2,39 @@ import {
   createSystem,
   defaultConfig,
   defineRecipe,
+  defineSemanticTokens,
   defineTokens,
 } from '@chakra-ui/react';
 
 const buttonRecipe = defineRecipe({
   base: {
     borderRadius: 24,
+  },
+  variants: {
+    variant: {
+      solid: {
+        bg: 'teal.400',
+        color: 'gray.900',
+        _hover: { bg: 'teal.500' },
+      },
+      outline: {
+        borderColor: 'gray.600',
+        color: 'fg',
+      },
+    },
+  },
+});
+
+const inputRecipe = defineRecipe({
+  base: {
+    borderRadius: 10,
+  },
+  variants: {
+    variant: {
+      outline: {
+        borderColor: 'gray.600',
+      },
+    },
   },
 });
 
@@ -32,11 +59,38 @@ const tokens = defineTokens({
   },
 });
 
+const semanticTokens = defineSemanticTokens({
+  colors: {
+    bg: {
+      DEFAULT: {
+        value: { _light: '{colors.white}', _dark: '{colors.gray.900}' },
+      },
+      surface: {
+        DEFAULT: { value: '{colors.gray.800}' },
+        hover: { value: '{colors.gray.700}' },
+      },
+    },
+    border: {
+      DEFAULT: {
+        value: { _light: '{colors.gray.200}', _dark: '#1a2120' },
+      },
+      strong: { value: '{colors.gray.500}' },
+    },
+    fg: {
+      muted: {
+        value: { _light: '{colors.gray.600}', _dark: '#8b908e' },
+      },
+    },
+  },
+});
+
 export const customTheme = createSystem(defaultConfig, {
   theme: {
     tokens,
+    semanticTokens,
     recipes: {
       button: buttonRecipe,
+      input: inputRecipe,
     },
   },
 });

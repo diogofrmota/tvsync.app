@@ -28,8 +28,6 @@ export const LegalSection = ({
     <Heading as="h2" fontSize="xl">
       {title}
     </Heading>
-    <Text _dark={{ color: 'gray.100' }} color="gray.600">
-      {children}
-    </Text>
+    <Text color="fg.muted">{children}</Text>
   </Stack>
 );
