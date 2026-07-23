@@ -86,12 +86,14 @@ const NavLink = ({
   if (mobile) {
     return (
       <VStack
-        _dark={{ color: active ? 'teal.300' : 'gray.200' }}
         asChild
-        color={active ? 'teal.600' : 'gray.600'}
+        color={active ? 'gold.300' : 'gray.200'}
         flex="1"
         gap={1}
         minWidth={0}
+        transitionDuration="fast"
+        transitionProperty="color"
+        transitionTimingFunction="ease-out"
       >
         <Link aria-current={active ? 'page' : undefined} href={item.href}>
           <Icon aria-hidden as={item.icon} boxSize={5} />
@@ -106,7 +108,7 @@ const NavLink = ({
   return (
     <Box
       _after={{
-        background: active ? 'teal.300' : 'transparent',
+        background: active ? 'gold.300' : 'transparent',
         borderRadius: 'full',
         bottom: '-0.4rem',
         content: '""',
@@ -114,17 +116,23 @@ const NavLink = ({
         left: 0,
         position: 'absolute',
         right: 0,
+        transitionDuration: 'moderate',
+        transitionProperty: 'background',
+        transitionTimingFunction: 'ease-out',
       }}
-      _dark={{ color: active ? undefined : 'gray.100' }}
       _focusVisible={{
         outline: '3px solid',
-        outlineColor: 'teal.400',
+        outlineColor: 'gold.400',
         outlineOffset: '3px',
       }}
+      _hover={{ color: 'fg' }}
       asChild
-      color={active ? 'fg' : 'gray.600'}
+      color={active ? 'fg' : 'gray.100'}
       fontWeight={active ? '700' : '500'}
       position="relative"
+      transitionDuration="fast"
+      transitionProperty="color"
+      transitionTimingFunction="ease-out"
     >
       <Link aria-current={active ? 'page' : undefined} href={item.href}>
         {item.label}
@@ -153,12 +161,13 @@ const Header = () => {
           maxWidth="80rem"
           paddingX={{ base: 4, sm: 6, lg: 8 }}
         >
-          <Heading
-            asChild
-            fontSize={{ base: 'xl', md: '2xl' }}
-            fontWeight="700"
-          >
-            <Link href={isAuthenticated ? '/movies' : '/'}>TvSync</Link>
+          <Heading asChild fontSize={{ base: 'xl', md: '2xl' }}>
+            <Link href={isAuthenticated ? '/movies' : '/'}>
+              Tv
+              <Text as="span" color="gold.400">
+                Sync
+              </Text>
+            </Link>
           </Heading>
           {status === 'loading' ? null : (
             <HStack

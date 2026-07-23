@@ -72,7 +72,7 @@ Functionality
 
 Layout
 
-Black background with a centred white registration card.
+Black background with a centred, dark elevated registration card with a spotlight-gold accent.
 
 Content
 
@@ -105,7 +105,7 @@ Functionality
 
 Layout
 
-Black background with a centred white login card.
+Black background with a centred, dark elevated login card with a spotlight-gold accent.
 
 Content
 

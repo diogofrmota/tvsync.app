@@ -1,20 +1,24 @@
 'use client';
 
-import { Box, Button, Heading } from '@chakra-ui/react';
+import { Stack } from '@chakra-ui/react';
 import {
   type MovieListPageNavButtonProps,
   MovieListPageNavButtons,
 } from 'lib/components/movie/list/components';
 import type { MovieListModeKey } from 'lib/components/movie/list/types';
 import MoviesContainer from 'lib/components/movie/MoviesContainer';
+import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
 import { useMovieList } from 'lib/services/tmdb/movie/list/index.client';
 import type {
   ListType,
   MovieListItemType,
   MovieListParams,
 } from 'lib/services/tmdb/movie/list/types';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+
+const capitalize = (value: string) =>
+  value.charAt(0).toUpperCase() + value.slice(1);
 
 type MovieListContainerProps = {
   listMode: MovieListModeKey;
@@ -27,7 +31,6 @@ export const MovieListContainer = ({
   section,
   genre,
 }: MovieListContainerProps) => {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const qPage = searchParams.get('page');
@@ -131,29 +134,19 @@ export const MovieListContainer = ({
   };
 
   return (
-    <Box mb={8} paddingX={8} w="full">
-      <Button borderRadius={24} onClick={() => router.push('/')} width="full">
-        Back
-      </Button>
-
-      <Box marginY={8}>
-        {section && (
-          <Heading
-            as="h1"
-            fontSize={{ base: '2xl', md: '4xl' }}
-            fontWeight="500"
-            textTransform="capitalize"
-          >
-            {section.replace('_', ' ')}
-          </Heading>
-        )}
+    <PageShell>
+      <PageHeading
+        subtitle={section ? capitalize(section.replace('_', ' ')) : undefined}
+        title="Movies"
+      />
+      <Stack gap={5}>
         <MovieListPageNavButtons {...pageNavButtonProps} />
         <MoviesContainer
           isLoading={isLoading}
           movies={filterMovies(data?.results)}
         />
         <MovieListPageNavButtons {...pageNavButtonProps} />
-      </Box>
-    </Box>
+      </Stack>
+    </PageShell>
   );
 };

@@ -27,6 +27,7 @@ export const OAuthButtons = ({
       loading={isPending}
       onClick={handleGoogleSignIn}
       size="lg"
+      variant="outline"
     >
       <FcGoogle />
       Continue with Google

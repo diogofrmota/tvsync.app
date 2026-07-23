@@ -9,17 +9,22 @@ import {
 const buttonRecipe = defineRecipe({
   base: {
     borderRadius: 24,
+    transitionDuration: 'fast',
+    transitionProperty: 'background, color, box-shadow, transform',
+    transitionTimingFunction: 'ease-out',
+    _active: { transform: 'scale(0.97)' },
   },
   variants: {
     variant: {
       solid: {
-        bg: 'teal.400',
+        bg: 'gold.400',
         color: 'gray.900',
-        _hover: { bg: 'teal.500' },
+        _hover: { bg: 'gold.300' },
       },
       outline: {
-        borderColor: 'gray.600',
+        borderColor: 'gray.500',
         color: 'fg',
+        _hover: { borderColor: 'gold.400', color: 'gold.300' },
       },
     },
   },
@@ -28,12 +33,15 @@ const buttonRecipe = defineRecipe({
 const inputRecipe = defineRecipe({
   base: {
     borderRadius: 10,
+    transitionDuration: 'fast',
+    transitionProperty: 'border-color, box-shadow',
+    transitionTimingFunction: 'ease-out',
   },
   variants: {
     variant: {
       outline: {
-        borderColor: 'gray.600',
-        focusRingColor: 'teal.400',
+        borderColor: 'gray.500',
+        focusRingColor: 'gold.400',
       },
     },
   },
@@ -42,14 +50,24 @@ const inputRecipe = defineRecipe({
 const textareaRecipe = defineRecipe({
   base: {
     borderRadius: 10,
+    transitionDuration: 'fast',
+    transitionProperty: 'border-color, box-shadow',
+    transitionTimingFunction: 'ease-out',
   },
   variants: {
     variant: {
       outline: {
-        borderColor: 'gray.600',
-        focusRingColor: 'teal.400',
+        borderColor: 'gray.500',
+        focusRingColor: 'gold.400',
       },
     },
+  },
+});
+
+const headingRecipe = defineRecipe({
+  base: {
+    fontWeight: '700',
+    letterSpacing: '-0.02em',
   },
 });
 
@@ -71,30 +89,46 @@ const tokens = defineTokens({
       800: { value: '#0a0c0c' },
       900: { value: '#050606' },
     },
+    // Spotlight gold — the brand accent. Named after amber/marquee-light
+    // tones rather than reused from a generic palette so it stays
+    // visually distinct from the semantic red/green/orange status colors.
+    gold: {
+      50: { value: '#fffbeb' },
+      100: { value: '#fef3c7' },
+      200: { value: '#fde68a' },
+      300: { value: '#fcd34d' },
+      400: { value: '#fbbf24' },
+      500: { value: '#f59e0b' },
+      600: { value: '#d97706' },
+      700: { value: '#b45309' },
+      800: { value: '#92400e' },
+      900: { value: '#78350f' },
+    },
   },
 });
 
+// TvSync is a dark-only, cinematic experience (no light-mode toggle is
+// exposed), so these tokens resolve to a single value rather than
+// branching on color mode.
 const semanticTokens = defineSemanticTokens({
   colors: {
     bg: {
-      DEFAULT: {
-        value: { _light: '{colors.white}', _dark: '{colors.gray.900}' },
-      },
+      DEFAULT: { value: '{colors.gray.900}' },
       surface: {
         DEFAULT: { value: '{colors.gray.800}' },
         hover: { value: '{colors.gray.700}' },
       },
     },
     border: {
-      DEFAULT: {
-        value: { _light: '{colors.gray.200}', _dark: '#1a2120' },
-      },
+      DEFAULT: { value: '#1a2120' },
       strong: { value: '{colors.gray.500}' },
     },
     fg: {
-      muted: {
-        value: { _light: '{colors.gray.600}', _dark: '#8b908e' },
-      },
+      muted: { value: '#8b908e' },
+    },
+    accent: {
+      DEFAULT: { value: '{colors.gold.400}' },
+      emphasized: { value: '{colors.gold.300}' },
     },
   },
 });
@@ -105,6 +139,7 @@ export const customTheme = createSystem(defaultConfig, {
     semanticTokens,
     recipes: {
       button: buttonRecipe,
+      heading: headingRecipe,
       input: inputRecipe,
       textarea: textareaRecipe,
     },

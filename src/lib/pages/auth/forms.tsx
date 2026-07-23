@@ -22,7 +22,12 @@ import { EMAIL_UNVERIFIED_ERROR } from 'lib/services/auth/constants';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
-import { type FormEvent, useActionState, useState } from 'react';
+import {
+  type FormEvent,
+  type ReactNode,
+  useActionState,
+  useState,
+} from 'react';
 
 import { OAuthButtons } from './client-actions';
 
@@ -41,10 +46,11 @@ const Feedback = ({
     {error ? (
       <Box
         aria-live="assertive"
+        background="red.950"
         borderColor="red.500"
         borderRadius="md"
         borderWidth="1px"
-        color="red.700"
+        color="red.300"
         padding={4}
         role="alert"
       >
@@ -54,10 +60,11 @@ const Feedback = ({
     {success ? (
       <Box
         aria-live="polite"
+        background="green.950"
         borderColor="green.600"
         borderRadius="md"
         borderWidth="1px"
-        color="green.700"
+        color="green.300"
         padding={4}
         role="status"
       >
@@ -67,10 +74,30 @@ const Feedback = ({
   </>
 );
 
+const AuthLink = ({
+  children,
+  href,
+}: {
+  children: ReactNode;
+  href: string;
+}) => (
+  <Box
+    _hover={{ color: 'gold.300' }}
+    asChild
+    color="fg.muted"
+    display="inline"
+    transitionDuration="fast"
+    transitionProperty="color"
+    transitionTimingFunction="ease-out"
+  >
+    <a href={href}>{children}</a>
+  </Box>
+);
+
 const ProviderDivider = () => (
   <Stack align="center" direction="row" gap={3}>
     <Separator flex="1" />
-    <Text color="gray.600" fontSize="sm">
+    <Text color="fg.muted" fontSize="sm">
       or
     </Text>
     <Separator flex="1" />
@@ -81,10 +108,11 @@ const GoogleAvailability = ({ enabled }: { enabled: boolean }) =>
   enabled ? null : (
     <Box
       aria-live="polite"
+      background="orange.950"
       borderColor="orange.500"
       borderRadius="md"
       borderWidth="1px"
-      color="orange.700"
+      color="orange.300"
       padding={4}
       role="status"
     >
@@ -217,7 +245,7 @@ export const RegisterForm = ({
       <GoogleAvailability enabled={googleEnabled} />
       <OAuthButtons callbackUrl={callbackUrl} googleEnabled={googleEnabled} />
       <Text textAlign="center">
-        <a href="/login">Already registered? Log in</a>
+        <AuthLink href="/login">Already registered? Log in</AuthLink>
       </Text>
     </Stack>
   );
@@ -330,10 +358,10 @@ export const LoginForm = ({
       <GoogleAvailability enabled={googleEnabled} />
       <OAuthButtons callbackUrl={callbackUrl} googleEnabled={googleEnabled} />
       <Text textAlign="center">
-        <a href="/forgot-password">Forgot password?</a>
+        <AuthLink href="/forgot-password">Forgot password?</AuthLink>
       </Text>
       <Text textAlign="center">
-        <a href="/register">New user? Create an account</a>
+        <AuthLink href="/register">New user? Create an account</AuthLink>
       </Text>
     </Stack>
   );
@@ -391,7 +419,7 @@ export const ResetPasswordForm = ({
     return (
       <Stack gap={5} textAlign="center">
         <Feedback error="This reset link is invalid, expired, or has already been used." />
-        <Box asChild color="teal.700" fontWeight="600">
+        <Box asChild color="gold.300" fontWeight="600">
           <a href="/forgot-password">Request a new reset link</a>
         </Box>
       </Stack>

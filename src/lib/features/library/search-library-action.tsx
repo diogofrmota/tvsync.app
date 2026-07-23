@@ -129,7 +129,7 @@ export const SearchLibraryAction = ({
       )}
       {feedback ? (
         <Text
-          color={feedback.tone === 'error' ? 'red.500' : 'green.600'}
+          color={feedback.tone === 'error' ? 'red.400' : 'green.400'}
           fontSize="xs"
           role={feedback.tone === 'error' ? 'alert' : 'status'}
         >

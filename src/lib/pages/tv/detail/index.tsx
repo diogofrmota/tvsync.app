@@ -165,6 +165,9 @@ const TvShowDetailPage = ({
               ) : (
                 <Stack
                   alignItems="flex-start"
+                  background="bg.surface"
+                  borderColor="border"
+                  borderRadius="md"
                   borderWidth="1px"
                   gap={3}
                   padding={4}

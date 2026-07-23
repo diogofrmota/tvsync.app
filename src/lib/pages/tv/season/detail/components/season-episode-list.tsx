@@ -202,13 +202,19 @@ export const SeasonEpisodeList = ({
 
             return (
               <Grid
-                _hover={{ borderColor: 'gray.400' }}
-                borderColor="whiteAlpha.300"
+                _hover={{
+                  background: 'bg.surface.hover',
+                  borderColor: 'gold.400',
+                }}
+                borderColor="border"
                 borderRadius={8}
                 borderWidth="1px"
                 key={episode.id}
                 overflow="hidden"
                 padding={3}
+                transitionDuration="fast"
+                transitionProperty="background, border-color"
+                transitionTimingFunction="ease-out"
               >
                 <Grid
                   gap={4}
@@ -263,7 +269,7 @@ export const SeasonEpisodeList = ({
                           </Badge>
                         ) : null}
                       </Flex>
-                      <Text color="gray.400" fontSize="sm">
+                      <Text color="fg.muted" fontSize="sm">
                         {episode.air_date || 'Air date unavailable'} |{' '}
                         {formatRuntime(episode.runtime)}
                       </Text>
@@ -272,7 +278,7 @@ export const SeasonEpisodeList = ({
                           {episode.overview}
                         </Text>
                       ) : (
-                        <Text color="gray.400" fontSize="sm">
+                        <Text color="fg.muted" fontSize="sm">
                           No overview is available for this episode.
                         </Text>
                       )}
@@ -294,7 +300,7 @@ export const SeasonEpisodeList = ({
           })}
         </Grid>
       ) : (
-        <Text color="gray.400">
+        <Text color="fg.muted">
           TMDB does not have episode information for this season yet.
         </Text>
       )}

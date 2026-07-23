@@ -1,4 +1,4 @@
-import { Flex, HStack, Text } from '@chakra-ui/react';
+import { Box, Flex, HStack, Text } from '@chakra-ui/react';
 import Link from 'next/link';
 
 const footerLinks = [
@@ -29,9 +29,19 @@ const Footer = () => (
       wrap="wrap"
     >
       {footerLinks.map((item) => (
-        <Link href={item.href} key={item.href}>
-          {item.label}
-        </Link>
+        <Box
+          _hover={{ color: 'gold.300' }}
+          asChild
+          color="fg.muted"
+          fontSize="sm"
+          fontWeight="500"
+          key={item.href}
+          transitionDuration="fast"
+          transitionProperty="color"
+          transitionTimingFunction="ease-out"
+        >
+          <Link href={item.href}>{item.label}</Link>
+        </Box>
       ))}
     </HStack>
     <Text color="fg.muted" fontSize="sm">

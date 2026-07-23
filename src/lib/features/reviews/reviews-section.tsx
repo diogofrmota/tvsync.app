@@ -88,7 +88,7 @@ export const ReviewsSection = ({
         <Heading fontSize="lg" fontWeight="400" textTransform="uppercase">
           {title}
         </Heading>
-        <Text color="gray.400" fontSize="sm">
+        <Text color="fg.muted" fontSize="sm">
           {state.reviews.length > 0
             ? `${state.reviews.length} ${
                 state.reviews.length === 1 ? 'review' : 'reviews'
@@ -130,7 +130,7 @@ export const ReviewsSection = ({
                 <Heading fontSize="md">
                   {review.title || 'Untitled review'}
                 </Heading>
-                <Text color="gray.400" fontSize="sm">
+                <Text color="fg.muted" fontSize="sm">
                   <Link href={`/profile/${review.username}`}>
                     {review.displayName || review.username}
                   </Link>{' '}
@@ -151,7 +151,7 @@ export const ReviewsSection = ({
                 templateColumns="repeat(2, max-content)"
               >
                 {review.canEdit ? (
-                  <Badge colorPalette="teal" variant="subtle">
+                  <Badge colorPalette="gold" variant="subtle">
                     Your review
                   </Badge>
                 ) : null}
@@ -170,7 +170,7 @@ export const ReviewsSection = ({
           ))}
         </Grid>
       ) : (
-        <Text color="gray.400">
+        <Text color="fg.muted">
           Be the first TvSync user to leave a review.
         </Text>
       )}

@@ -132,11 +132,11 @@ export const MediaStatusControl = ({
       </Field.Root>
 
       {watchStatus ? (
-        <Badge alignSelf="flex-start" colorPalette="teal" variant="subtle">
+        <Badge alignSelf="flex-start" colorPalette="gold" variant="subtle">
           {statusLabels[watchStatus]}
         </Badge>
       ) : (
-        <Text color="gray.400" fontSize="sm">
+        <Text color="fg.muted" fontSize="sm">
           Choose a status to save it.
         </Text>
       )}

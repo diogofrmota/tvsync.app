@@ -125,13 +125,16 @@ export const PublicProfilePage = ({ data }: { data: PublicProfileData }) => {
         <SectionHeading title="Social Information" />
         <Flex gap={4}>
           <Box
-            _hover={{ borderColor: 'teal.400' }}
+            _hover={{ borderColor: 'gold.400' }}
             asChild
             borderColor="border"
             borderRadius="lg"
             borderWidth="1px"
             flex="1"
             padding={5}
+            transitionDuration="fast"
+            transitionProperty="border-color"
+            transitionTimingFunction="ease-out"
           >
             <Link href={`${profilePath}/following` as Route}>
               <Text fontSize="2xl" fontWeight="bold">
@@ -141,13 +144,16 @@ export const PublicProfilePage = ({ data }: { data: PublicProfileData }) => {
             </Link>
           </Box>
           <Box
-            _hover={{ borderColor: 'teal.400' }}
+            _hover={{ borderColor: 'gold.400' }}
             asChild
             borderColor="border"
             borderRadius="lg"
             borderWidth="1px"
             flex="1"
             padding={5}
+            transitionDuration="fast"
+            transitionProperty="border-color"
+            transitionTimingFunction="ease-out"
           >
             <Link href={`${profilePath}/followers` as Route}>
               <Text fontSize="2xl" fontWeight="bold">

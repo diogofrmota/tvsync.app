@@ -109,14 +109,14 @@ export const MediaSearchBar = ({
           <Flex gap={3} width="full">
             <Input
               _focusVisible={{
-                borderColor: 'white',
-                boxShadow: '0 0 0 1px white',
+                borderColor: 'gold.400',
+                boxShadow: '0 0 0 1px var(--chakra-colors-gold-400)',
               }}
-              _hover={{ borderColor: 'white' }}
+              _hover={{ borderColor: 'gold.400' }}
               _placeholder={{ color: 'whiteAlpha.700' }}
               aria-label={placeholder}
               autoComplete="off"
-              borderColor="white"
+              borderColor="whiteAlpha.400"
               borderRadius={24}
               name="query"
               onChange={(event) => setQuery(event.target.value)}

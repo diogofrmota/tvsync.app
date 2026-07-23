@@ -188,7 +188,7 @@ export const MultiSearchPage = ({
 
     return (
       <>
-        <Text aria-live="polite" color="gray.500" fontSize="sm" role="status">
+        <Text aria-live="polite" color="fg.muted" fontSize="sm" role="status">
           Showing {items.length}{' '}
           {mediaType === MediaType.Movie ? 'movies' : 'TV shows'} on page {page}
           .
@@ -330,7 +330,7 @@ export const MultiSearchPage = ({
               </Field.Root>
             </Grid>
             {query ? (
-              <Text color="gray.500" fontSize="xs">
+              <Text color="fg.muted" fontSize="xs">
                 TMDB returns title searches by relevance. Genre and sorting
                 apply to the results loaded on this page.
               </Text>

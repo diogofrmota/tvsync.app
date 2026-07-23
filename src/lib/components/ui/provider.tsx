@@ -12,9 +12,9 @@ export function Provider(
   props: React.PropsWithChildren<{ session?: Session | null }>
 ) {
   return (
-    <ProgressProvider color="#00aaaa" height="4px" shallowRouting>
+    <ProgressProvider color="#fbbf24" height="4px" shallowRouting>
       <SessionProvider session={props.session}>
-        <ColorModeProvider defaultTheme="dark">
+        <ColorModeProvider defaultTheme="dark" forcedTheme="dark">
           <ChakraProvider value={customTheme}>{props.children}</ChakraProvider>
         </ColorModeProvider>
       </SessionProvider>

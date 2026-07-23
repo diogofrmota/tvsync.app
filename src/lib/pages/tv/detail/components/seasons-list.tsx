@@ -43,12 +43,19 @@ export const SeasonsList = ({ seasons, showId }: SeasonsListProps) => {
         <Grid gap={4} templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }}>
           {visibleSeasons.map((season) => (
             <Box
-              borderColor="whiteAlpha.300"
+              _hover={{
+                background: 'bg.surface.hover',
+                borderColor: 'gold.400',
+              }}
+              borderColor="border"
               borderRadius={8}
               borderWidth="1px"
               key={`${season.id}-${season.season_number}`}
               overflow="hidden"
               padding={3}
+              transitionDuration="fast"
+              transitionProperty="background, border-color"
+              transitionTimingFunction="ease-out"
             >
               <Link
                 href={
@@ -74,7 +81,7 @@ export const SeasonsList = ({ seasons, showId }: SeasonsListProps) => {
                       </Badge>
                     </Flex>
 
-                    <Text color="gray.400" fontSize="sm">
+                    <Text color="fg.muted" fontSize="sm">
                       {getSeasonYear(season.air_date)} ·{' '}
                       {season.episode_count > 0
                         ? formatEpisodeCount(season.episode_count)
@@ -86,7 +93,7 @@ export const SeasonsList = ({ seasons, showId }: SeasonsListProps) => {
                         {season.overview}
                       </Text>
                     ) : (
-                      <Text color="gray.400" fontSize="sm">
+                      <Text color="fg.muted" fontSize="sm">
                         No overview is available for this season.
                       </Text>
                     )}
@@ -107,7 +114,7 @@ export const SeasonsList = ({ seasons, showId }: SeasonsListProps) => {
           ))}
         </Grid>
       ) : (
-        <Text color="gray.400">
+        <Text color="fg.muted">
           TMDB does not have season information for this show yet.
         </Text>
       )}

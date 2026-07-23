@@ -50,11 +50,14 @@ const PosterImage = ({
 
   return (
     <Image
-      _groupHover={{ opacity: 0.5 }}
+      _groupHover={{ opacity: 0.85 }}
       borderRadius="md"
       objectFit="cover"
       onError={() => setFailedToLoad(true)}
       src={`${IMAGE_URL}${src}`}
+      transitionDuration="moderate"
+      transitionProperty="opacity"
+      transitionTimingFunction="ease-out"
       {...(layout === 'flex' && flexSize)}
       {...props}
       alt={alt}

@@ -64,7 +64,7 @@ export const TVSeasonDetailPage = ({
             <Grid gap={4}>
               <Link href={`/tv/show/${showId}` as Route} prefetch={false}>
                 <Text
-                  color="gray.400"
+                  color="fg.muted"
                   fontSize="sm"
                   letterSpacing={0}
                   textTransform="uppercase"
@@ -117,7 +117,7 @@ export const TVSeasonDetailPage = ({
                   {data.overview}
                 </BionifiedParagraph>
               ) : (
-                <Text color="gray.400">
+                <Text color="fg.muted">
                   No overview is available from TMDB for this season yet.
                 </Text>
               )}
@@ -145,7 +145,7 @@ export const TVSeasonDetailPage = ({
               showId={showId}
             />
           ) : (
-            <Text color="gray.400">
+            <Text color="fg.muted">
               TMDB does not have episode information for this season yet.
             </Text>
           )}

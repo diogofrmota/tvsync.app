@@ -1,15 +1,10 @@
-'use client';
-
 import { Badge, Flex } from '@chakra-ui/react';
-import { useColorMode } from 'lib/components/ui/color-mode';
 import type { MovieDetailSectionProps } from 'lib/pages/movie/detail/types';
 import Link from 'next/link';
 
 type GenreListProps = MovieDetailSectionProps;
 
 export const GenreList = ({ data }: GenreListProps) => {
-  const { colorMode } = useColorMode();
-
   if (data.genres.length === 0) {
     return null;
   }
@@ -22,7 +17,7 @@ export const GenreList = ({ data }: GenreListProps) => {
           colorScheme="gray"
           cursor="pointer"
           key={`${genre.name}-${genre.id}`}
-          variant={colorMode === 'light' ? 'solid' : 'outline'}
+          variant="outline"
         >
           <Link href={`/movies/genre/${genre.id}?page=1`} prefetch={false}>
             {genre.name}

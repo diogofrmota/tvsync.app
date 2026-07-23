@@ -29,7 +29,7 @@ export const RatingDisplay = ({
         </Text>
       </Text>
       {typeof count === 'number' && count > 0 ? (
-        <Badge colorPalette="teal" variant="subtle">
+        <Badge colorPalette="gold" variant="subtle">
           {count} {count === 1 ? 'rating' : 'ratings'}
         </Badge>
       ) : null}
