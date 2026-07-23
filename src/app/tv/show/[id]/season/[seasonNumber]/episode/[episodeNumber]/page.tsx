@@ -47,10 +47,10 @@ export async function generateMetadata({
 
     return {
       ...crawlerMetadata,
-      title: `${title} | TvSync`,
+      title: `TvSync | ${title}`,
       description,
       openGraph: {
-        title: `${title} | TvSync`,
+        title: `TvSync | ${title}`,
         description,
         type: 'video.episode',
         url: `/tv/show/${id}/season/${seasonNumber}/episode/${episodeNumber}`,
@@ -67,7 +67,7 @@ export async function generateMetadata({
   } catch {
     return {
       ...crawlerMetadata,
-      title: 'TV episode | TvSync',
+      title: 'TvSync | TV episode',
       description: 'View TV episode progress and ratings on TvSync.',
     };
   }

@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   description: 'Create a new password for your TvSync account.',
-  title: 'Create a New Password | TvSync',
+  title: 'TvSync | Create a New Password',
 };
 
 type ResetPasswordPageProps = {

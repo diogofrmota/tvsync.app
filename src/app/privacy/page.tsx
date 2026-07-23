@@ -2,7 +2,7 @@ import { LegalPage, LegalSection } from 'lib/pages/legal';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
-export const metadata: Metadata = { title: 'Privacy Policy | TvSync' };
+export const metadata: Metadata = { title: 'TvSync | Privacy Policy' };
 export default function PrivacyPage() {
   return (
     <LegalPage

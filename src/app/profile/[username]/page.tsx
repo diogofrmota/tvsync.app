@@ -21,7 +21,7 @@ export async function generateMetadata({
 
   if (!data) {
     return {
-      title: 'Profile | TvSync',
+      title: 'TvSync | Profile',
       description: 'View a public TvSync profile.',
     };
   }
@@ -32,10 +32,10 @@ export async function generateMetadata({
     `See ${displayName}'s public watch statistics and favourites on TvSync.`;
 
   return {
-    title: `${displayName} (@${data.profile.username}) | TvSync`,
+    title: `TvSync | ${displayName} (@${data.profile.username})`,
     description,
     openGraph: {
-      title: `${displayName} (@${data.profile.username}) | TvSync`,
+      title: `TvSync | ${displayName} (@${data.profile.username})`,
       description,
       url: `/profile/${data.profile.username}`,
     },

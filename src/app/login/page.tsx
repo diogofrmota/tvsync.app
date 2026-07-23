@@ -6,11 +6,11 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
 
 export const metadata: Metadata = {
-  title: 'Log in | TvSync',
+  title: 'TvSync | Log in',
   description:
     'Log in to TvSync with email, username, or Google authentication.',
   openGraph: {
-    title: 'Log in | TvSync',
+    title: 'TvSync | Log in',
     description:
       'Log in to TvSync with email, username, or Google authentication.',
     url: '/login',

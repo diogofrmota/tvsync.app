@@ -81,10 +81,11 @@ export const MoviesPage = ({
 
   return (
     <PageShell>
-      <PageHeading
-        subtitle="Never knew if its Movies or Films, sorry english not my first language."
-        title="Movies"
-      />
+      <PageHeading title="Movies" />
+      <Stack alignItems="center" as="section" gap={4} textAlign="center">
+        <Text color="fg">Add new movies to your library</Text>
+        <DiscoverMoviesButton />
+      </Stack>
       <MovieLibrarySection
         items={plannedItems}
         sectionKey="planned"
@@ -95,10 +96,6 @@ export const MoviesPage = ({
         sectionKey="finished"
         title="Finished"
       />
-      <Stack alignItems="center" as="section" gap={4} textAlign="center">
-        <Text color="fg.muted">Find new movies</Text>
-        <DiscoverMoviesButton />
-      </Stack>
     </PageShell>
   );
 };

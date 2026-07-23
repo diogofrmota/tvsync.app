@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   description: 'Update your TvSync profile and account security.',
-  title: 'Edit Profile | TvSync',
+  title: 'TvSync | Edit Profile',
 };
 
 export default async function Page() {

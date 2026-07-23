@@ -12,10 +12,10 @@ export async function generateMetadata({
   const title = formatGenreTitle(genre);
 
   return {
-    title: `${title} Movies | TvSync`,
+    title: `TvSync | ${title} Movies`,
     description: `Discover ${title.toLowerCase()} movies from TMDB on TvSync.`,
     openGraph: {
-      title: `${title} Movies | TvSync`,
+      title: `TvSync | ${title} Movies`,
       description: `Discover ${title.toLowerCase()} movies from TMDB on TvSync.`,
       url: `/movies/genre/${genre}`,
     },

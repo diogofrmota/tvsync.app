@@ -6,10 +6,10 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
 
 export const metadata: Metadata = {
-  title: 'Your movies | TvSync',
+  title: 'TvSync | Your movies',
   description: 'Review and manage your personal movie library in TvSync.',
   openGraph: {
-    title: 'Your movies | TvSync',
+    title: 'TvSync | Your movies',
     description: 'Review and manage your personal movie library in TvSync.',
     url: '/movies',
   },

@@ -5,7 +5,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   description: 'Confirm your new TvSync email address.',
-  title: 'Confirm Email Change | TvSync',
+  title: 'TvSync | Confirm Email Change',
 };
 
 export default async function Page({

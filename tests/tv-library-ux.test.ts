@@ -124,10 +124,10 @@ test('TV Shows page has the exact required section names, order, and navigation 
   ]);
 
   assertInOrder(page, [
+    'Find new TV Shows to binge',
     'title="Watching"',
     'title="Planned to Watch"',
     'title="Finished"',
-    'Find new TV Shows to binge',
   ]);
   assert.doesNotMatch(
     page,
