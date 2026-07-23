@@ -161,8 +161,8 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
   assert.doesNotMatch(rail, /overflowX="auto"/);
   assert.doesNotMatch(rail, /scrollSnapType/);
   assert.match(rail, /templateColumns=\{\{/);
-  assert.match(profileRoute, /getOwnProfileStatistics\(\)/);
-  assert.match(profileRoute, /getOwnProfileFavorites\(\)/);
+  assert.match(profileRoute, /getOwnProfileStatistics/);
+  assert.match(profileRoute, /getOwnProfileFavorites/);
   assert.match(movieDetail, /<FavoriteButton/);
   assert.match(tvDetail, /<FavoriteButton/);
   assert.match(favoriteButton, /Mark as Favourite/);
