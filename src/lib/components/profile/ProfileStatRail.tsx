@@ -1,4 +1,6 @@
-import { Box, Flex, Text } from '@chakra-ui/react';
+import { Box, Grid, Icon, Text } from '@chakra-ui/react';
+import type { IconType } from 'react-icons';
+import { FiClock, FiFilm, FiPlayCircle, FiTv } from 'react-icons/fi';
 
 export type ProfileStatCard = {
   detail?: string;
@@ -6,42 +8,54 @@ export type ProfileStatCard = {
   value: number | string;
 };
 
+const iconsByLabel: Record<string, IconType> = {
+  'Episodes Watched': FiPlayCircle,
+  'Movies Watched': FiFilm,
+  'TV Shows Watched': FiTv,
+  'Time Spent Watching Movies': FiClock,
+  'Time Spent Watching TV Shows': FiClock,
+};
+
 export const ProfileStatRail = ({
   cards,
 }: {
   cards: Array<ProfileStatCard>;
 }) => (
-  <Flex
+  <Grid
     aria-label="Profile statistics"
-    gap={4}
-    overflowX="auto"
-    paddingBottom={3}
+    columnGap={4}
     role="list"
-    scrollSnapType="x mandatory"
-    style={{ WebkitOverflowScrolling: 'touch' }}
+    rowGap={4}
+    templateColumns={{
+      base: 'repeat(2, minmax(0, 1fr))',
+      md: 'repeat(3, minmax(0, 1fr))',
+      lg: `repeat(${cards.length}, minmax(0, 1fr))`,
+    }}
   >
     {cards.map((card) => (
       <Box
+        _hover={{ borderColor: 'gold.400' }}
         borderColor="border"
         borderRadius="lg"
         borderWidth="1px"
-        flex="0 0 auto"
         key={card.label}
-        minHeight="8.5rem"
         padding={5}
         role="listitem"
-        scrollSnapAlign="start"
-        width={{ base: '15rem', md: '17rem' }}
+        transitionDuration="fast"
+        transitionProperty="border-color"
+        transitionTimingFunction="ease-out"
       >
-        <Text color="fg.muted" fontSize="sm" fontWeight="medium">
-          {card.label}
-        </Text>
+        <Icon as={iconsByLabel[card.label]} boxSize={5} color="gold.400" />
         <Text
           color="gold.300"
           fontSize={{ base: '2xl', md: '3xl' }}
           fontWeight="bold"
+          marginTop={2}
         >
           {card.value}
+        </Text>
+        <Text color="fg.muted" fontSize="sm" fontWeight="medium">
+          {card.label}
         </Text>
         {card.detail ? (
           <Text color="fg.muted" fontSize="xs" marginTop={2}>
@@ -50,5 +64,5 @@ export const ProfileStatRail = ({
         ) : null}
       </Box>
     ))}
-  </Flex>
+  </Grid>
 );

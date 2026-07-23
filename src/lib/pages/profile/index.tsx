@@ -116,94 +116,49 @@ export const ProfilePage = ({
   return (
     <PageShell>
       <PageHeading
-        subtitle="Your profile information, social connections, and watch activity."
+        subtitle="Your profile information, social connections and statistics."
         title="Profile"
       />
 
-      <Stack gap={5}>
-        <Flex
-          align={{ base: 'flex-start', sm: 'center' }}
-          borderColor="border"
-          borderRadius="lg"
-          borderWidth="1px"
-          direction={{ base: 'column', sm: 'row' }}
-          gap={5}
-          padding={5}
-        >
-          <Stack flex="1" gap={1} minWidth={0}>
-            <Heading as="h2" fontSize={{ base: 'xl', md: '2xl' }}>
-              {displayName}
-            </Heading>
-            <Text color="fg.muted">@{profile.username}</Text>
-          </Stack>
-          <Stack
-            direction={{ base: 'column', sm: 'row' }}
-            gap={3}
-            width={{ base: 'full', sm: 'auto' }}
-          >
-            <Button asChild width={{ base: 'full', sm: 'auto' }}>
-              <Link href="/profile/edit">Edit Profile</Link>
-            </Button>
-            <LogoutButton />
-          </Stack>
-        </Flex>
-      </Stack>
+      <Stack align="center" gap={4} textAlign="center">
+        <Heading as="h2" fontSize={{ base: 'xl', md: '2xl' }}>
+          {displayName}
+        </Heading>
+        <Text color="fg.muted">@{profile.username}</Text>
 
-      <Stack gap={4}>
-        <Flex gap={4}>
-          <Box
-            _hover={{ borderColor: 'gold.400' }}
-            asChild
-            borderColor="border"
-            borderRadius="lg"
-            borderWidth="1px"
-            flex="1"
-            minWidth={0}
-            padding={5}
-            transitionDuration="fast"
-            transitionProperty="border-color"
-            transitionTimingFunction="ease-out"
-          >
+        <Flex gap={10} justify="center">
+          <Box asChild>
             <Link href={`${baseProfilePath}/following` as Route}>
-              <Text fontSize="2xl" fontWeight="bold">
-                {followCounts.following_count}
-              </Text>
-              <Text color="fg.muted">Following</Text>
+              <Stack align="center" gap={0}>
+                <Text fontSize="2xl" fontWeight="bold">
+                  {followCounts.following_count}
+                </Text>
+                <Text color="fg.muted">Following</Text>
+              </Stack>
             </Link>
           </Box>
-          <Box
-            _hover={{ borderColor: 'gold.400' }}
-            asChild
-            borderColor="border"
-            borderRadius="lg"
-            borderWidth="1px"
-            flex="1"
-            minWidth={0}
-            padding={5}
-            transitionDuration="fast"
-            transitionProperty="border-color"
-            transitionTimingFunction="ease-out"
-          >
+          <Box asChild>
             <Link href={`${baseProfilePath}/followers` as Route}>
-              <Text fontSize="2xl" fontWeight="bold">
-                {followCounts.follower_count}
-              </Text>
-              <Text color="fg.muted">Followers</Text>
+              <Stack align="center" gap={0}>
+                <Text fontSize="2xl" fontWeight="bold">
+                  {followCounts.follower_count}
+                </Text>
+                <Text color="fg.muted">Followers</Text>
+              </Stack>
             </Link>
           </Box>
         </Flex>
-      </Stack>
 
-      <Stack gap={4}>
-        <SectionHeading title="Statistics" />
-        <ProfileStatRail cards={statCards} />
-        <Button alignSelf="flex-start" asChild size="sm" variant="outline">
-          <Link
-            href={`${baseProfilePath}/following?compare=statistics` as Route}
-          >
-            Compare with Following
-          </Link>
-        </Button>
+        <Text color="fg.muted" maxWidth="32rem">
+          {profile.bio || 'No bio yet, yes I am misterius.'}
+        </Text>
+
+        <Flex gap={3}>
+          <Button asChild size="sm">
+            <Link href="/profile/edit">Edit Profile</Link>
+          </Button>
+          <LogoutButton />
+        </Flex>
       </Stack>
 
       <FavoriteSection
@@ -216,6 +171,18 @@ export const ProfilePage = ({
         items={favoriteTvShows}
         title="Favourite TV Shows"
       />
+
+      <Stack gap={4}>
+        <SectionHeading title="Statistics" />
+        <ProfileStatRail cards={statCards} />
+        <Button alignSelf="center" asChild size="sm" variant="outline">
+          <Link
+            href={`${baseProfilePath}/following?compare=statistics` as Route}
+          >
+            Compare with Following
+          </Link>
+        </Button>
+      </Stack>
     </PageShell>
   );
 };

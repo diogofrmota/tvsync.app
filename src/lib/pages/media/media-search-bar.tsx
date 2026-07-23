@@ -100,7 +100,7 @@ export const MediaSearchBar = ({
 
   return (
     <Box asChild width="full">
-      <form action="/search" onSubmit={handleSubmit}>
+      <form action="/explore" onSubmit={handleSubmit}>
         <Box
           maxWidth={{ base: 'full', md: '36rem' }}
           position="relative"

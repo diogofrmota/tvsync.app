@@ -14,7 +14,7 @@ import Link from 'next/link';
 
 type TvSectionKey = 'completed' | 'planned' | 'watching';
 
-const discoverTvShowsHref = '/search?type=tv';
+const discoverTvShowsHref = '/explore?type=tv';
 
 const statusLabels: Record<TvLibrarySectionStatus, string> = {
   [WatchStatus.Completed]: 'Finished',
@@ -22,12 +22,10 @@ const statusLabels: Record<TvLibrarySectionStatus, string> = {
   [WatchStatus.Watching]: 'Watching',
 };
 const emptyMessages: Record<TvSectionKey, string> = {
-  completed:
-    'No finished TV shows yet, can you belive that? You have no culture.',
+  completed: 'Why use this app if you never finished a tv show?',
   planned:
-    "No planned to watch TV shows yet. That's so sad! Go find some TV shows please.",
-  watching:
-    "No TV shows in progress yet. That's so sad! Go find something to watch please.",
+    'You need to find what the girlies are watching and add to your list.',
+  watching: 'Time to start a new TV Show!',
 };
 
 const DiscoverTvShowsButton = ({ label = 'Discover TV Shows' }) => (
@@ -94,10 +92,7 @@ export const TvShowsPage = ({
 
   return (
     <PageShell>
-      <PageHeading
-        subtitle="Keep track of your TV show library. Here you can see what you are watching, what you have planned to watch and what you have finished."
-        title="TV Shows"
-      />
+      <PageHeading subtitle="Netflix and chill?" title="TV Shows" />
       <TvLibrarySection
         items={groupedItems[WatchStatus.Watching]}
         sectionKey="watching"
@@ -113,11 +108,8 @@ export const TvShowsPage = ({
         sectionKey="completed"
         title="Finished"
       />
-      <Stack as="section" gap={4}>
-        <SectionHeading
-          description="Find another TV show to add to your library."
-          title="Discover TV Shows"
-        />
+      <Stack alignItems="center" as="section" gap={4} textAlign="center">
+        <Text color="fg.muted">Find new TV Shows to binge</Text>
         <DiscoverTvShowsButton />
       </Stack>
     </PageShell>

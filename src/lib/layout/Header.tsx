@@ -48,10 +48,10 @@ const publicNavItems: Array<NavItem> = [
 
 const authenticatedNavItems: Array<NavItem> = [
   {
-    href: '/search',
+    href: '/explore',
     icon: FiSearch,
     label: 'Explore',
-    match: (path) => path.startsWith('/search'),
+    match: (path) => path.startsWith('/explore'),
   },
   {
     href: '/movies',
@@ -164,7 +164,7 @@ const Header = () => {
           paddingX={{ base: 4, sm: 6, lg: 8 }}
         >
           <Heading asChild fontSize={{ base: '2xl', md: '3xl' }}>
-            <Link href={isAuthenticated ? '/movies' : '/'}>
+            <Link href={isAuthenticated ? '/explore' : '/'}>
               Tv
               <Text as="span" color="gold.400">
                 Sync

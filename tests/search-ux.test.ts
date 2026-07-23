@@ -29,7 +29,7 @@ test('Search exposes exactly linkable Movies and TV Shows tabs with type-scoped 
     read('src/lib/pages/search/multi/index.tsx'),
     read('src/lib/pages/movies/index.tsx'),
     read('src/lib/pages/tv-shows/index.tsx'),
-    read('src/app/search/page.tsx'),
+    read('src/app/explore/page.tsx'),
   ]);
 
   assert.match(page, /label: 'Movies'/);
@@ -42,8 +42,8 @@ test('Search exposes exactly linkable Movies and TV Shows tabs with type-scoped 
   assert.equal(getSearchMediaType('movie'), MediaType.Movie);
   assert.equal(getSearchMediaType('tv'), MediaType.Tv);
   assert.equal(getSearchMediaType('person'), MediaType.Movie);
-  assert.match(movies, /'\/search\?type=movie'/);
-  assert.match(tvShows, /'\/search\?type=tv'/);
+  assert.match(movies, /'\/explore\?type=movie'/);
+  assert.match(tvShows, /'\/explore\?type=tv'/);
   assert.match(route, /getCallbackUrl\(await searchParams\)/);
 });
 
@@ -222,7 +222,7 @@ test('responsive results, poster navigation, pagination, and all required states
 test('quick library actions use batched status input, type-correct options, and duplicate-safe persistence', async () => {
   const [page, route, action, loader, query, swr] = await Promise.all([
     read('src/lib/pages/search/multi/index.tsx'),
-    read('src/app/search/page.tsx'),
+    read('src/app/explore/page.tsx'),
     read('src/lib/features/library/search-library-action.tsx'),
     read('src/lib/pages/search/load-search-library-state.server.ts'),
     read('src/lib/services/database/library-queries.ts'),

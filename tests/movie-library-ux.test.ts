@@ -85,14 +85,14 @@ test('Movies page has only the required ordered library sections and navigation 
   assertInOrder(page, [
     'title="Planned to Watch"',
     'title="Finished"',
-    'title="Discover Movies"',
+    'Find new movies',
   ]);
   assert.doesNotMatch(
     page,
     /recommendations|recently viewed|trending|genres|activity feed/i
   );
   assert.match(page, /href=\{discoverMoviesHref\}/);
-  assert.match(page, /const discoverMoviesHref = '\/search\?type=movie'/);
+  assert.match(page, /const discoverMoviesHref = '\/explore\?type=movie'/);
   assert.match(
     searchState,
     /value === MediaType\.Tv \? MediaType\.Tv : MediaType\.Movie/
@@ -210,7 +210,7 @@ test('library status changes and remove-from-library controls were moved to the 
   assert.doesNotMatch(page, /Library status/);
   assert.match(
     page,
-    /Keep track of your movie library\. Here you can see what you have planned to watch and what you have finished\./
+    /Never knew if its Movies or Films, sorry english not my first language\./
   );
 });
 

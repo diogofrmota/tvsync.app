@@ -245,7 +245,7 @@ export const MultiSearchPage = ({
     <PageShell>
       <PageHeading
         subtitle="Browse and search one content type at a time, then add titles to your library."
-        title="Search"
+        title="Explore"
       />
       <Stack gap={5}>
         <HStack aria-label="Content type" gap={2} role="tablist">

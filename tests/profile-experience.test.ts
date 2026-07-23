@@ -127,7 +127,7 @@ test('recent authentication has a fixed window that refresh callbacks cannot ext
   assert.equal(isRecentAuthentication(now + 1, now), false);
 });
 
-test('Profile renders exact information, social navigation, horizontal stats, and favourites', async () => {
+test('Profile renders exact information, social navigation, non-scrolling stats, and favourites', async () => {
   const [page, profileRoute, rail, movieDetail, tvDetail, favoriteButton] =
     await Promise.all([
       read('src/lib/pages/profile/index.tsx'),
@@ -157,9 +157,10 @@ test('Profile renders exact information, social navigation, horizontal stats, an
   assert.match(page, /\/following/);
   assert.match(page, /\/followers/);
   assert.match(page, /Compare with Following/);
-  assert.match(rail, /overflowX="auto"/);
-  assert.match(rail, /scrollSnapType="x mandatory"/);
-  assert.match(rail, /width=\{\{ base: '15rem', md: '17rem' \}\}/);
+  assert.match(page, /No bio yet, yes I am misterius\./);
+  assert.doesNotMatch(rail, /overflowX="auto"/);
+  assert.doesNotMatch(rail, /scrollSnapType/);
+  assert.match(rail, /templateColumns=\{\{/);
   assert.match(profileRoute, /getOwnProfileStatistics\(\)/);
   assert.match(profileRoute, /getOwnProfileFavorites\(\)/);
   assert.match(movieDetail, /<FavoriteButton/);
@@ -250,8 +251,7 @@ test('Profile and Edit Profile include explicit mobile and desktop layouts', asy
     read('src/lib/pages/profile/profile-form.tsx'),
   ]);
 
-  assert.match(profile, /direction=\{\{ base: 'column', sm: 'row' \}\}/);
-  assert.match(profile, /width=\{\{ base: 'full', sm: 'auto' \}\}/);
+  assert.match(profile, /fontSize=\{\{ base: 'xl', md: '2xl' \}\}/);
   assert.match(edit, /padding=\{\{ base: 5, md: 6 \}\}/);
   assert.match(form, /maxLength=\{280\}/);
   assert.match(form, /autoComplete="current-password"/);
