@@ -40,7 +40,7 @@ const tvListSections = new Set([
   'popular',
   'top_rated',
 ]);
-const searchResources = new Set(['movie', 'multi', 'tv']);
+const searchResources = new Set(['movie', 'tv']);
 const trendingResources = new Set(['movie', 'tv']);
 const trendingTimeWindows = new Set(['day', 'week']);
 
