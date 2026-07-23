@@ -83,9 +83,9 @@ test('Movies page has only the required ordered library sections and navigation 
   ]);
 
   assertInOrder(page, [
+    'Add new movies to your library',
     'title="Planned to Watch"',
     'title="Finished"',
-    'Find new movies',
   ]);
   assert.doesNotMatch(
     page,
@@ -208,10 +208,7 @@ test('library status changes and remove-from-library controls were moved to the 
   assert.doesNotMatch(page, /NativeSelect/);
   assert.doesNotMatch(page, /Remove from library/);
   assert.doesNotMatch(page, /Library status/);
-  assert.match(
-    page,
-    /Never knew if its Movies or Films, sorry english not my first language\./
-  );
+  assert.match(page, /Add new movies to your library/);
 });
 
 test('shared poster cards and responsive grids cover desktop and three-column mobile rendering', async () => {

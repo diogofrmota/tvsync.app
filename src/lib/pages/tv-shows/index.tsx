@@ -92,7 +92,11 @@ export const TvShowsPage = ({
 
   return (
     <PageShell>
-      <PageHeading subtitle="Netflix and chill?" title="TV Shows" />
+      <PageHeading title="TV Shows" />
+      <Stack alignItems="center" as="section" gap={4} textAlign="center">
+        <Text color="fg">Find new TV Shows to binge</Text>
+        <DiscoverTvShowsButton />
+      </Stack>
       <TvLibrarySection
         items={groupedItems[WatchStatus.Watching]}
         sectionKey="watching"
@@ -108,10 +112,6 @@ export const TvShowsPage = ({
         sectionKey="completed"
         title="Finished"
       />
-      <Stack alignItems="center" as="section" gap={4} textAlign="center">
-        <Text color="fg.muted">Find new TV Shows to binge</Text>
-        <DiscoverTvShowsButton />
-      </Stack>
     </PageShell>
   );
 };

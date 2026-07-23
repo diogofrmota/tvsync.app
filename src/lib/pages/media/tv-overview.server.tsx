@@ -110,10 +110,10 @@ export const getTVShowListMetadata = (listType: TVShowListType): Metadata => {
   const description = `Browse ${title.toLowerCase()} from TMDB on TvSync.`;
 
   return {
-    title: `${title} | TvSync`,
+    title: `TvSync | ${title}`,
     description,
     openGraph: {
-      title: `${title} | TvSync`,
+      title: `TvSync | ${title}`,
       description,
       url: `/tv/${listType}`,
     },

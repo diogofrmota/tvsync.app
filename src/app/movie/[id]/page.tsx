@@ -36,10 +36,10 @@ export async function generateMetadata({
     const imagePath = movie.backdrop_path ?? movie.poster_path;
 
     return {
-      title: `${title} | TvSync`,
+      title: `TvSync | ${title}`,
       description,
       openGraph: {
-        title: `${title} | TvSync`,
+        title: `TvSync | ${title}`,
         description,
         type: 'video.movie',
         url: `/movie/${id}`,
@@ -55,7 +55,7 @@ export async function generateMetadata({
     };
   } catch {
     return {
-      title: 'Movie | TvSync',
+      title: 'TvSync | Movie',
       description:
         'View movie details, cast, recommendations, and tracking on TvSync.',
     };

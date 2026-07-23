@@ -2,7 +2,7 @@ import { LegalPage, LegalSection } from 'lib/pages/legal';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
-export const metadata: Metadata = { title: 'Terms of Service | TvSync' };
+export const metadata: Metadata = { title: 'TvSync | Terms of Service' };
 export default function TermsPage() {
   return (
     <LegalPage subtitle="The rules for using TvSync." title="Terms of Service">

@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   description: 'Verify your TvSync email address.',
-  title: 'Verify Email | TvSync',
+  title: 'TvSync | Verify Email',
 };
 
 type VerifyEmailPageProps = {

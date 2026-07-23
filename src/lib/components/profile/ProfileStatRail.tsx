@@ -1,6 +1,12 @@
 import { Box, Grid, Icon, Text } from '@chakra-ui/react';
 import type { IconType } from 'react-icons';
-import { FiClock, FiFilm, FiPlayCircle, FiTv } from 'react-icons/fi';
+import {
+  FiBarChart2,
+  FiClock,
+  FiFilm,
+  FiPlayCircle,
+  FiTv,
+} from 'react-icons/fi';
 
 export type ProfileStatCard = {
   detail?: string;
@@ -15,6 +21,9 @@ const iconsByLabel: Record<string, IconType> = {
   'Time Spent Watching Movies': FiClock,
   'Time Spent Watching TV Shows': FiClock,
 };
+
+const getStatIcon = (label: string): IconType =>
+  iconsByLabel[label] ?? FiBarChart2;
 
 export const ProfileStatRail = ({
   cards,
@@ -45,7 +54,7 @@ export const ProfileStatRail = ({
         transitionProperty="border-color"
         transitionTimingFunction="ease-out"
       >
-        <Icon as={iconsByLabel[card.label]} boxSize={5} color="gold.400" />
+        <Icon as={getStatIcon(card.label)} boxSize={5} color="gold.400" />
         <Text
           color="gold.300"
           fontSize={{ base: '2xl', md: '3xl' }}

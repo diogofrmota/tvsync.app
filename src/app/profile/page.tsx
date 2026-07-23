@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   description:
     'View your TvSync profile, activity, favourites, and statistics.',
-  title: 'Your Profile | TvSync',
+  title: 'TvSync | Your Profile',
 };
 
 export default async function Page() {

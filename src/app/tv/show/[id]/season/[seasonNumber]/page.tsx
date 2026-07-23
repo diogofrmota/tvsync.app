@@ -32,10 +32,10 @@ export async function generateMetadata({
       season.overview || `View episodes, progress, and ratings for ${title}.`;
 
     return {
-      title: `${title} | TvSync`,
+      title: `TvSync | ${title}`,
       description,
       openGraph: {
-        title: `${title} | TvSync`,
+        title: `TvSync | ${title}`,
         description,
         type: 'video.tv_show',
         url: `/tv/show/${id}/season/${seasonNumber}`,
@@ -51,7 +51,7 @@ export async function generateMetadata({
     };
   } catch {
     return {
-      title: 'TV season | TvSync',
+      title: 'TvSync | TV season',
       description: 'View TV season episodes, progress, and ratings on TvSync.',
     };
   }

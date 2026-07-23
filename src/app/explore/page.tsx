@@ -7,11 +7,11 @@ import { getServerSession } from 'next-auth/next';
 import { Suspense } from 'react';
 
 export const metadata: Metadata = {
-  title: 'Explore movies and TV shows | TvSync',
+  title: 'TvSync | Explore movies and TV shows',
   description:
     'Search TMDB for movies and TV shows, open detail pages, and save titles to your TvSync watchlist.',
   openGraph: {
-    title: 'Explore movies and TV shows | TvSync',
+    title: 'TvSync | Explore movies and TV shows',
     description:
       'Search TMDB for movies and TV shows, open detail pages, and save titles to your TvSync watchlist.',
     url: '/explore',

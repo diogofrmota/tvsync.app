@@ -6,11 +6,11 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
 
 export const metadata: Metadata = {
-  title: 'Your watchlist | TvSync',
+  title: 'TvSync | Your watchlist',
   description:
     'Review, search, sort, and manage your saved movies and TV shows in TvSync.',
   openGraph: {
-    title: 'Your watchlist | TvSync',
+    title: 'TvSync | Your watchlist',
     description:
       'Review, search, sort, and manage your saved movies and TV shows in TvSync.',
     url: '/watchlist',

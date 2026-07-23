@@ -6,7 +6,7 @@ import { getServerSession } from 'next-auth/next';
 
 export const metadata: Metadata = {
   description: 'Request a secure TvSync password reset email.',
-  title: 'Reset Password | TvSync',
+  title: 'TvSync | Reset Password',
 };
 
 export default async function Page() {

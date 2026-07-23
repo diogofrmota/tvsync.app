@@ -2,7 +2,7 @@ import { loadProfileConnectionsPage } from 'lib/pages/profile/load-connections.s
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: 'Followers | TvSync' };
+export const metadata: Metadata = { title: 'TvSync | Followers' };
 
 export default async function Page({
   params,
