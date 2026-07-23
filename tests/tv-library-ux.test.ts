@@ -164,7 +164,8 @@ test('Watching, Planned to Watch, and Finished are deterministic and mutually ex
       totalEpisodeCount: 3,
       watchedEpisodeCount: 0,
     }),
-    WatchStatus.Watching
+    WatchStatus.Planned,
+    'Watching requires at least one watched episode per UX.md 2.2, regardless of intent'
   );
   assert.equal(
     deriveTvLibraryStatus({
@@ -229,8 +230,46 @@ test('manual status transitions synchronize watched progress with the selected s
     },
     WatchStatus.Watching
   );
-  assert.equal(oneEpisodeWatching.status, WatchStatus.Watching);
+  assert.equal(
+    oneEpisodeWatching.status,
+    WatchStatus.Planned,
+    'a single-episode show can never be "watching" with zero watched episodes: watching its only episode completes it'
+  );
   assert.equal(oneEpisodeWatching.watchedEpisodeCount, 0);
+});
+
+test('a show with zero or one available episodes never displays Watching with zero watched episodes', () => {
+  const zeroEpisodeShow = getTvLibraryProjection({
+    availableEpisodes: [],
+    intentStatus: WatchStatus.Watching,
+    watchedEpisodeKeys: new Set(),
+  });
+  assert.equal(zeroEpisodeShow.status, WatchStatus.Planned);
+  assert.equal(zeroEpisodeShow.watchedEpisodeCount, 0);
+
+  const singleEpisode = [{ episodeNumber: 1, seasonNumber: 1 }];
+  const oneEpisodeUnwatched = getTvLibraryProjection({
+    availableEpisodes: singleEpisode,
+    intentStatus: WatchStatus.Watching,
+    watchedEpisodeKeys: new Set(),
+  });
+  assert.equal(oneEpisodeUnwatched.status, WatchStatus.Planned);
+
+  const projectedKeys = projectWatchedKeysForStatus({
+    availableEpisodes: singleEpisode,
+    currentWatchedEpisodeKeys: new Set(),
+    status: WatchStatus.Watching,
+  });
+  const persisted = getTvLibraryProjection({
+    availableEpisodes: singleEpisode,
+    intentStatus: WatchStatus.Watching,
+    watchedEpisodeKeys: projectedKeys,
+  });
+  assert.equal(
+    persisted.status,
+    WatchStatus.Planned,
+    'server-side reconciliation for a single-episode show must never persist Watching at zero watched episodes'
+  );
 });
 
 test('episode progress drives automatic completion, reopening, and new-episode behavior', () => {

@@ -233,6 +233,85 @@ test('shared poster cards and responsive grids cover desktop and three-column mo
   assert.match(page, /Remove from library/);
 });
 
+test('poster images fall back to the "Poster unavailable" state on a real network/decode failure, not only a missing src', async () => {
+  const posterImage = await read('src/lib/components/shared/PosterImage.tsx');
+
+  assert.match(
+    posterImage,
+    /useState\(false\)/,
+    'PosterImage must track a load-failure state, not only branch on a missing src'
+  );
+  assert.match(
+    posterImage,
+    /onError=\{\(\) => setFailedToLoad\(true\)\}/,
+    'the rendered <Image> must react to a real load failure (network error, 404, decode failure), not just an absent src'
+  );
+  assert.match(
+    posterImage,
+    /if \(!src \|\| failedToLoad\)/,
+    'the "Poster unavailable" fallback must render for both a missing src and a failed load'
+  );
+});
+
+test('TMDB image base URLs live outside any client-boundary module so Server Components can read them directly', async () => {
+  // PosterImage.tsx must stay 'use client' (it tracks load-failure state),
+  // but IMAGE_URL/IMAGE_URL_ORIGINAL are plain string constants consumed by
+  // several Server Components (cast lists, streaming providers, episode
+  // stills). If a plain value is exported from a 'use client' module, Next's
+  // server/client boundary replaces it with a throwing reference stub for
+  // any Server Component that imports it, so it must live in its own module
+  // that never carries a 'use client' directive.
+  const constantsModule = await read(
+    'src/lib/components/shared/tmdb-image-urls.ts'
+  );
+
+  assert.doesNotMatch(
+    constantsModule,
+    /'use client'/,
+    'the TMDB image URL constants module must never be a client boundary'
+  );
+  assert.match(constantsModule, /export const IMAGE_URL =/);
+  assert.match(constantsModule, /export const IMAGE_URL_ORIGINAL =/);
+
+  const posterImage = await read('src/lib/components/shared/PosterImage.tsx');
+
+  assert.doesNotMatch(
+    posterImage,
+    /export const IMAGE_URL/,
+    'PosterImage.tsx is a client boundary and must not re-declare/export the shared image URL constants'
+  );
+  assert.match(
+    posterImage,
+    /from 'lib\/components\/shared\/tmdb-image-urls'/,
+    'PosterImage.tsx must import the shared constant rather than defining its own'
+  );
+
+  const serverConsumers = [
+    'src/lib/pages/tv/detail/components/casts-wrapper.tsx',
+    'src/lib/pages/tv/detail/components/streaming-availability.tsx',
+    'src/lib/pages/tv/episode/detail/index.tsx',
+    'src/lib/pages/tv/season/detail/components/season-episode-list.tsx',
+    'src/lib/pages/movie/detail/components/casts-wrapper.tsx',
+    'src/lib/pages/movie/detail/components/streaming-availability.tsx',
+    'src/lib/components/movie/image/ImageSection.tsx',
+    'src/lib/pages/media/media-search-bar.tsx',
+  ];
+
+  for (const path of serverConsumers) {
+    const source = await read(path);
+    assert.doesNotMatch(
+      source,
+      /IMAGE_URL[A-Za-z_]*[^;]*from 'lib\/components\/shared\/PosterImage'/,
+      `${path} must not import an image URL constant from the client-boundary PosterImage module`
+    );
+    assert.match(
+      source,
+      /from 'lib\/components\/shared\/tmdb-image-urls'/,
+      `${path} must import IMAGE_URL/IMAGE_URL_ORIGINAL from the shared non-client module`
+    );
+  }
+});
+
 test('database library operations persist transitions, prevent duplicates, preserve ratings, and enforce ownership', async () => {
   const db = await PGlite.create({ extensions: { pgcrypto } });
 

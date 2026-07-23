@@ -11,7 +11,7 @@ import {
   Progress,
   Text,
 } from '@chakra-ui/react';
-import { IMAGE_URL_ORIGINAL } from 'lib/components/shared/PosterImage';
+import { IMAGE_URL_ORIGINAL } from 'lib/components/shared/tmdb-image-urls';
 import {
   setEpisodeWatched,
   setSeasonWatched,
