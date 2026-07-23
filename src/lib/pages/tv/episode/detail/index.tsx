@@ -80,7 +80,7 @@ export const TVEpisodeDetailPage = ({
           <Grid gap={4}>
             <Link href={`/tv/show/${data.show_id}` as Route} prefetch={false}>
               <Text
-                color="gray.400"
+                color="fg.muted"
                 fontSize="sm"
                 letterSpacing={0}
                 textTransform="uppercase"
@@ -179,7 +179,7 @@ export const TVEpisodeDetailPage = ({
                 {data.overview}
               </BionifiedParagraph>
             ) : (
-              <Text color="gray.400">
+              <Text color="fg.muted">
                 No overview is available from TMDB for this episode yet.
               </Text>
             )}

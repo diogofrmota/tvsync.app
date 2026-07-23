@@ -165,6 +165,9 @@ export const ProfilePage = ({
             flex="1"
             minWidth={0}
             padding={5}
+            transitionDuration="fast"
+            transitionProperty="border-color"
+            transitionTimingFunction="ease-out"
           >
             <Link href={`${baseProfilePath}/following` as Route}>
               <Text fontSize="2xl" fontWeight="bold">
@@ -182,6 +185,9 @@ export const ProfilePage = ({
             flex="1"
             minWidth={0}
             padding={5}
+            transitionDuration="fast"
+            transitionProperty="border-color"
+            transitionTimingFunction="ease-out"
           >
             <Link href={`${baseProfilePath}/followers` as Route}>
               <Text fontSize="2xl" fontWeight="bold">

@@ -136,7 +136,7 @@ export const MediaStatusControl = ({
           {statusLabels[watchStatus]}
         </Badge>
       ) : (
-        <Text color="gray.400" fontSize="sm">
+        <Text color="fg.muted" fontSize="sm">
           Choose a status to save it.
         </Text>
       )}

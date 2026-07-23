@@ -25,6 +25,8 @@ const ProviderList = ({
         {providers.map((provider) => (
           <Flex
             alignItems="center"
+            borderColor="border"
+            borderRadius="md"
             borderWidth="1px"
             gap={2}
             key={provider.providerId}

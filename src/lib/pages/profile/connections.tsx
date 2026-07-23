@@ -106,6 +106,7 @@ export const ProfileConnectionsPage = ({
 
             return (
               <Stack
+                _hover={{ borderColor: 'gold.400' }}
                 borderColor="border"
                 borderRadius="lg"
                 borderWidth="1px"
@@ -113,6 +114,9 @@ export const ProfileConnectionsPage = ({
                 key={item.username}
                 padding={4}
                 role="listitem"
+                transitionDuration="fast"
+                transitionProperty="border-color"
+                transitionTimingFunction="ease-out"
               >
                 <Flex align="center" gap={4}>
                   <Avatar.Root size="md">

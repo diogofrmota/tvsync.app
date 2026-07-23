@@ -1,8 +1,9 @@
 'use client';
 
-import { Grid, Heading, Text } from '@chakra-ui/react';
+import { Stack } from '@chakra-ui/react';
 import type { PageNavButtonProps } from 'lib/components/shared/list/page-nav-buttons';
 import PageNavButtons from 'lib/components/shared/list/page-nav-buttons';
+import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
 import TvShowListContainer from 'lib/components/tv/TvShowListContainer';
 import { useTVShowByList } from 'lib/services/tmdb/tv/list/index.client';
 import type {
@@ -14,6 +15,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 type TVShowListPageProps = {
   listType: TVShowListType;
 };
+
+const capitalize = (value: string) =>
+  value.charAt(0).toUpperCase() + value.slice(1);
 
 const TVShowList = ({ listType }: TVShowListPageProps) => {
   const { push } = useRouter();
@@ -79,22 +83,20 @@ const TVShowList = ({ listType }: TVShowListPageProps) => {
   };
 
   return (
-    <Grid gap={4} paddingX={8}>
-      <Grid gap={2}>
-        <Heading as="h1" fontSize={{ base: '2xl', md: '4xl' }} fontWeight="500">
-          TV Shows
-        </Heading>
-        <Text color="white" textTransform="capitalize">
-          {listType.replaceAll('_', ' ')}
-        </Text>
-      </Grid>
-      <PageNavButtons {...pageNavButtonProps} />
-      <TvShowListContainer
-        isLoading={isLoading}
-        shows={filterShows(data?.results)}
+    <PageShell>
+      <PageHeading
+        subtitle={capitalize(listType.replaceAll('_', ' '))}
+        title="TV Shows"
       />
-      <PageNavButtons {...pageNavButtonProps} />
-    </Grid>
+      <Stack gap={5}>
+        <PageNavButtons {...pageNavButtonProps} />
+        <TvShowListContainer
+          isLoading={isLoading}
+          shows={filterShows(data?.results)}
+        />
+        <PageNavButtons {...pageNavButtonProps} />
+      </Stack>
+    </PageShell>
   );
 };
 

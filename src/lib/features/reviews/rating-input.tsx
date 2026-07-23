@@ -169,7 +169,7 @@ export const RatingInput = ({
           Remove rating
         </Button>
       ) : (
-        <Text color="gray.400" fontSize="sm">
+        <Text color="fg.muted" fontSize="sm">
           Save a rating from 1.0 to 10.0.
         </Text>
       )}

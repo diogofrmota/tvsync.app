@@ -91,7 +91,7 @@ export const ReviewSocial = ({
                     {comment.display_name || comment.username}
                   </Link>
                 </Text>
-                <Text color="gray.400" fontSize="xs">
+                <Text color="fg.muted" fontSize="xs">
                   {formatDate(comment.created_at)}
                 </Text>
               </HStack>

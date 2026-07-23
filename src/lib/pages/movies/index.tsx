@@ -88,7 +88,7 @@ const MovieLibraryCard = ({
         </Button>
         {mutation?.message ? (
           <Text
-            color={mutation.tone === 'error' ? 'red.500' : 'green.600'}
+            color={mutation.tone === 'error' ? 'red.400' : 'green.400'}
             fontSize="xs"
             role={mutation.tone === 'error' ? 'alert' : 'status'}
           >
@@ -271,7 +271,7 @@ export const MoviesPage = ({
       />
       {pageMessage?.message ? (
         <Text
-          color={pageMessage.tone === 'error' ? 'red.500' : 'green.600'}
+          color={pageMessage.tone === 'error' ? 'red.400' : 'green.400'}
           fontSize="sm"
           role={pageMessage.tone === 'error' ? 'alert' : 'status'}
         >

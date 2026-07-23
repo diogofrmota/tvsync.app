@@ -36,7 +36,11 @@ export const ProfileStatRail = ({
         <Text color="fg.muted" fontSize="sm" fontWeight="medium">
           {card.label}
         </Text>
-        <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="bold">
+        <Text
+          color="gold.300"
+          fontSize={{ base: '2xl', md: '3xl' }}
+          fontWeight="bold"
+        >
           {card.value}
         </Text>
         {card.detail ? (

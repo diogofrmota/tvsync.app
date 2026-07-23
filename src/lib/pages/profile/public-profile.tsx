@@ -132,6 +132,9 @@ export const PublicProfilePage = ({ data }: { data: PublicProfileData }) => {
             borderWidth="1px"
             flex="1"
             padding={5}
+            transitionDuration="fast"
+            transitionProperty="border-color"
+            transitionTimingFunction="ease-out"
           >
             <Link href={`${profilePath}/following` as Route}>
               <Text fontSize="2xl" fontWeight="bold">
@@ -148,6 +151,9 @@ export const PublicProfilePage = ({ data }: { data: PublicProfileData }) => {
             borderWidth="1px"
             flex="1"
             padding={5}
+            transitionDuration="fast"
+            transitionProperty="border-color"
+            transitionTimingFunction="ease-out"
           >
             <Link href={`${profilePath}/followers` as Route}>
               <Text fontSize="2xl" fontWeight="bold">
