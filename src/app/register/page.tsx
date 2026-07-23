@@ -1,9 +1,8 @@
 import { RegisterAuthPage } from 'lib/pages/auth';
 import { getSafeCallbackUrl } from 'lib/services/auth/callback-url';
-import { authOptions } from 'lib/services/auth/index.server';
+import { getAuthSession } from 'lib/services/auth/session.server';
 import type { Metadata, Route } from 'next';
 import { redirect } from 'next/navigation';
-import { getServerSession } from 'next-auth/next';
 
 export const metadata: Metadata = {
   title: 'TvSync | Register',
@@ -25,7 +24,7 @@ type RegisterPageProps = {
 };
 
 export default async function Page({ searchParams }: RegisterPageProps) {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   const { callbackUrl, error } = await searchParams;
   const safeCallbackUrl = getSafeCallbackUrl(callbackUrl);
 

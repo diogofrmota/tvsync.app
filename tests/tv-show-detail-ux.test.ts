@@ -299,7 +299,7 @@ test('favourite and personal rating mutations authenticate and reconcile for TV 
   assert.match(favoriteActions, /status: 'login_required'/);
   assert.match(rating, /await saveRating/);
   assert.match(rating, /setState\(previousState\)/);
-  assert.match(ratingActions, /await getServerSession\(authOptions\)/);
+  assert.match(ratingActions, /await getAuthSession\(\)/);
 
   const page = await read('src/lib/pages/tv/detail/index.tsx');
   assert.match(page, /<FavoriteButton mediaType=\{MediaType\.Tv\}/);

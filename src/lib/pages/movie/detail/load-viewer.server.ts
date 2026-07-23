@@ -1,9 +1,8 @@
-import { authOptions } from 'lib/services/auth/index.server';
-import { getServerSession } from 'next-auth/next';
+import { getAuthSession } from 'lib/services/auth/session.server';
 
 export const isMovieDetailViewerAuthenticated = async () => {
   try {
-    return Boolean((await getServerSession(authOptions))?.user?.id);
+    return Boolean((await getAuthSession())?.user?.id);
   } catch {
     return false;
   }

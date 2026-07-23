@@ -1,4 +1,4 @@
-import { authOptions } from 'lib/services/auth/index.server';
+import { getAuthSession } from 'lib/services/auth/session.server';
 import { getAuthSessionIssue } from 'lib/services/auth/session-error.server';
 import {
   getDatabaseAvailabilityIssue,
@@ -6,7 +6,6 @@ import {
 } from 'lib/services/database/core.server';
 import { NextResponse } from 'next/server';
 import type { Session } from 'next-auth';
-import { getServerSession } from 'next-auth/next';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,7 +47,7 @@ export async function GET() {
   let session: Session | null = null;
 
   try {
-    session = await getServerSession(authOptions);
+    session = await getAuthSession();
   } catch (error) {
     return NextResponse.json({
       auth: {

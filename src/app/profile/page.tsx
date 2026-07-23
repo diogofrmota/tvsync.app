@@ -3,7 +3,7 @@ import { getOwnProfileFavorites } from 'lib/features/profile/profile-favorites.s
 import type { ProfileStatistics } from 'lib/features/profile/profile-statistics';
 import { getOwnProfileStatistics } from 'lib/features/profile/profile-statistics.server';
 import { ProfileAccessIssue, ProfilePage } from 'lib/pages/profile';
-import { authOptions } from 'lib/services/auth/index.server';
+import { getAuthSession } from 'lib/services/auth/session.server';
 import type { AuthSessionIssue } from 'lib/services/auth/session-error.server';
 import {
   getAuthSessionIssue,
@@ -17,7 +17,6 @@ import { getOwnProfile } from 'lib/services/database/tracking.server';
 import type { Metadata, Route } from 'next';
 import { redirect } from 'next/navigation';
 import type { Session } from 'next-auth';
-import { getServerSession } from 'next-auth/next';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,7 +74,7 @@ export default async function Page() {
   let session: Session | null = null;
 
   try {
-    session = await getServerSession(authOptions);
+    session = await getAuthSession();
   } catch (error) {
     return <ProfileAccessIssue issue={getAuthSessionIssue(error)} />;
   }

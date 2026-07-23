@@ -1,13 +1,12 @@
 'use server';
 
-import { authOptions } from 'lib/services/auth/index.server';
+import { getAuthSession } from 'lib/services/auth/session.server';
 import {
   addOwnLibraryItem,
   getOwnMedia,
   removeOwnLibraryItem,
 } from 'lib/services/database/tracking.server';
 import { MediaType } from 'lib/types';
-import { getServerSession } from 'next-auth/next';
 
 type WatchlistMediaType = MediaType.Movie | MediaType.Tv;
 
@@ -32,7 +31,7 @@ const isValidInput = (input: WatchlistActionInput) =>
   isValidMediaType(input.mediaType);
 
 const ensureAuthenticated = async () => {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   return Boolean(session?.user?.id);
 };

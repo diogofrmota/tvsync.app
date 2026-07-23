@@ -11,7 +11,7 @@ import {
   getTvEpisodeKey,
   getWatchedAvailableEpisodeKeys,
 } from 'lib/features/library/tv-library-state';
-import { authOptions } from 'lib/services/auth/index.server';
+import { getAuthSession } from 'lib/services/auth/session.server';
 import {
   getOwnEpisodeProgress,
   getOwnMedia,
@@ -28,7 +28,6 @@ import {
   TV_WATCH_STATUSES,
   WatchStatus,
 } from 'lib/types';
-import { getServerSession } from 'next-auth/next';
 
 type TrackingActionStatus = 'error' | 'login_required' | 'removed' | 'saved';
 
@@ -81,7 +80,7 @@ export type TvProgressSummaryResult = {
 };
 
 const ensureAuthenticated = async () => {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   return Boolean(session?.user?.id);
 };

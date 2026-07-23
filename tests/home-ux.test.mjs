@@ -171,7 +171,7 @@ test('tracking, watchlist, and rating mutations authenticate before writes and p
 
   const ratingMutation = getExportBody(ratings, 'saveRating');
   assert.ok(
-    ratingMutation.indexOf('await getServerSession(authOptions)') <
+    ratingMutation.indexOf('await getAuthSession()') <
       ratingMutation.indexOf('await upsertOwnRating')
   );
   assert.match(ratingMutation, /status: 'login_required'/);

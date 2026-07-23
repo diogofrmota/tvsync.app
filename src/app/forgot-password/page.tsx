@@ -1,8 +1,7 @@
 import { ForgotPasswordAuthPage } from 'lib/pages/auth';
-import { authOptions } from 'lib/services/auth/index.server';
+import { getAuthSession } from 'lib/services/auth/session.server';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { getServerSession } from 'next-auth/next';
 
 export const metadata: Metadata = {
   description: 'Request a secure TvSync password reset email.',
@@ -10,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Page() {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   if (session?.user) {
     redirect('/profile');

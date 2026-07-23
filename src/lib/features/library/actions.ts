@@ -2,7 +2,7 @@
 
 import { setOwnTvLibraryIntent } from 'lib/features/library/tv-library.server';
 import type { TvLibrarySectionStatus } from 'lib/features/library/types';
-import { authOptions } from 'lib/services/auth/index.server';
+import { getAuthSession } from 'lib/services/auth/session.server';
 import {
   removeOwnLibraryItem,
   setOwnMovieLibraryStatus,
@@ -13,7 +13,6 @@ import {
   type MovieWatchStatus,
   WatchStatus,
 } from 'lib/types';
-import { getServerSession } from 'next-auth/next';
 
 type MovieLibraryMutationInput = {
   status: MovieWatchStatus;
@@ -47,8 +46,7 @@ export type TvLibraryMutationResult = {
 const isPositiveInteger = (value: number) =>
   Number.isInteger(value) && value > 0;
 
-const isAuthenticated = async () =>
-  Boolean((await getServerSession(authOptions))?.user?.id);
+const isAuthenticated = async () => Boolean((await getAuthSession())?.user?.id);
 
 const isMovieWatchStatus = (
   value: MovieWatchStatus

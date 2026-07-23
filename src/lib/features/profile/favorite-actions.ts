@@ -1,12 +1,11 @@
 'use server';
 
-import { authOptions } from 'lib/services/auth/index.server';
+import { getAuthSession } from 'lib/services/auth/session.server';
 import {
   getOwnFavorite,
   setOwnFavorite,
 } from 'lib/services/database/profile.server';
 import { MediaType, type TrackableMediaType } from 'lib/types';
-import { getServerSession } from 'next-auth/next';
 
 export type FavoriteActionResult = {
   favorite: boolean;
@@ -21,8 +20,7 @@ const isValidInput = (input: {
   input.tmdbId > 0 &&
   (input.mediaType === MediaType.Movie || input.mediaType === MediaType.Tv);
 
-const isAuthenticated = async () =>
-  Boolean((await getServerSession(authOptions))?.user?.id);
+const isAuthenticated = async () => Boolean((await getAuthSession())?.user?.id);
 
 export const getFavoriteState = async (input: {
   mediaType: TrackableMediaType;

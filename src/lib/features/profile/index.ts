@@ -6,12 +6,11 @@ import {
 } from 'lib/features/profile/profile-favorites.server';
 import type { ProfileStatistics } from 'lib/features/profile/profile-statistics';
 import { getPublicProfileStatistics } from 'lib/features/profile/profile-statistics.server';
-import { authOptions } from 'lib/services/auth/index.server';
+import { getAuthSession } from 'lib/services/auth/session.server';
 import type { FollowState } from 'lib/services/database/social.server';
 import { getFollowStateForProfile } from 'lib/services/database/social.server';
 import type { PublicProfile } from 'lib/services/database/tracking.server';
 import { getPublicProfileByUsername } from 'lib/services/database/tracking.server';
-import { getServerSession } from 'next-auth/next';
 
 export type PublicProfileData = {
   favorites: Array<ProfileFavoriteItem>;
@@ -39,7 +38,7 @@ export const getPublicProfileData = async (
     getFollowStateForProfile(profile.user_id),
     getPublicProfileFavorites(profile.username),
     getPublicProfileStatistics(profile.username),
-    getServerSession(authOptions),
+    getAuthSession(),
   ]);
 
   return {

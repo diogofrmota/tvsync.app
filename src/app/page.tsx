@@ -1,9 +1,8 @@
 import { Home } from 'lib/pages/home';
 import { loadHomeDiscoverySections } from 'lib/pages/home/load-home-discovery.server';
-import { authOptions } from 'lib/services/auth/index.server';
+import { getAuthSession } from 'lib/services/auth/session.server';
 import type { Metadata, Route } from 'next';
 import { redirect } from 'next/navigation';
-import { getServerSession } from 'next-auth/next';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
@@ -19,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Page() {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   const isAuthenticated = Boolean(session?.user?.id);
   if (isAuthenticated) {
     redirect('/movies' as Route);

@@ -1,6 +1,6 @@
 'use server';
 
-import { authOptions } from 'lib/services/auth/index.server';
+import { getAuthSession } from 'lib/services/auth/session.server';
 import {
   getReviewSocialRows,
   type ReviewSocialRow,
@@ -16,7 +16,6 @@ import {
   upsertOwnReview,
 } from 'lib/services/database/tracking.server';
 import { MediaType, PrivacySetting, type RatingTarget } from 'lib/types';
-import { getServerSession } from 'next-auth/next';
 
 type ActionStatus = 'deleted' | 'error' | 'login_required' | 'saved';
 
@@ -133,7 +132,7 @@ export const getRatingState = async (
 
   try {
     const [session, summary] = await Promise.all([
-      getServerSession(authOptions),
+      getAuthSession(),
       getRatingSummary(target),
     ]);
     const ownRating = session?.user?.id ? await getOwnRating(target) : null;
@@ -169,7 +168,7 @@ export const saveRating = async (
     };
   }
 
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   if (!session?.user?.id) {
     return {
@@ -212,7 +211,7 @@ export const removeRating = async (
     };
   }
 
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   if (!session?.user?.id) {
     return {
@@ -252,7 +251,7 @@ export const getReviewsState = async (
   }
 
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getAuthSession();
     const currentUserId = session?.user?.id ?? null;
     const [publicReviews, ownReview] = await Promise.all([
       listPublicReviewsForMedia(tmdbId, mediaType),
@@ -331,7 +330,7 @@ export const saveReview = async (
     return { fieldErrors };
   }
 
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   if (!session?.user?.id) {
     return { error: 'Sign in before saving your review.' };
@@ -360,7 +359,7 @@ export const removeReview = async (
     return { ownReview: null, reviews: [], status: 'error' };
   }
 
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   if (!session?.user?.id) {
     return { ownReview: null, reviews: [], status: 'login_required' };
