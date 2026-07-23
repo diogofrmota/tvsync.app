@@ -1,7 +1,7 @@
 'use client';
 
 import { Box, Button, Flex, Image, Input, Stack, Text } from '@chakra-ui/react';
-import { IMAGE_URL } from 'lib/components/shared/PosterImage';
+import { IMAGE_URL } from 'lib/components/shared/tmdb-image-urls';
 import { useMovieList } from 'lib/services/tmdb/movie/list/index.client';
 import type { MovieListItemType } from 'lib/services/tmdb/movie/list/types';
 import { useTVShowSearchResultList } from 'lib/services/tmdb/tv/list/index.client';

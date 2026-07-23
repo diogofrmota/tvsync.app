@@ -1,8 +1,9 @@
+'use client';
+
 import type { ImageProps } from '@chakra-ui/react';
 import { Box, Image, Text } from '@chakra-ui/react';
-
-export const IMAGE_URL = 'https://image.tmdb.org/t/p/w500';
-export const IMAGE_URL_ORIGINAL = 'https://image.tmdb.org/t/p/original';
+import { IMAGE_URL } from 'lib/components/shared/tmdb-image-urls';
+import { useState } from 'react';
 
 type PosterImageProps = Omit<ImageProps, 'src'> & {
   alt?: string;
@@ -16,12 +17,13 @@ const PosterImage = ({
   layout,
   ...props
 }: PosterImageProps) => {
+  const [failedToLoad, setFailedToLoad] = useState(false);
   const flexSize: ImageProps = {
     height: { base: '10.5rem', sm: '11.5rem', md: '12.5rem' },
     width: { base: '7.5rem', sm: '8.25rem', md: '9rem' },
   };
 
-  if (!src) {
+  if (!src || failedToLoad) {
     return (
       <Box
         alignItems="center"
@@ -56,6 +58,7 @@ const PosterImage = ({
       _groupHover={{ opacity: 0.5 }}
       borderRadius="md"
       objectFit="cover"
+      onError={() => setFailedToLoad(true)}
       src={`${IMAGE_URL}${src}`}
       {...(layout === 'flex' && flexSize)}
       {...props}

@@ -20,6 +20,7 @@ import {
   normalizeEmail,
   normalizeLoginIdentifier,
   normalizeUsername,
+  parseTrustedClientIp,
   validateRegistrationInput,
 } from '../src/lib/services/auth/security';
 
@@ -109,6 +110,20 @@ test('identity throttles are global while IP throttles stay address-specific', (
 
   assert.equal(firstIp.identityKeyDigest, secondIp.identityKeyDigest);
   assert.notEqual(firstIp.ipKeyDigest, secondIp.ipKeyDigest);
+});
+
+test('client IP resolution trusts only the nearest proxy hop, not attacker-suppliable entries', () => {
+  // A malicious client cannot defeat per-IP rate limiting by prepending a
+  // fake address: only the right-most (nearest-hop) entry is trusted.
+  assert.equal(
+    parseTrustedClientIp('9.9.9.9, 203.0.113.7'),
+    '203.0.113.7',
+    'the left-most entry is client-suppliable and must never be trusted'
+  );
+  assert.equal(parseTrustedClientIp('203.0.113.7'), '203.0.113.7');
+  assert.equal(parseTrustedClientIp('  203.0.113.7  , 9.9.9.9 '), '9.9.9.9');
+  assert.equal(parseTrustedClientIp(undefined), 'unknown');
+  assert.equal(parseTrustedClientIp(''), 'unknown');
 });
 
 test('authentication redirects reject cross-origin and encoded slash variants', () => {

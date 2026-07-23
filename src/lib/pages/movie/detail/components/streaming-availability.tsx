@@ -1,5 +1,5 @@
 import { Box, Flex, Heading, Image, Link, Stack, Text } from '@chakra-ui/react';
-import { IMAGE_URL } from 'lib/components/shared/PosterImage';
+import { IMAGE_URL } from 'lib/components/shared/tmdb-image-urls';
 import type {
   MovieWatchProvider,
   MovieWatchProviderRegion,

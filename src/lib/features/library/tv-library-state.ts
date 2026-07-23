@@ -99,7 +99,7 @@ export const deriveTvLibraryStatus = ({
     return WatchStatus.Completed;
   }
 
-  if (watchedEpisodeCount > 0 || intentStatus === WatchStatus.Watching) {
+  if (watchedEpisodeCount > 0) {
     return WatchStatus.Watching;
   }
 
@@ -211,13 +211,18 @@ export const getOptimisticTvLibraryProjection = (
   status: TvLibrarySectionStatus
 ): TvLibraryProjection => {
   let watchedEpisodeCount = item.watchedEpisodeCount;
+  let resolvedStatus = status;
 
   if (status === WatchStatus.Completed) {
     watchedEpisodeCount = item.totalEpisodeCount;
   } else if (status === WatchStatus.Planned) {
     watchedEpisodeCount = 0;
   } else if (item.totalEpisodeCount <= 1) {
+    // A show with zero or one available episode can never be "partway
+    // through" — watching its only episode completes it. Selecting
+    // Watching for such a show can only resolve to Planned.
     watchedEpisodeCount = 0;
+    resolvedStatus = WatchStatus.Planned;
   } else if (watchedEpisodeCount === 0) {
     watchedEpisodeCount = 1;
   } else if (watchedEpisodeCount >= item.totalEpisodeCount) {
@@ -229,7 +234,7 @@ export const getOptimisticTvLibraryProjection = (
       item.totalEpisodeCount > 0
         ? Math.round((watchedEpisodeCount / item.totalEpisodeCount) * 100)
         : 0,
-    status,
+    status: resolvedStatus,
     totalEpisodeCount: item.totalEpisodeCount,
     watchedEpisodeCount,
   };

@@ -9,7 +9,7 @@ import {
 } from '@chakra-ui/react';
 import { BionifiedParagraph } from 'lib/components/BionifiedParagraph';
 import { PageShell } from 'lib/components/shared/PageShell';
-import { IMAGE_URL_ORIGINAL } from 'lib/components/shared/PosterImage';
+import { IMAGE_URL_ORIGINAL } from 'lib/components/shared/tmdb-image-urls';
 import { RatingInput } from 'lib/features/reviews';
 import { BackButton } from 'lib/pages/movie/detail/components/back-button';
 import { EpisodeProgressPanel } from 'lib/pages/tv/episode/detail/components/episode-progress-panel';
