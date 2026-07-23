@@ -64,7 +64,7 @@ const PosterCard = ({
         borderColor="border"
         borderRadius="md"
         borderWidth="1px"
-        className="poster-hover"
+        className="poster-hover group"
         overflow="hidden"
         position="relative"
       >

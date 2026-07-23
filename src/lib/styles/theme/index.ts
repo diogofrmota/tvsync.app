@@ -9,6 +9,10 @@ import {
 const buttonRecipe = defineRecipe({
   base: {
     borderRadius: 24,
+    transitionDuration: 'fast',
+    transitionProperty: 'background, color, box-shadow, transform',
+    transitionTimingFunction: 'ease-out',
+    _active: { transform: 'scale(0.97)' },
   },
   variants: {
     variant: {
@@ -28,6 +32,9 @@ const buttonRecipe = defineRecipe({
 const inputRecipe = defineRecipe({
   base: {
     borderRadius: 10,
+    transitionDuration: 'fast',
+    transitionProperty: 'border-color, box-shadow',
+    transitionTimingFunction: 'ease-out',
   },
   variants: {
     variant: {
@@ -42,6 +49,9 @@ const inputRecipe = defineRecipe({
 const textareaRecipe = defineRecipe({
   base: {
     borderRadius: 10,
+    transitionDuration: 'fast',
+    transitionProperty: 'border-color, box-shadow',
+    transitionTimingFunction: 'ease-out',
   },
   variants: {
     variant: {

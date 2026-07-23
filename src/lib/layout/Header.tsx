@@ -92,6 +92,9 @@ const NavLink = ({
         flex="1"
         gap={1}
         minWidth={0}
+        transitionDuration="fast"
+        transitionProperty="color"
+        transitionTimingFunction="ease-out"
       >
         <Link aria-current={active ? 'page' : undefined} href={item.href}>
           <Icon aria-hidden as={item.icon} boxSize={5} />
@@ -114,6 +117,9 @@ const NavLink = ({
         left: 0,
         position: 'absolute',
         right: 0,
+        transitionDuration: 'moderate',
+        transitionProperty: 'background',
+        transitionTimingFunction: 'ease-out',
       }}
       _dark={{ color: active ? undefined : 'gray.100' }}
       _focusVisible={{
@@ -121,10 +127,14 @@ const NavLink = ({
         outlineColor: 'teal.400',
         outlineOffset: '3px',
       }}
+      _hover={{ color: 'fg' }}
       asChild
       color={active ? 'fg' : 'gray.600'}
       fontWeight={active ? '700' : '500'}
       position="relative"
+      transitionDuration="fast"
+      transitionProperty="color"
+      transitionTimingFunction="ease-out"
     >
       <Link aria-current={active ? 'page' : undefined} href={item.href}>
         {item.label}

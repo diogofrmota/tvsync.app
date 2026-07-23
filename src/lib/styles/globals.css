@@ -1,6 +1,7 @@
 :where(a, button, input, textarea, select):focus-visible {
   outline: 3px solid var(--chakra-colors-teal-400);
   outline-offset: 3px;
+  transition: outline-offset 150ms var(--chakra-easings-ease-out);
 }
 
 html {
@@ -18,11 +19,35 @@ svg {
 
 .poster-hover {
   transition:
-    transform 120ms ease,
-    border-color 120ms ease;
+    transform 200ms var(--chakra-easings-ease-out),
+    border-color 200ms var(--chakra-easings-ease-out),
+    box-shadow 200ms var(--chakra-easings-ease-out);
 }
 
 .poster-hover:hover {
   border-color: var(--chakra-colors-border-strong);
-  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -8px rgb(0 0 0 / 0.5);
+  transform: translateY(-3px);
+}
+
+.poster-hover:active {
+  transform: translateY(-1px) scale(0.98);
+  transition-duration: 100ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .poster-hover:hover,
+  .poster-hover:active {
+    box-shadow: none;
+    transform: none;
+  }
 }

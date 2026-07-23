@@ -1,7 +1,7 @@
 'use client';
 
 import { AspectRatio, Box, SimpleGrid, Stack, Text } from '@chakra-ui/react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, useReducedMotion } from 'framer-motion';
 import MotionBox from 'lib/components/MotionBox';
 import PosterCard from 'lib/components/shared/PosterCard';
 import type { MediaType } from 'lib/types';
@@ -130,6 +130,8 @@ export const OverviewShelf = ({
 }: OverviewShelfProps) => {
   const [pageIndex, setPageIndex] = useState(0);
   const [pageDirection, setPageDirection] = useState<1 | -1>(1);
+  const prefersReducedMotion = useReducedMotion();
+  const slideDistance = prefersReducedMotion ? 0 : 56;
   const visibleRange = getVisibleRange(pageIndex);
   const visibleItems = items.slice(
     visibleRange.start,
@@ -154,9 +156,13 @@ export const OverviewShelf = ({
   return (
     <AnimatePresence initial={false} mode="wait">
       <MotionBox
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -56 * pageDirection }}
-        initial={{ opacity: 0, x: 56 * pageDirection }}
+        animate={{
+          opacity: 1,
+          transition: { duration: prefersReducedMotion ? 0.15 : 0.3 },
+          x: 0,
+        }}
+        exit={{ opacity: 0, x: -slideDistance * pageDirection }}
+        initial={{ opacity: 0, x: slideDistance * pageDirection }}
         key={pageIndex}
       >
         <SimpleGrid
