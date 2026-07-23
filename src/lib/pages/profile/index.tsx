@@ -1,12 +1,4 @@
-import {
-  Avatar,
-  Box,
-  Button,
-  Flex,
-  Heading,
-  Stack,
-  Text,
-} from '@chakra-ui/react';
+import { Box, Button, Flex, Heading, Stack, Text } from '@chakra-ui/react';
 import {
   type ProfileStatCard,
   ProfileStatRail,
@@ -19,6 +11,7 @@ import {
   formatWatchTime,
   type ProfileStatistics,
 } from 'lib/features/profile/profile-statistics';
+import { LogoutButton } from 'lib/pages/auth/client-actions';
 import type { AuthSessionIssue } from 'lib/services/auth/session-error.server';
 import type { FollowCountsRow } from 'lib/services/database/social.server';
 import type { OwnProfile } from 'lib/services/database/tracking.server';
@@ -128,7 +121,6 @@ export const ProfilePage = ({
       />
 
       <Stack gap={5}>
-        <SectionHeading title="Profile Information" />
         <Flex
           align={{ base: 'flex-start', sm: 'center' }}
           borderColor="border"
@@ -138,23 +130,26 @@ export const ProfilePage = ({
           gap={5}
           padding={5}
         >
-          <Avatar.Root aria-label={`${displayName} profile avatar`} size="2xl">
-            <Avatar.Fallback name={displayName} />
-          </Avatar.Root>
           <Stack flex="1" gap={1} minWidth={0}>
             <Heading as="h2" fontSize={{ base: 'xl', md: '2xl' }}>
               {displayName}
             </Heading>
             <Text color="fg.muted">@{profile.username}</Text>
           </Stack>
-          <Button asChild width={{ base: 'full', sm: 'auto' }}>
-            <Link href="/profile/edit">Edit Profile</Link>
-          </Button>
+          <Stack
+            direction={{ base: 'column', sm: 'row' }}
+            gap={3}
+            width={{ base: 'full', sm: 'auto' }}
+          >
+            <Button asChild width={{ base: 'full', sm: 'auto' }}>
+              <Link href="/profile/edit">Edit Profile</Link>
+            </Button>
+            <LogoutButton />
+          </Stack>
         </Flex>
       </Stack>
 
       <Stack gap={4}>
-        <SectionHeading title="Social Information" />
         <Flex gap={4}>
           <Box
             _hover={{ borderColor: 'gold.400' }}

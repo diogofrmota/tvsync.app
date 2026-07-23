@@ -139,9 +139,7 @@ test('Profile renders exact information, social navigation, horizontal stats, an
     ]);
 
   for (const label of [
-    'Profile Information',
     'Edit Profile',
-    'Social Information',
     'Following',
     'Followers',
     'Movies Watched',
@@ -170,6 +168,9 @@ test('Profile renders exact information, social navigation, horizontal stats, an
   assert.match(favoriteButton, /Remove from Favourites/);
   assert.match(favoriteButton, /aria-pressed=\{favorite\}/);
   assert.doesNotMatch(page, /Reviews|Favorite genres|Achievements|Streaks/);
+  assert.doesNotMatch(page, /Profile Information|Social Information/);
+  assert.doesNotMatch(page, /Avatar/);
+  assert.match(page, /LogoutButton/);
 });
 
 test('follower and following pages search, navigate, and follow without exposing internal ids', async () => {
