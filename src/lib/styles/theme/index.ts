@@ -33,6 +33,21 @@ const inputRecipe = defineRecipe({
     variant: {
       outline: {
         borderColor: 'gray.600',
+        focusRingColor: 'teal.400',
+      },
+    },
+  },
+});
+
+const textareaRecipe = defineRecipe({
+  base: {
+    borderRadius: 10,
+  },
+  variants: {
+    variant: {
+      outline: {
+        borderColor: 'gray.600',
+        focusRingColor: 'teal.400',
       },
     },
   },
@@ -91,6 +106,7 @@ export const customTheme = createSystem(defaultConfig, {
     recipes: {
       button: buttonRecipe,
       input: inputRecipe,
+      textarea: textareaRecipe,
     },
   },
 });
