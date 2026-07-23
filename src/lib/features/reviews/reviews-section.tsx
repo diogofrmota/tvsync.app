@@ -151,7 +151,7 @@ export const ReviewsSection = ({
                 templateColumns="repeat(2, max-content)"
               >
                 {review.canEdit ? (
-                  <Badge colorPalette="teal" variant="subtle">
+                  <Badge colorPalette="gold" variant="subtle">
                     Your review
                   </Badge>
                 ) : null}

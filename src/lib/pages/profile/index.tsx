@@ -157,7 +157,7 @@ export const ProfilePage = ({
         <SectionHeading title="Social Information" />
         <Flex gap={4}>
           <Box
-            _hover={{ borderColor: 'teal.400' }}
+            _hover={{ borderColor: 'gold.400' }}
             asChild
             borderColor="border"
             borderRadius="lg"
@@ -174,7 +174,7 @@ export const ProfilePage = ({
             </Link>
           </Box>
           <Box
-            _hover={{ borderColor: 'teal.400' }}
+            _hover={{ borderColor: 'gold.400' }}
             asChild
             borderColor="border"
             borderRadius="lg"

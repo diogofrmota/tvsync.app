@@ -85,7 +85,7 @@ test('reset tokens expire after 24 hours, consume once, rotate sessions, and red
   assert.match(authForms, /Request a new reset link/);
 });
 
-test('all auth pages share the black-shell responsive centered white card system', () => {
+test('all auth pages share the dark-shell responsive centered cinematic card system', () => {
   const layout = read('src/lib/layout/index.tsx');
 
   for (const route of [
@@ -98,10 +98,10 @@ test('all auth pages share the black-shell responsive centered white card system
     assert.match(layout, new RegExp(`'${route}'`));
   }
 
-  assert.match(layout, /background="black"/);
+  assert.match(layout, /background="bg"/);
   assert.match(layout, /minHeight="100dvh"/);
   assert.match(authPages, /maxWidth="32rem"/);
-  assert.match(authPages, /background="white"/);
+  assert.match(authPages, /background="bg\.surface"/);
   assert.match(authPages, /padding=\{\{ base: 6, sm: 8 \}\}/);
   assert.match(authPages, /TvSync/);
   assert.match(authPages, /Create an Account/);

@@ -24,7 +24,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   if (isAuthPage) {
     return (
-      <Flex as="main" background="black" minHeight="100dvh">
+      <Flex as="main" background="bg" minHeight="100dvh">
         {children}
       </Flex>
     );

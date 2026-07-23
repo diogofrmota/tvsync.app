@@ -32,11 +32,14 @@ export const AuthShell = ({
   >
     {backHref && backLabel ? (
       <Box
-        _hover={{ textDecoration: 'underline' }}
+        _hover={{ color: 'gold.300' }}
         alignSelf="flex-start"
         asChild
-        color="white"
+        color="fg.muted"
         marginBottom={4}
+        transitionDuration="fast"
+        transitionProperty="color"
+        transitionTimingFunction="ease-out"
       >
         <Link href={backHref}>
           <FiArrowLeft aria-hidden /> {backLabel}
@@ -44,16 +47,20 @@ export const AuthShell = ({
       </Box>
     ) : null}
     <Stack
-      background="white"
+      background="bg.surface"
+      borderColor="border"
       borderRadius="xl"
-      boxShadow="0 18px 60px rgba(0, 0, 0, 0.35)"
-      color="black"
+      borderWidth="1px"
+      boxShadow="0 24px 70px -24px rgba(0, 0, 0, 0.7)"
       gap={6}
       padding={{ base: 6, sm: 8 }}
     >
       <Stack gap={2} textAlign="center">
         <Text fontSize="xl" fontWeight="700">
-          TvSync
+          Tv
+          <Text as="span" color="gold.400">
+            Sync
+          </Text>
         </Text>
         <Heading as="h1" fontSize={{ base: '2xl', sm: '3xl' }}>
           {heading}
@@ -136,7 +143,7 @@ export const VerifyEmailAuthPage = ({ verified }: { verified: boolean }) => (
     heading={verified ? 'Email Verified' : 'Verification Link Invalid'}
   >
     <Stack gap={5} textAlign="center">
-      <Text color="gray.700" role={verified ? 'status' : 'alert'}>
+      <Text color="fg.muted" role={verified ? 'status' : 'alert'}>
         {verified
           ? 'Your email is verified. You can now log in to TvSync.'
           : 'This verification link is invalid, expired, or has already been used.'}
@@ -144,7 +151,7 @@ export const VerifyEmailAuthPage = ({ verified }: { verified: boolean }) => (
       <Box
         _hover={{ textDecoration: 'underline' }}
         asChild
-        color="teal.700"
+        color="gold.300"
         fontWeight="600"
       >
         <Link href={verified ? '/login' : '/login?verification=required'}>
@@ -164,7 +171,7 @@ export const EmailChangeVerificationPage = ({
 }) => (
   <AuthShell heading={changed ? 'Email Updated' : 'Email Change Link Invalid'}>
     <Stack gap={5} textAlign="center">
-      <Text color="gray.700" role={changed ? 'status' : 'alert'}>
+      <Text color="fg.muted" role={changed ? 'status' : 'alert'}>
         {changed
           ? 'Your email address was updated. For your security, sign in again with the updated account.'
           : 'This email-change link is invalid, expired, already used, or the address is no longer available.'}
@@ -172,7 +179,7 @@ export const EmailChangeVerificationPage = ({
       <Box
         _hover={{ textDecoration: 'underline' }}
         asChild
-        color="teal.700"
+        color="gold.300"
         fontWeight="600"
       >
         <Link href={changed ? '/login?account=email-updated' : '/profile/edit'}>

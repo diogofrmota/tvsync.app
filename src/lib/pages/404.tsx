@@ -8,12 +8,9 @@ import {
   Image,
   Text,
 } from '@chakra-ui/react';
-import { useColorMode } from 'lib/components/ui/color-mode';
 import Link from 'next/link';
 
 const Page404 = () => {
-  const { colorMode } = useColorMode();
-
   return (
     <>
       <Box margin="0 auto" width={['100%', '70%', '60%', '60%']}>
@@ -34,10 +31,7 @@ const Page404 = () => {
 
         <Box marginTop={4} textAlign="center">
           <Text>It&apos;s Okay!</Text>
-          <Button
-            asChild
-            backgroundColor={colorMode === 'light' ? 'gray.300' : 'teal.500'}
-          >
+          <Button asChild>
             <Link href="/">Let&apos;s Head Back</Link>
           </Button>
         </Box>

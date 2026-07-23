@@ -180,7 +180,7 @@ export const TvDetailLibraryControl = ({ tmdbId }: { tmdbId: number }) => {
 
       {status ? (
         <>
-          <Badge alignSelf="start" colorPalette="teal" variant="subtle">
+          <Badge alignSelf="start" colorPalette="gold" variant="subtle">
             Current status: {statusLabels[status]}
           </Badge>
           <Button

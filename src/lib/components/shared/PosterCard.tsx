@@ -58,7 +58,7 @@ const PosterCard = ({
       <Box
         _focusWithin={{
           outline: '3px solid',
-          outlineColor: 'teal.400',
+          outlineColor: 'gold.400',
           outlineOffset: '3px',
         }}
         borderColor="border"
@@ -85,7 +85,7 @@ const PosterCard = ({
         </Link>
         {status ? (
           <Badge
-            bg="teal.400"
+            bg="gold.400"
             bottom={2}
             color="gray.900"
             left={2}

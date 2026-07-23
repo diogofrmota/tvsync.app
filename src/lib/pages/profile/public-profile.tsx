@@ -125,7 +125,7 @@ export const PublicProfilePage = ({ data }: { data: PublicProfileData }) => {
         <SectionHeading title="Social Information" />
         <Flex gap={4}>
           <Box
-            _hover={{ borderColor: 'teal.400' }}
+            _hover={{ borderColor: 'gold.400' }}
             asChild
             borderColor="border"
             borderRadius="lg"
@@ -141,7 +141,7 @@ export const PublicProfilePage = ({ data }: { data: PublicProfileData }) => {
             </Link>
           </Box>
           <Box
-            _hover={{ borderColor: 'teal.400' }}
+            _hover={{ borderColor: 'gold.400' }}
             asChild
             borderColor="border"
             borderRadius="lg"

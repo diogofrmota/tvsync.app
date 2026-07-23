@@ -53,20 +53,28 @@ const ActionButtonTile = ({
 }) => (
   <ActionTileFrame>
     <Box
-      _hover={{ background: 'gray.100', borderColor: 'white' }}
+      _hover={{
+        background: 'gold.400',
+        borderColor: 'gold.400',
+        color: 'gray.900',
+        transform: 'translateY(-3px)',
+      }}
       alignItems="center"
       aria-label={ariaLabel}
       as="button"
-      background="white"
-      borderColor="white"
+      background="bg.surface"
+      borderColor="border"
       borderWidth={1}
-      color="black"
+      color="gold.300"
       cursor="pointer"
       display="flex"
       fontSize={{ base: '6xl', md: '7xl' }}
       justifyContent="center"
       lineHeight={1}
       onClick={onClick}
+      transitionDuration="fast"
+      transitionProperty="background, border-color, color, transform"
+      transitionTimingFunction="ease-out"
     >
       {children}
     </Box>
@@ -92,16 +100,24 @@ const BrowseAllTile = ({
 }) => (
   <ActionTileFrame>
     <Box
-      _hover={{ background: 'gray.100', borderColor: 'white' }}
+      _hover={{
+        background: 'gold.400',
+        borderColor: 'gold.400',
+        color: 'gray.900',
+        transform: 'translateY(-3px)',
+      }}
       alignItems="center"
       asChild
-      background="white"
-      borderColor="white"
+      background="bg.surface"
+      borderColor="border"
       borderWidth={1}
-      color="black"
+      color="gold.300"
       display="flex"
       justifyContent="center"
       textAlign="center"
+      transitionDuration="fast"
+      transitionProperty="background, border-color, color, transform"
+      transitionTimingFunction="ease-out"
     >
       <Link aria-label="Browse all titles" href={href}>
         <Text fontSize={{ base: 'md', md: 'lg' }} fontWeight="700">
