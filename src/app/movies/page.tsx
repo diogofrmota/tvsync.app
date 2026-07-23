@@ -1,9 +1,8 @@
 import { MoviesPage } from 'lib/pages/movies';
 import { loadOwnMovieLibraryItems } from 'lib/pages/movies/load-movie-library.server';
-import { authOptions } from 'lib/services/auth/index.server';
+import { getAuthSession } from 'lib/services/auth/session.server';
 import type { Metadata, Route } from 'next';
 import { redirect } from 'next/navigation';
-import { getServerSession } from 'next-auth/next';
 
 export const metadata: Metadata = {
   title: 'TvSync | Your movies',
@@ -16,7 +15,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Page() {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   if (!session?.user) {
     redirect('/login?callbackUrl=/movies' as Route);

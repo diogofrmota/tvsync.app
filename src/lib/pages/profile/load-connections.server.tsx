@@ -2,10 +2,9 @@ import 'server-only';
 
 import { getPublicProfileStatistics } from 'lib/features/profile/profile-statistics.server';
 import { ProfileConnectionsPage } from 'lib/pages/profile/connections';
-import { authOptions } from 'lib/services/auth/index.server';
+import { getAuthSession } from 'lib/services/auth/session.server';
 import { listProfileConnections } from 'lib/services/database/social.server';
 import { notFound } from 'next/navigation';
-import { getServerSession } from 'next-auth/next';
 
 export const loadProfileConnectionsPage = async (input: {
   kind: 'followers' | 'following';
@@ -16,7 +15,7 @@ export const loadProfileConnectionsPage = async (input: {
 }) => {
   const [data, session] = await Promise.all([
     listProfileConnections(input),
-    getServerSession(authOptions),
+    getAuthSession(),
   ]);
 
   if (!data) {

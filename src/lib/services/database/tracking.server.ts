@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { authOptions } from 'lib/services/auth/index.server';
+import { getAuthSession } from 'lib/services/auth/session.server';
 import type {
   MovieWatchStatus,
   PrivacySetting,
@@ -8,7 +8,6 @@ import type {
   TrackableMediaType,
   WatchStatus,
 } from 'lib/types';
-import { getServerSession } from 'next-auth/next';
 
 import { getDatabaseSql } from './core.server';
 import {
@@ -161,7 +160,7 @@ export type PublicProfileStatsRow = {
 };
 
 export const getAuthenticatedUserId = async () => {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   const userId = session?.user?.id;
 
   if (!userId) {

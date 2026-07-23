@@ -1,9 +1,8 @@
 import { loadSearchLibraryState } from 'lib/pages/search/load-search-library-state.server';
 import { MultiSearchPage } from 'lib/pages/search/multi';
-import { authOptions } from 'lib/services/auth/index.server';
+import { getAuthSession } from 'lib/services/auth/session.server';
 import type { Metadata, Route } from 'next';
 import { redirect } from 'next/navigation';
-import { getServerSession } from 'next-auth/next';
 import { Suspense } from 'react';
 
 export const metadata: Metadata = {
@@ -40,7 +39,7 @@ const getCallbackUrl = (
 };
 
 const ExplorePage = async ({ searchParams }: SearchPageProps) => {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   if (!session?.user) {
     const callbackUrl = getCallbackUrl(await searchParams);
     redirect(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}` as Route);

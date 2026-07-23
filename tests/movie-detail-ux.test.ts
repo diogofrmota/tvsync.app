@@ -253,7 +253,7 @@ test('favourite and personal rating mutations authenticate, reconcile, and suppo
   assert.match(rating, /setState\(previousState\)/);
   assert.match(rating, /Your rating was saved/);
   assert.match(rating, /Your rating could not be saved/);
-  assert.match(ratingActions, /await getServerSession\(authOptions\)/);
+  assert.match(ratingActions, /await getAuthSession\(\)/);
   assert.match(
     database,
     /on conflict \(user_id, tmdb_id, media_type, season_number, episode_number\) do update set/

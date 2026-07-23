@@ -1,7 +1,6 @@
 'use server';
 
 import { sendEmailChangeVerification } from 'lib/services/auth/email.server';
-import { authOptions } from 'lib/services/auth/index.server';
 import { hashPassword } from 'lib/services/auth/password.server';
 import { checkRequestAuthRateLimit } from 'lib/services/auth/rate-limit.server';
 import {
@@ -12,6 +11,7 @@ import {
   validatePassword,
   validateUsername,
 } from 'lib/services/auth/security';
+import { getAuthSession } from 'lib/services/auth/session.server';
 import { getDatabaseAvailabilityIssue } from 'lib/services/database/core.server';
 import {
   type AuthMethods,
@@ -28,7 +28,6 @@ import {
   isUsernameTakenByAnotherUser,
 } from 'lib/services/database/tracking.server';
 import { PrivacySetting } from 'lib/types';
-import { getServerSession } from 'next-auth/next';
 
 export type ProfileFormState = {
   emailPending?: boolean;
@@ -75,7 +74,7 @@ const readPasswordField = (formData: FormData, fieldName: string) => {
 };
 
 const getAuthenticatedSession = async () => {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   return session?.user?.id ? session : null;
 };

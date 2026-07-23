@@ -1,12 +1,11 @@
-import { authOptions } from 'lib/services/auth/index.server';
 import type { Metadata, Viewport } from 'next';
 import { Outfit as FontBody } from 'next/font/google';
 import Script from 'next/script';
-import { getServerSession } from 'next-auth/next';
 
 import 'lib/styles/globals.css';
 import { Provider } from 'lib/components/ui/provider';
 import Layout from 'lib/layout';
+import { getAuthSession } from 'lib/services/auth/session.server';
 
 const fontBody = FontBody({
   subsets: ['latin'],
@@ -64,7 +63,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   return (
     <html className={fontBody.className} lang="en" suppressHydrationWarning>

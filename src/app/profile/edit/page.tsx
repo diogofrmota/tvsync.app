@@ -1,12 +1,11 @@
 import { ProfileAccessIssue } from 'lib/pages/profile';
 import { EditProfilePage } from 'lib/pages/profile/edit';
-import { authOptions } from 'lib/services/auth/index.server';
+import { getAuthSession } from 'lib/services/auth/session.server';
 import { getDatabaseAvailabilityIssue } from 'lib/services/database/core.server';
 import { getOwnAuthMethods } from 'lib/services/database/profile.server';
 import { getOwnProfile } from 'lib/services/database/tracking.server';
 import type { Metadata, Route } from 'next';
 import { redirect } from 'next/navigation';
-import { getServerSession } from 'next-auth/next';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +15,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Page() {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   if (!session?.user?.id) {
     redirect('/login?callbackUrl=/profile/edit' as Route);
