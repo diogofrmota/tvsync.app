@@ -42,11 +42,7 @@ export const PageHeading = ({
       <Heading as="h1" fontSize={{ base: '2xl', md: '4xl' }} fontWeight="600">
         {title}
       </Heading>
-      {subtitle ? (
-        <Text _dark={{ color: 'gray.100' }} color="gray.600">
-          {subtitle}
-        </Text>
-      ) : null}
+      {subtitle ? <Text color="fg.muted">{subtitle}</Text> : null}
     </Stack>
     {actions ? <Box flexShrink={0}>{actions}</Box> : null}
   </Flex>

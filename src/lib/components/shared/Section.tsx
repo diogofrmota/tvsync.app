@@ -25,7 +25,7 @@ export const SectionHeading = ({
         {title}
       </Heading>
       {description ? (
-        <Text _dark={{ color: 'gray.100' }} color="gray.600" fontSize="sm">
+        <Text color="fg.muted" fontSize="sm">
           {description}
         </Text>
       ) : null}
@@ -60,6 +60,7 @@ export const StatePanel = ({
   <Stack
     aria-live={tone === 'error' ? 'assertive' : 'polite'}
     borderColor={stateBorderColors[tone]}
+    borderLeftWidth="3px"
     borderRadius="md"
     borderStyle="solid"
     borderWidth="1px"
@@ -72,9 +73,7 @@ export const StatePanel = ({
         {title}
       </Heading>
     ) : null}
-    <Text _dark={{ color: 'gray.100' }} color="gray.600">
-      {message}
-    </Text>
+    <Text color="fg.muted">{message}</Text>
     {action ? <Box alignSelf="flex-start">{action}</Box> : null}
     {status ? (
       <Text fontSize="sm" fontWeight="600">

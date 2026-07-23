@@ -41,12 +41,7 @@ const PosterImage = ({
         {...(layout === 'flex' && flexSize)}
         {...props}
       >
-        <Text
-          _dark={{ color: 'gray.100' }}
-          color="gray.600"
-          fontSize="sm"
-          fontWeight="medium"
-        >
+        <Text color="fg.muted" fontSize="sm" fontWeight="medium">
           Poster unavailable
         </Text>
       </Box>

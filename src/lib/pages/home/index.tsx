@@ -41,7 +41,7 @@ const Hero = () => (
       <Text fontSize={{ base: 'xl', md: '2xl' }} fontWeight="600">
         Track your TV shows and movies in one place.
       </Text>
-      <Text _dark={{ color: 'gray.100' }} color="gray.600">
+      <Text color="fg.muted">
         TvSync focuses on a clean design and essential features, without
         unnecessary distractions.
       </Text>

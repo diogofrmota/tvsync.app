@@ -323,7 +323,12 @@ export const DeleteAccountDialog = ({
       role="alertdialog"
     >
       <Dialog.Trigger asChild>
-        <Button colorPalette="red" variant="outline">
+        <Button
+          borderColor="red.400"
+          color="red.400"
+          colorPalette="red"
+          variant="outline"
+        >
           Delete Account
         </Button>
       </Dialog.Trigger>
@@ -393,6 +398,8 @@ export const DeleteAccountDialog = ({
               </Button>
             </Dialog.ActionTrigger>
             <Button
+              bg="red.600"
+              color="white"
               colorPalette="red"
               form="delete-account-form"
               loading={isPending}

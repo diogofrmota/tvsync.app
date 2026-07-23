@@ -86,7 +86,7 @@ const NavLink = ({
   if (mobile) {
     return (
       <VStack
-        _dark={{ color: active ? 'teal.300' : 'gray.100' }}
+        _dark={{ color: active ? 'teal.300' : 'gray.200' }}
         asChild
         color={active ? 'teal.600' : 'gray.600'}
         flex="1"
@@ -115,14 +115,14 @@ const NavLink = ({
         position: 'absolute',
         right: 0,
       }}
-      _dark={{ color: active ? 'white' : 'gray.100' }}
+      _dark={{ color: active ? undefined : 'gray.100' }}
       _focusVisible={{
         outline: '3px solid',
         outlineColor: 'teal.400',
-        outlineOffset: '4px',
+        outlineOffset: '3px',
       }}
       asChild
-      color={active ? 'gray.900' : 'gray.600'}
+      color={active ? 'fg' : 'gray.600'}
       fontWeight={active ? '700' : '500'}
       position="relative"
     >

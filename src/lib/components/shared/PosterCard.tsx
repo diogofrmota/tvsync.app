@@ -61,11 +61,12 @@ const PosterCard = ({
           outlineColor: 'teal.400',
           outlineOffset: '3px',
         }}
-        _hover={{ transform: 'translateY(-2px)' }}
+        borderColor="border"
         borderRadius="md"
+        borderWidth="1px"
+        className="poster-hover"
         overflow="hidden"
         position="relative"
-        transition="transform 120ms ease"
       >
         <Link
           aria-label={`Open ${label}`}
@@ -84,8 +85,9 @@ const PosterCard = ({
         </Link>
         {status ? (
           <Badge
+            bg="teal.400"
             bottom={2}
-            colorPalette="teal"
+            color="gray.900"
             left={2}
             position="absolute"
             textTransform="none"
@@ -118,7 +120,7 @@ const PosterCard = ({
               <Progress.Range />
             </Progress.Track>
           </Progress.Root>
-          <Text _dark={{ color: 'gray.100' }} color="gray.600" fontSize="xs">
+          <Text color="gray.300" fontSize="xs">
             {Math.round(progress)}% watched
           </Text>
         </Stack>
