@@ -7,14 +7,14 @@ import { getServerSession } from 'next-auth/next';
 import { Suspense } from 'react';
 
 export const metadata: Metadata = {
-  title: 'Search movies and TV shows | TvSync',
+  title: 'Explore movies and TV shows | TvSync',
   description:
     'Search TMDB for movies and TV shows, open detail pages, and save titles to your TvSync watchlist.',
   openGraph: {
-    title: 'Search movies and TV shows | TvSync',
+    title: 'Explore movies and TV shows | TvSync',
     description:
       'Search TMDB for movies and TV shows, open detail pages, and save titles to your TvSync watchlist.',
-    url: '/search',
+    url: '/explore',
   },
 };
 
@@ -36,10 +36,10 @@ const getCallbackUrl = (
   }
 
   const queryString = callbackParams.toString();
-  return queryString ? `/search?${queryString}` : '/search';
+  return queryString ? `/explore?${queryString}` : '/explore';
 };
 
-const SearchPage = async ({ searchParams }: SearchPageProps) => {
+const ExplorePage = async ({ searchParams }: SearchPageProps) => {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     const callbackUrl = getCallbackUrl(await searchParams);
@@ -55,4 +55,4 @@ const SearchPage = async ({ searchParams }: SearchPageProps) => {
   );
 };
 
-export default SearchPage;
+export default ExplorePage;

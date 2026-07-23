@@ -1,5 +1,5 @@
 :where(a, button, input, textarea, select):focus-visible {
-  outline: 3px solid var(--chakra-colors-teal-400);
+  outline: 3px solid var(--chakra-colors-gold-400);
   outline-offset: 3px;
   transition: outline-offset 150ms var(--chakra-easings-ease-out);
 }

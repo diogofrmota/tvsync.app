@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Grid, Stack } from '@chakra-ui/react';
+import { Button, Grid, Stack, Text } from '@chakra-ui/react';
 import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
 import PosterCard from 'lib/components/shared/PosterCard';
 import { SectionHeading, StatePanel } from 'lib/components/shared/Section';
@@ -11,7 +11,7 @@ import Link from 'next/link';
 
 type MovieSectionKey = 'finished' | 'planned';
 
-const discoverMoviesHref = '/search?type=movie';
+const discoverMoviesHref = '/explore?type=movie';
 const statusLabels: Record<MovieWatchStatus, string> = {
   [WatchStatus.Planned]: 'Planned to Watch',
   [WatchStatus.Watched]: 'Finished',
@@ -82,7 +82,7 @@ export const MoviesPage = ({
   return (
     <PageShell>
       <PageHeading
-        subtitle="Keep track of your movie library. Here you can see what you have planned to watch and what you have finished."
+        subtitle="Never knew if its Movies or Films, sorry english not my first language."
         title="Movies"
       />
       <MovieLibrarySection
@@ -95,11 +95,8 @@ export const MoviesPage = ({
         sectionKey="finished"
         title="Finished"
       />
-      <Stack as="section" gap={4}>
-        <SectionHeading
-          description="Find another movie to add to your library."
-          title="Discover Movies"
-        />
+      <Stack alignItems="center" as="section" gap={4} textAlign="center">
+        <Text color="fg.muted">Find new movies</Text>
         <DiscoverMoviesButton />
       </Stack>
     </PageShell>

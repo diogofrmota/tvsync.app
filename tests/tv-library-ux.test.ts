@@ -127,13 +127,13 @@ test('TV Shows page has the exact required section names, order, and navigation 
     'title="Watching"',
     'title="Planned to Watch"',
     'title="Finished"',
-    'title="Discover TV Shows"',
+    'Find new TV Shows to binge',
   ]);
   assert.doesNotMatch(
     page,
     /recommendations|activity feed|upcoming schedule|recently viewed/i
   );
-  assert.match(page, /const discoverTvShowsHref = '\/search\?type=tv'/);
+  assert.match(page, /const discoverTvShowsHref = '\/explore\?type=tv'/);
   assert.match(page, /href=\{discoverTvShowsHref\}/);
   assert.match(searchState, /value === MediaType\.Tv \? MediaType\.Tv/);
   assert.match(poster, /tv: '\/tv\/show'/);
@@ -318,12 +318,9 @@ test('library status changes and remove-from-library controls were moved to the 
   assert.match(page, /groupTvLibraryItems\(initialItems\)/);
   assert.match(
     page,
-    /No planned to watch TV shows yet\. That's so sad! Go find some TV shows please\./
+    /You need to find what the girlies are watching and add to your list\./
   );
-  assert.match(
-    page,
-    /No finished TV shows yet, can you belive that\? You have no culture\./
-  );
+  assert.match(page, /Why use this app if you never finished a tv show\?/);
 });
 
 test('shared poster cards and responsive grids cover detail navigation, mobile, and desktop', async () => {

@@ -168,7 +168,7 @@ export const WatchlistPage = ({
     ];
   }
   const discoverHref =
-    `/search?type=${fixedMediaType ?? MediaType.Movie}` as Route;
+    `/explore?type=${fixedMediaType ?? MediaType.Movie}` as Route;
   return (
     <PageShell>
       <PageHeading
