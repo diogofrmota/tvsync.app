@@ -48,6 +48,12 @@ const publicNavItems: Array<NavItem> = [
 
 const authenticatedNavItems: Array<NavItem> = [
   {
+    href: '/search',
+    icon: FiSearch,
+    label: 'Explore',
+    match: (path) => path.startsWith('/search'),
+  },
+  {
     href: '/movies',
     icon: FiFilm,
     label: 'Movies',
@@ -58,12 +64,6 @@ const authenticatedNavItems: Array<NavItem> = [
     icon: FiTv,
     label: 'TV Shows',
     match: (path) => path.startsWith('/tv-shows') || path.startsWith('/tv/'),
-  },
-  {
-    href: '/search',
-    icon: FiSearch,
-    label: 'Search',
-    match: (path) => path.startsWith('/search'),
   },
   {
     href: '/profile',
@@ -156,12 +156,14 @@ const Header = () => {
       >
         <Flex
           align="center"
+          gap={{ base: 6, md: 10 }}
           height={{ base: '4rem', md: '4.5rem' }}
+          justify="center"
           marginX="auto"
           maxWidth="80rem"
           paddingX={{ base: 4, sm: 6, lg: 8 }}
         >
-          <Heading asChild fontSize={{ base: 'xl', md: '2xl' }}>
+          <Heading asChild fontSize={{ base: '2xl', md: '3xl' }}>
             <Link href={isAuthenticated ? '/movies' : '/'}>
               Tv
               <Text as="span" color="gold.400">
@@ -174,8 +176,8 @@ const Header = () => {
               aria-label="Primary navigation"
               as="nav"
               display={isAuthenticated ? { base: 'none', md: 'flex' } : 'flex'}
+              fontSize={{ base: 'md', md: 'lg' }}
               gap={{ base: 4, sm: 6 }}
-              marginLeft="auto"
             >
               {items.map((item) => (
                 <NavLink item={item} key={item.href} />

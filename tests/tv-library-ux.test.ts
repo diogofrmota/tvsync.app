@@ -309,21 +309,21 @@ test('episode progress drives automatic completion, reopening, and new-episode b
   assert.equal(reopened.status, WatchStatus.Watching);
 });
 
-test('page controls autosave, remove, show empty actions, and roll back failed persistence', async () => {
+test('library status changes and remove-from-library controls were moved to the detail pages', async () => {
   const page = await read('src/lib/pages/tv-shows/index.tsx');
 
-  assert.match(page, /await updateTvLibraryStatus/);
-  assert.match(page, /getOptimisticTvLibraryProjection/);
-  assert.match(page, /previousItem/);
+  assert.doesNotMatch(page, /NativeSelect/);
+  assert.doesNotMatch(page, /Remove from library/);
+  assert.doesNotMatch(page, /Library status/);
+  assert.match(page, /groupTvLibraryItems\(initialItems\)/);
   assert.match(
     page,
-    /role=\{mutation\.tone === 'error' \? 'alert' : 'status'\}/
+    /No planned to watch TV shows yet\. That's so sad! Go find some TV shows please\./
   );
-  assert.match(page, /await removeTvShowFromLibrary/);
-  assert.match(page, /restoreTvLibraryItem\(current, item\)/);
-  assert.match(page, /action=\{<DiscoverTvShowsButton \/>\}/);
-  assert.match(page, /No \$\{title\.toLowerCase\(\)\} TV shows yet/);
-  assert.match(page, /router\.refresh\(\)/);
+  assert.match(
+    page,
+    /No finished TV shows yet, can you belive that\? You have no culture\./
+  );
 });
 
 test('shared poster cards and responsive grids cover detail navigation, mobile, and desktop', async () => {
@@ -335,12 +335,8 @@ test('shared poster cards and responsive grids cover detail navigation, mobile, 
   assert.match(page, /base: 'repeat\(3, minmax\(0, 1fr\)\)'/);
   assert.match(page, /md: 'repeat\(5, minmax\(0, 1fr\)\)'/);
   assert.match(page, /xl: 'repeat\(7, minmax\(0, 1fr\)\)'/);
-  assert.match(page, /Remove from library/);
-  assertInOrder(page, [
-    '<option value={WatchStatus.Watching}>Watching</option>',
-    '<option value={WatchStatus.Planned}>Planned to Watch</option>',
-    '<option value={WatchStatus.Completed}>Finished</option>',
-  ]);
+  assert.match(page, /statusLabels\[item\.status\]/);
+  assert.match(page, /episodes watched/);
 });
 
 test('atomic TV state persistence and removal remain owner-scoped', async () => {

@@ -112,9 +112,9 @@ test('Movies page has only the required ordered library sections and navigation 
     authenticatedNavEnd
   );
   assertInOrder(authenticatedNav, [
+    "label: 'Explore'",
     "label: 'Movies'",
     "label: 'TV Shows'",
-    "label: 'Search'",
     "label: 'Profile'",
   ]);
   assert.equal(authenticatedNav.match(/label:/g)?.length, 4);
@@ -190,29 +190,28 @@ test('Movies page groups exact statuses and renders direct discover empty states
     [10, 20]
   );
 
-  assert.match(page, /groupMovieLibraryItems\(items\)/);
+  assert.match(page, /groupMovieLibraryItems\(initialItems\)/);
   assert.match(page, /items\.length > 0/);
-  assert.match(page, /action=\{<DiscoverMoviesButton \/>\}/);
-  assert.match(page, /No \$\{title\.toLowerCase\(\)\} movies yet/);
+  assert.match(
+    page,
+    /No planned to watch movies yet\. That's so sad! Go find some movies please\./
+  );
+  assert.match(
+    page,
+    /No finished movies yet, can you belive that\? You have no culture\./
+  );
 });
 
-test('status and removal controls are immediate, automatic, and recover failed mutations', async () => {
+test('library status changes and remove-from-library controls were moved to the detail pages', async () => {
   const page = await read('src/lib/pages/movies/index.tsx');
 
-  assert.match(page, /onChange=\{\(event\) =>/);
-  assert.match(page, /setItems\(\(current\) =>/);
-  assert.match(page, /await updateMovieLibraryStatus/);
+  assert.doesNotMatch(page, /NativeSelect/);
+  assert.doesNotMatch(page, /Remove from library/);
+  assert.doesNotMatch(page, /Library status/);
   assert.match(
     page,
-    /updateMovieLibraryItemStatus\(current, item\.tmdbId, previousStatus\)/
+    /Keep track of your movie library\. Here you can see what you have planned to watch and what you have finished\./
   );
-  assert.match(page, /await removeMovieFromLibrary/);
-  assert.match(page, /restoreMovieLibraryItem\(current, item\)/);
-  assert.match(
-    page,
-    /role=\{mutation\.tone === 'error' \? 'alert' : 'status'\}/
-  );
-  assert.match(page, /router\.refresh\(\)/);
 });
 
 test('shared poster cards and responsive grids cover desktop and three-column mobile rendering', async () => {
@@ -222,15 +221,7 @@ test('shared poster cards and responsive grids cover desktop and three-column mo
   assert.match(page, /base: 'repeat\(3, minmax\(0, 1fr\)\)'/);
   assert.match(page, /md: 'repeat\(5, minmax\(0, 1fr\)\)'/);
   assert.match(page, /xl: 'repeat\(7, minmax\(0, 1fr\)\)'/);
-  assert.match(
-    page,
-    /<option value=\{WatchStatus\.Planned\}>Planned to Watch<\/option>/
-  );
-  assert.match(
-    page,
-    /<option value=\{WatchStatus\.Watched\}>Finished<\/option>/
-  );
-  assert.match(page, /Remove from library/);
+  assert.match(page, /statusLabels\[item\.status\]/);
 });
 
 test('poster images fall back to the "Poster unavailable" state on a real network/decode failure, not only a missing src', async () => {
