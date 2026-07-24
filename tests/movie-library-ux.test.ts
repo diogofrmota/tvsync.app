@@ -83,9 +83,9 @@ test('Movies page has only the required ordered library sections and navigation 
   ]);
 
   assertInOrder(page, [
-    'Add new movies to your library',
     'title="Planned to Watch"',
     'title="Finished"',
+    'Add new movies to your library',
   ]);
   assert.doesNotMatch(
     page,
@@ -192,14 +192,8 @@ test('Movies page groups exact statuses and renders direct discover empty states
 
   assert.match(page, /groupMovieLibraryItems\(initialItems\)/);
   assert.match(page, /items\.length > 0/);
-  assert.match(
-    page,
-    /No movies planned to watch yet\. Discover movies to build your watchlist\./
-  );
-  assert.match(
-    page,
-    /No finished movies yet\. Discover movies to start tracking them\./
-  );
+  assert.match(page, /Discover new movies to add to your watchlist\./);
+  assert.match(page, /No finished movies yet\./);
 });
 
 test('library status changes and remove-from-library controls were moved to the detail pages', async () => {

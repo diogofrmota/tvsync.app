@@ -22,11 +22,9 @@ const statusLabels: Record<TvLibrarySectionStatus, string> = {
   [WatchStatus.Watching]: 'Watching',
 };
 const emptyMessages: Record<TvSectionKey, string> = {
-  completed:
-    'No finished TV shows yet. Discover TV shows to start tracking them.',
-  planned:
-    'No TV shows planned to watch yet. Discover TV shows to build your watchlist.',
-  watching: 'No TV shows in progress yet. Discover TV shows to start watching.',
+  completed: 'No finished TV shows yet.',
+  planned: 'Discover TV shows to add to your watchlist.',
+  watching: 'No TV shows in progress.',
 };
 
 const DiscoverTvShowsButton = ({ label = 'Discover TV Shows' }) => (
@@ -94,10 +92,6 @@ export const TvShowsPage = ({
   return (
     <PageShell>
       <PageHeading title="TV Shows" />
-      <Stack alignItems="center" as="section" gap={4} textAlign="center">
-        <Text color="fg">Find new TV Shows to binge</Text>
-        <DiscoverTvShowsButton />
-      </Stack>
       <TvLibrarySection
         items={groupedItems[WatchStatus.Watching]}
         sectionKey="watching"
@@ -113,6 +107,10 @@ export const TvShowsPage = ({
         sectionKey="completed"
         title="Finished"
       />
+      <Stack alignItems="center" as="section" gap={4} textAlign="center">
+        <Text color="fg">Find new TV Shows to binge</Text>
+        <DiscoverTvShowsButton />
+      </Stack>
     </PageShell>
   );
 };

@@ -17,9 +17,8 @@ const statusLabels: Record<MovieWatchStatus, string> = {
   [WatchStatus.Watched]: 'Finished',
 };
 const emptyMessages: Record<MovieSectionKey, string> = {
-  finished: 'No finished movies yet. Discover movies to start tracking them.',
-  planned:
-    'No movies planned to watch yet. Discover movies to build your watchlist.',
+  finished: 'No finished movies yet.',
+  planned: 'Discover new movies to add to your watchlist.',
 };
 
 const DiscoverMoviesButton = () => (
@@ -82,10 +81,6 @@ export const MoviesPage = ({
   return (
     <PageShell>
       <PageHeading title="Movies" />
-      <Stack alignItems="center" as="section" gap={4} textAlign="center">
-        <Text color="fg">Add new movies to your library</Text>
-        <DiscoverMoviesButton />
-      </Stack>
       <MovieLibrarySection
         items={plannedItems}
         sectionKey="planned"
@@ -96,6 +91,10 @@ export const MoviesPage = ({
         sectionKey="finished"
         title="Finished"
       />
+      <Stack alignItems="center" as="section" gap={4} textAlign="center">
+        <Text color="fg">Add new movies to your library</Text>
+        <DiscoverMoviesButton />
+      </Stack>
     </PageShell>
   );
 };
