@@ -197,7 +197,7 @@ export const RegisterForm = ({
                   type="text"
                 />
                 <Field.HelperText>
-                  3-24 letters, numbers, or underscores.
+                  3-24 letters, numbers or underscores.
                 </Field.HelperText>
                 <Field.ErrorText>{state.fieldErrors?.username}</Field.ErrorText>
               </Field.Root>
@@ -245,7 +245,9 @@ export const RegisterForm = ({
       <GoogleAvailability enabled={googleEnabled} />
       <OAuthButtons callbackUrl={callbackUrl} googleEnabled={googleEnabled} />
       <Text textAlign="center">
-        <AuthLink href="/login">Already registered? Log in</AuthLink>
+        <AuthLink href="/login">
+          Already registered? <Text as="span" fontWeight="700">Log in</Text>
+        </AuthLink>
       </Text>
     </Stack>
   );
@@ -361,7 +363,9 @@ export const LoginForm = ({
         <AuthLink href="/forgot-password">Forgot password?</AuthLink>
       </Text>
       <Text textAlign="center">
-        <AuthLink href="/register">New user? Create an account</AuthLink>
+        <AuthLink href="/register">
+          New user? <Text as="span" fontWeight="700">Create an account</Text>
+        </AuthLink>
       </Text>
     </Stack>
   );

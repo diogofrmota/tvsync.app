@@ -6,9 +6,9 @@ export const HOME_PREVIEW_ITEM_COUNT = 9;
 
 export const HOME_SECTION_TITLES = [
   'Popular Movies',
-  'Highest-Rated Movies of All Time',
+  'Highest-Rated Movies',
   'Popular TV Shows',
-  'Highest-Rated TV Shows of All Time',
+  'Highest-Rated TV Shows',
 ] as const;
 
 export type HomeDiscoverySection = {

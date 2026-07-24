@@ -23,6 +23,9 @@ export const OAuthButtons = ({
   };
   return (
     <Button
+      _hover={{ background: 'gray.100' }}
+      background="white"
+      color="gray.900"
       disabled={!googleEnabled || isPending}
       loading={isPending}
       onClick={handleGoogleSignIn}
@@ -50,6 +53,9 @@ export const LogoutButton = ({
   };
   return (
     <Button
+      _hover={{ background: 'gray.100', color: 'gray.900' }}
+      background="white"
+      color="gray.900"
       disabled={isPending}
       loading={isPending}
       onClick={handleSignOut}

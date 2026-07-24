@@ -88,31 +88,6 @@ const Hero = () => {
           textAlign="center"
           zIndex={1}
         >
-          <MotionBox {...reveal(0)}>
-            <Flex
-              align="center"
-              borderColor="border.strong"
-              borderRadius="full"
-              borderWidth="1px"
-              color="gray.100"
-              gap={2}
-              paddingX={4}
-              paddingY={1.5}
-            >
-              <Box
-                aria-hidden
-                background="gold.400"
-                borderRadius="full"
-                boxShadow="0 0 12px 1px rgba(251, 191, 36, 0.7)"
-                height="0.5rem"
-                width="0.5rem"
-              />
-              <Text fontSize="sm" fontWeight="500" letterSpacing="0.01em">
-                The home for film &amp; TV lovers
-              </Text>
-            </Flex>
-          </MotionBox>
-
           <MotionBox {...reveal(0.08)}>
             <Heading
               as="h1"
@@ -122,21 +97,20 @@ const Hero = () => {
             >
               Everything you watch,{' '}
               <Text as="span" color="gold.400">
-                in perfect sync
+                synced in one place
               </Text>
             </Heading>
           </MotionBox>
 
           <MotionBox {...reveal(0.16)}>
             <Text
-              color="fg.muted"
+              color="fg"
               fontSize={{ base: 'lg', md: 'xl' }}
               lineHeight="1.6"
               maxWidth="34rem"
             >
-              Track what you&apos;re watching, build your watchlist, and
-              discover what to watch next — all in one clean, distraction-free
-              space.
+              Track what you are watching, both movies and tv shows, and
+              discover what to watch next. All in one app.
             </Text>
           </MotionBox>
 
@@ -153,9 +127,12 @@ const Hero = () => {
               </Button>
               <Button
                 asChild
+                background="white"
+                color="gray.900"
                 size="lg"
                 variant="outline"
                 width={{ base: 'full', sm: 'auto' }}
+                _hover={{ background: 'gray.100' }}
               >
                 <Link href="/login">Log in</Link>
               </Button>
@@ -164,7 +141,7 @@ const Hero = () => {
 
           <MotionBox {...reveal(0.3)}>
             <Text color="fg.muted" fontSize="sm">
-              Free to use · No ads · Powered by TMDB
+              Free to use · Clean UI · No ads
             </Text>
           </MotionBox>
         </Stack>
@@ -186,25 +163,26 @@ const Hero = () => {
               key={feature.title}
               padding={5}
             >
-              <Flex
-                align="center"
-                background="rgba(251, 191, 36, 0.12)"
-                borderRadius="lg"
-                color="gold.400"
-                height="2.5rem"
-                justify="center"
-                width="2.5rem"
-              >
-                <Icon as={feature.icon} boxSize={5} />
-              </Flex>
-              <Stack gap={1}>
+              <Flex align="center" gap={3}>
+                <Flex
+                  align="center"
+                  background="rgba(251, 191, 36, 0.12)"
+                  borderRadius="lg"
+                  color="gold.400"
+                  flexShrink={0}
+                  height="2.5rem"
+                  justify="center"
+                  width="2.5rem"
+                >
+                  <Icon as={feature.icon} boxSize={5} />
+                </Flex>
                 <Text fontSize="md" fontWeight="600">
                   {feature.title}
                 </Text>
-                <Text color="fg.muted" fontSize="sm" lineHeight="1.5">
-                  {feature.description}
-                </Text>
-              </Stack>
+              </Flex>
+              <Text color="fg.muted" fontSize="sm" lineHeight="1.5">
+                {feature.description}
+              </Text>
             </Stack>
           ))}
         </SimpleGrid>

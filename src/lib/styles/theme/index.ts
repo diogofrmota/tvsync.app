@@ -124,7 +124,7 @@ const semanticTokens = defineSemanticTokens({
       strong: { value: '{colors.gray.500}' },
     },
     fg: {
-      muted: { value: '#8b908e' },
+      muted: { value: '#ffffff' },
     },
     accent: {
       DEFAULT: { value: '{colors.gold.400}' },

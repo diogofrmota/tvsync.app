@@ -7,7 +7,7 @@ export const SET_OWN_MOVIE_LIBRARY_STATUS_QUERY = `
     last_watched_at,
     privacy_setting
   )
-  values ($1, $2, 'movie', $3, $4, 'private')
+  values ($1, $2, 'movie', $3, $4, 'public')
   on conflict (user_id, tmdb_id, media_type) do update set
     watch_status = excluded.watch_status,
     last_watched_at = excluded.last_watched_at,
@@ -60,7 +60,7 @@ export const SET_OWN_TV_LIBRARY_STATE_QUERY = `
     last_watched_at,
     privacy_setting
   )
-  values ($1, $2, 'tv', $3, $5, 'private')
+  values ($1, $2, 'tv', $3, $5, 'public')
   on conflict (user_id, tmdb_id, media_type) do update set
     watch_status = excluded.watch_status,
     last_watched_at = excluded.last_watched_at,
@@ -149,7 +149,7 @@ export const ADD_OWN_LIBRARY_ITEM_QUERY = `
     watch_status,
     privacy_setting
   )
-  values ($1, $2, $3, 'planned', 'private')
+  values ($1, $2, $3, 'planned', 'public')
   on conflict (user_id, tmdb_id, media_type) do nothing
   returning *
 `;

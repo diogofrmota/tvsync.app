@@ -99,16 +99,17 @@ export const ProfilePage = ({
     { label: 'Movies Watched', value: statistics.moviesWatched },
     {
       detail: runtimeDetail(statistics.missingMovieRuntimeCount),
-      label: 'Time Spent Watching Movies',
+      label: 'Time in Movies',
       value: formatWatchTime(statistics.movieMinutesWatched),
     },
     { label: 'TV Shows Watched', value: statistics.tvShowsWatched },
     {
       detail: runtimeDetail(statistics.missingTvRuntimeCount),
-      label: 'Time Spent Watching TV Shows',
+      label: 'Time in TV Shows',
       value: formatWatchTime(statistics.tvMinutesWatched),
     },
     { label: 'Episodes Watched', value: statistics.episodesWatched },
+    { label: 'Number of Reviews', value: statistics.reviewsWritten },
   ];
   const favoriteMovies = favorites.filter((item) => item.mediaType === 'movie');
   const favoriteTvShows = favorites.filter((item) => item.mediaType === 'tv');
@@ -116,7 +117,14 @@ export const ProfilePage = ({
   return (
     <PageShell>
       <PageHeading
-        subtitle="Your profile information, social connections and statistics."
+        actions={
+          <Flex gap={3}>
+            <Button asChild size="sm">
+              <Link href="/profile/edit">Edit Profile</Link>
+            </Button>
+            <LogoutButton />
+          </Flex>
+        }
         title="Profile"
       />
 
@@ -170,23 +178,16 @@ export const ProfilePage = ({
               {profile.bio}
             </Text>
           ) : null}
-
-          <Flex gap={3}>
-            <Button asChild size="sm">
-              <Link href="/profile/edit">Edit Profile</Link>
-            </Button>
-            <LogoutButton />
-          </Flex>
         </Stack>
       </Box>
 
       <FavoriteSection
-        emptyMessage="You have not added any favourite movies yet."
+        emptyMessage="You have not added any favourite movies."
         items={favoriteMovies}
         title="Favourite Movies"
       />
       <FavoriteSection
-        emptyMessage="You have not added any favourite TV shows yet."
+        emptyMessage="You have not added any favourite TV shows."
         items={favoriteTvShows}
         title="Favourite TV Shows"
       />

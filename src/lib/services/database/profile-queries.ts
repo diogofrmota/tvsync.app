@@ -9,7 +9,6 @@ export const UPDATE_OWN_PROFILE_DETAILS_QUERY = `
     display_name = $2,
     username = $3,
     bio = $4,
-    privacy_setting = $5,
     updated_at = now()
   where user_id = $1
   returning user_id, name, username, display_name, email, bio,

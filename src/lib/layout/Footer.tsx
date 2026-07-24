@@ -9,13 +9,13 @@ const footerLinks = [
 
 const Footer = () => (
   <Flex
-    align={{ base: 'flex-start', sm: 'center' }}
+    align="center"
     as="footer"
     borderColor="border"
     borderTopWidth="1px"
-    direction={{ base: 'column', sm: 'row' }}
+    direction="column"
     gap={4}
-    justify="space-between"
+    justify="center"
     marginX="auto"
     maxWidth="80rem"
     paddingX={{ base: 4, sm: 6, lg: 8 }}
@@ -26,6 +26,7 @@ const Footer = () => (
       aria-label="Footer navigation"
       as="nav"
       gap={{ base: 3, sm: 5 }}
+      justify="center"
       wrap="wrap"
     >
       {footerLinks.map((item) => (

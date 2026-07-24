@@ -55,9 +55,9 @@ test('public shell and Home content follow UX 1.1 and 1.2 order exactly', () => 
   ]);
   assertInOrder(config, [
     "'Popular Movies'",
-    "'Highest-Rated Movies of All Time'",
+    "'Highest-Rated Movies'",
     "'Popular TV Shows'",
-    "'Highest-Rated TV Shows of All Time'",
+    "'Highest-Rated TV Shows'",
   ]);
   assertInOrder(footer, [
     "label: 'Privacy Policy'",
@@ -174,7 +174,7 @@ test('tracking, watchlist, and rating mutations authenticate before writes and p
     ratingMutation.indexOf('await getAuthSession()') <
       ratingMutation.indexOf('await upsertOwnRating')
   );
-  assert.match(ratingMutation, /status: 'login_required'/);
+  assert.match(ratingMutation, /emptyResult\('login_required'\)/);
 
   for (const control of [
     'src/lib/features/watchlist/watchlist-button.tsx',

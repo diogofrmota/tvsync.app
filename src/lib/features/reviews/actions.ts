@@ -1,10 +1,12 @@
 'use server';
 
+import { REVIEW_MAX_LENGTH } from 'lib/features/reviews/constants';
 import { getAuthSession } from 'lib/services/auth/session.server';
 import {
   deleteOwnRating,
   getOwnRating,
   getRatingSummary,
+  updateOwnReview,
   upsertOwnRating,
 } from 'lib/services/database/tracking.server';
 import { MediaType, type RatingTarget } from 'lib/types';
@@ -15,8 +17,17 @@ export type RatingStateResult = {
   averageRating: number | null;
   rating: number | null;
   ratingCount: number;
+  review: string | null;
   status: ActionStatus;
 };
+
+const emptyResult = (status: ActionStatus): RatingStateResult => ({
+  averageRating: null,
+  rating: null,
+  ratingCount: 0,
+  review: null,
+  status,
+});
 
 const isPositiveInteger = (value: number) =>
   Number.isInteger(value) && value > 0;
@@ -64,12 +75,7 @@ export const getRatingState = async (
   target: RatingTarget
 ): Promise<RatingStateResult> => {
   if (!isRatingTarget(target)) {
-    return {
-      averageRating: null,
-      rating: null,
-      ratingCount: 0,
-      status: 'error',
-    };
+    return emptyResult('error');
   }
 
   try {
@@ -83,15 +89,11 @@ export const getRatingState = async (
       averageRating: summary.average_rating,
       rating: ownRating ? Number(ownRating.rating) : null,
       ratingCount: summary.rating_count,
+      review: ownRating?.review ?? null,
       status: session?.user?.id ? 'saved' : 'login_required',
     };
   } catch {
-    return {
-      averageRating: null,
-      rating: null,
-      ratingCount: 0,
-      status: 'error',
-    };
+    return emptyResult('error');
   }
 };
 
@@ -102,42 +104,68 @@ export const saveRating = async (
   const nextRating = normalizeRating(rating);
 
   if (!(isRatingTarget(target) && isValidRating(nextRating))) {
-    return {
-      averageRating: null,
-      rating: null,
-      ratingCount: 0,
-      status: 'error',
-    };
+    return emptyResult('error');
   }
 
   const session = await getAuthSession();
 
   if (!session?.user?.id) {
-    return {
-      averageRating: null,
-      rating: null,
-      ratingCount: 0,
-      status: 'login_required',
-    };
+    return emptyResult('login_required');
   }
 
   try {
-    await upsertOwnRating({ ...target, rating: nextRating });
+    const [row] = await upsertOwnRating({ ...target, rating: nextRating });
     const summary = await getRatingSummary(target);
 
     return {
       averageRating: summary.average_rating,
       rating: nextRating,
       ratingCount: summary.rating_count,
+      review: row?.review ?? null,
       status: 'saved',
     };
   } catch {
+    return emptyResult('error');
+  }
+};
+
+export const saveReview = async (
+  target: RatingTarget,
+  review: string
+): Promise<RatingStateResult> => {
+  if (!(isRatingTarget(target) && typeof review === 'string')) {
+    return emptyResult('error');
+  }
+
+  if (review.length > REVIEW_MAX_LENGTH) {
+    return emptyResult('error');
+  }
+
+  const session = await getAuthSession();
+
+  if (!session?.user?.id) {
+    return emptyResult('login_required');
+  }
+
+  try {
+    const [row] = await updateOwnReview({ ...target, review });
+
+    if (!row) {
+      // No rating exists yet, so there is nothing to attach a review to.
+      return emptyResult('error');
+    }
+
+    const summary = await getRatingSummary(target);
+
     return {
-      averageRating: null,
-      rating: null,
-      ratingCount: 0,
-      status: 'error',
+      averageRating: summary.average_rating,
+      rating: row.rating ? Number(row.rating) : null,
+      ratingCount: summary.rating_count,
+      review: row.review ?? null,
+      status: 'saved',
     };
+  } catch {
+    return emptyResult('error');
   }
 };
 
@@ -145,23 +173,13 @@ export const removeRating = async (
   target: RatingTarget
 ): Promise<RatingStateResult> => {
   if (!isRatingTarget(target)) {
-    return {
-      averageRating: null,
-      rating: null,
-      ratingCount: 0,
-      status: 'error',
-    };
+    return emptyResult('error');
   }
 
   const session = await getAuthSession();
 
   if (!session?.user?.id) {
-    return {
-      averageRating: null,
-      rating: null,
-      ratingCount: 0,
-      status: 'login_required',
-    };
+    return emptyResult('login_required');
   }
 
   try {
@@ -172,14 +190,10 @@ export const removeRating = async (
       averageRating: summary.average_rating,
       rating: null,
       ratingCount: summary.rating_count,
+      review: null,
       status: 'deleted',
     };
   } catch {
-    return {
-      averageRating: null,
-      rating: null,
-      ratingCount: 0,
-      status: 'error',
-    };
+    return emptyResult('error');
   }
 };

@@ -27,24 +27,25 @@ import {
   getOwnProfile,
   isUsernameTakenByAnotherUser,
 } from 'lib/services/database/tracking.server';
-import { PrivacySetting } from 'lib/types';
 
 export type ProfileFormState = {
   emailPending?: boolean;
   error?: string;
   fieldErrors?: Partial<
     Record<
-      | 'bio'
-      | 'currentPassword'
-      | 'displayName'
-      | 'email'
-      | 'privacySetting'
-      | 'username',
+      'bio' | 'currentPassword' | 'displayName' | 'email' | 'username',
       string
     >
   >;
   success?: string;
 };
+
+export type UsernameAvailability = {
+  message?: string;
+  status: 'available' | 'error' | 'invalid' | 'taken';
+};
+
+const BIO_MAX_LENGTH = 100;
 
 export type PasswordFormState = {
   error?: string;
@@ -89,7 +90,6 @@ type ValidProfileInput = {
   currentPassword: string;
   displayName: string;
   email: string;
-  privacySetting: PrivacySetting;
   username: string;
 };
 
@@ -103,7 +103,6 @@ const validateProfileInput = (
     currentPassword: readPasswordField(formData, 'currentPassword'),
     displayName: readTextField(formData, 'displayName'),
     email: normalizeEmail(readTextField(formData, 'email')),
-    privacySetting: readTextField(formData, 'privacySetting') as PrivacySetting,
     username: normalizeUsername(readTextField(formData, 'username')),
   };
   const fieldErrors: NonNullable<ProfileFormState['fieldErrors']> = {};
@@ -122,15 +121,43 @@ const validateProfileInput = (
     fieldErrors.email = emailError;
   }
 
-  if (input.bio.length > 280) {
-    fieldErrors.bio = 'Biography must be 280 characters or fewer.';
-  }
-
-  if (!Object.values(PrivacySetting).includes(input.privacySetting)) {
-    fieldErrors.privacySetting = 'Choose a valid profile visibility.';
+  if (input.bio.length > BIO_MAX_LENGTH) {
+    fieldErrors.bio = `Bio must be ${BIO_MAX_LENGTH} characters or fewer.`;
   }
 
   return Object.keys(fieldErrors).length > 0 ? { fieldErrors } : input;
+};
+
+export const checkUsernameAvailability = async (
+  rawUsername: string
+): Promise<UsernameAvailability> => {
+  const session = await getAuthenticatedSession();
+
+  if (!session?.user) {
+    return { status: 'error' };
+  }
+
+  const username = normalizeUsername(
+    typeof rawUsername === 'string' ? rawUsername : ''
+  );
+  const usernameError = validateUsername(username);
+
+  if (usernameError) {
+    return { message: usernameError, status: 'invalid' };
+  }
+
+  try {
+    const taken = await isUsernameTakenByAnotherUser(username);
+
+    return taken
+      ? { message: 'That username is already taken.', status: 'taken' }
+      : { message: 'That username is available.', status: 'available' };
+  } catch {
+    return {
+      message: 'Could not check that username. Please try again.',
+      status: 'error',
+    };
+  }
 };
 
 const getReauthenticationFailure = (
