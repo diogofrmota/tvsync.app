@@ -33,9 +33,12 @@ export const AuthShell = ({
     {backHref && backLabel ? (
       <Box
         _hover={{ color: 'gold.300' }}
+        alignItems="center"
         alignSelf="flex-start"
         asChild
         color="fg.muted"
+        display="inline-flex"
+        gap={2}
         marginBottom={4}
         transitionDuration="fast"
         transitionProperty="color"
