@@ -157,7 +157,7 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
   assert.match(page, /\/following/);
   assert.match(page, /\/followers/);
   assert.match(page, /Compare with Following/);
-  assert.match(page, /No bio yet, yes I am misterius\./);
+  assert.match(page, /You have not added a biography yet\./);
   // ProfileStatRail renders react-icons via the Chakra <Icon as={...}> prop.
   // Chakra's Icon is a client component, so the rail must also be a client
   // component; otherwise the icon function crosses the RSC server/client

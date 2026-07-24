@@ -318,9 +318,12 @@ test('library status changes and remove-from-library controls were moved to the 
   assert.match(page, /groupTvLibraryItems\(initialItems\)/);
   assert.match(
     page,
-    /You need to find what the girlies are watching and add to your list\./
+    /No TV shows planned to watch yet\. Discover TV shows to build your watchlist\./
   );
-  assert.match(page, /Why use this app if you never finished a tv show\?/);
+  assert.match(
+    page,
+    /No finished TV shows yet\. Discover TV shows to start tracking them\./
+  );
 });
 
 test('shared poster cards and responsive grids cover detail navigation, mobile, and desktop', async () => {

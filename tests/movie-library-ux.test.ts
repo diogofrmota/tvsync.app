@@ -194,11 +194,11 @@ test('Movies page groups exact statuses and renders direct discover empty states
   assert.match(page, /items\.length > 0/);
   assert.match(
     page,
-    /No planned to watch movies yet\. That's so sad! Go find some movies please\./
+    /No movies planned to watch yet\. Discover movies to build your watchlist\./
   );
   assert.match(
     page,
-    /No finished movies yet, can you belive that\? You have no culture\./
+    /No finished movies yet\. Discover movies to start tracking them\./
   );
 });
 
