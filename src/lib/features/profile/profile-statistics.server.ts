@@ -5,6 +5,8 @@ import {
   listPublicProfileStatisticsProgress,
 } from 'lib/services/database/profile.server';
 import {
+  countOwnReviews,
+  countPublicReviews,
   listOwnEpisodeProgressForTvLibrary,
   listOwnMedia,
 } from 'lib/services/database/tracking.server';
@@ -20,7 +22,8 @@ import {
 
 const hydrateProfileStatistics = async (
   mediaRows: Awaited<ReturnType<typeof listOwnMedia>>,
-  progressRows: Awaited<ReturnType<typeof listOwnEpisodeProgressForTvLibrary>>
+  progressRows: Awaited<ReturnType<typeof listOwnEpisodeProgressForTvLibrary>>,
+  reviewsWritten: number
 ): Promise<ProfileStatistics> => {
   const watchedMovies = mediaRows.filter(
     (row) =>
@@ -80,23 +83,26 @@ const hydrateProfileStatistics = async (
     mediaRows,
     movieRuntimeByTmdbId,
     progressRows,
+    reviewsWritten,
   });
 };
 
 export const getOwnProfileStatistics = async (): Promise<ProfileStatistics> => {
-  const [mediaRows, progressRows] = await Promise.all([
+  const [mediaRows, progressRows, reviewsWritten] = await Promise.all([
     listOwnMedia(),
     listOwnEpisodeProgressForTvLibrary(),
+    countOwnReviews(),
   ]);
 
-  return hydrateProfileStatistics(mediaRows, progressRows);
+  return hydrateProfileStatistics(mediaRows, progressRows, reviewsWritten);
 };
 
 export const getPublicProfileStatistics = async (username: string) => {
-  const [mediaRows, progressRows] = await Promise.all([
+  const [mediaRows, progressRows, reviewsWritten] = await Promise.all([
     listPublicProfileStatisticsMedia(username),
     listPublicProfileStatisticsProgress(username),
+    countPublicReviews(username),
   ]);
 
-  return hydrateProfileStatistics(mediaRows, progressRows);
+  return hydrateProfileStatistics(mediaRows, progressRows, reviewsWritten);
 };

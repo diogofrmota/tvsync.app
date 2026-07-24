@@ -48,16 +48,22 @@ export const EditProfilePage = ({
   <PageShell size="narrow">
     <PageHeading
       actions={
-        <Button asChild variant="outline">
+        <Button
+          _hover={{ background: 'gray.100', color: 'gray.900' }}
+          asChild
+          background="white"
+          color="gray.900"
+          variant="outline"
+        >
           <Link href="/profile">Back to Profile</Link>
         </Button>
       }
-      subtitle="Update your profile information and manage account security."
+      subtitle="Update your profile information."
       title="Edit Profile"
     />
 
     <EditSection
-      description="Changes to your display name, username, and biography are immediate. Email changes require verification."
+      description="Changes to your display name, username and bio are immediate. Email changes require verification."
       title="Profile Information"
     >
       <ProfileForm
@@ -66,7 +72,6 @@ export const EditProfilePage = ({
           bio: profile.bio,
           displayName: profile.display_name,
           email: profile.email,
-          privacySetting: profile.privacy_setting,
           username: profile.username,
         }}
       />

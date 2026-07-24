@@ -174,7 +174,7 @@ test('tracking, watchlist, and rating mutations authenticate before writes and p
     ratingMutation.indexOf('await getAuthSession()') <
       ratingMutation.indexOf('await upsertOwnRating')
   );
-  assert.match(ratingMutation, /status: 'login_required'/);
+  assert.match(ratingMutation, /emptyResult\('login_required'\)/);
 
   for (const control of [
     'src/lib/features/watchlist/watchlist-button.tsx',

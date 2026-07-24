@@ -122,7 +122,7 @@ export const registerCredentialAccount = async (input: {
           ${username},
           ${username},
           ${email},
-          'private',
+          'public',
           null
         )
       `,
@@ -274,7 +274,7 @@ export const ensureGoogleAuthIdentity = async (input: GoogleIdentityInput) => {
           ${username},
           ${name},
           ${email},
-          'private',
+          'public',
           now()
         )
       `,

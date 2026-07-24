@@ -305,7 +305,7 @@ test('favourite and personal rating mutations authenticate and reconcile for TV 
   assert.match(page, /<FavoriteButton mediaType=\{MediaType\.Tv\}/);
   assert.match(
     page,
-    /<RatingInput\s+showAverage=\{false\}\s+target=\{\{ mediaType: MediaType\.Tv/
+    /<RatingInput\s+showAverage=\{false\}\s+showReview\s+target=\{\{ mediaType: MediaType\.Tv/
   );
 });
 

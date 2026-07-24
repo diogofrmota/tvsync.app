@@ -70,6 +70,14 @@ export type RatingInput = {
   tmdbId: number;
 };
 
+export type ReviewInput = {
+  episodeNumber?: number;
+  mediaType: RatingTargetType;
+  review: string;
+  seasonNumber?: number;
+  tmdbId: number;
+};
+
 export type WatchlistItemInput = {
   mediaType: TrackableMediaType;
   note?: string;
@@ -119,6 +127,7 @@ export type RatingRow = {
   id: string;
   media_type: RatingTargetType;
   rating: number;
+  review: string | null;
   season_number: number;
   tmdb_id: number;
   updated_at: string;
@@ -562,7 +571,7 @@ export const getOwnRating = async ({
   const userId = await getAuthenticatedUserId();
   const sql = getDatabaseSql();
   const rows = (await sql`
-    select id, user_id, tmdb_id, media_type, season_number, episode_number, rating, created_at, updated_at
+    select id, user_id, tmdb_id, media_type, season_number, episode_number, rating, review, created_at, updated_at
     from ratings
     where user_id = ${userId}
       and tmdb_id = ${tmdbId}
@@ -612,6 +621,61 @@ export const deleteOwnRating = async ({
       and episode_number = ${episodeNumber ?? -1}
     returning id
   `) as Array<{ id: string }>;
+};
+
+export const updateOwnReview = async ({
+  episodeNumber,
+  mediaType,
+  review,
+  seasonNumber,
+  tmdbId,
+}: ReviewInput) => {
+  const userId = await getAuthenticatedUserId();
+  const sql = getDatabaseSql();
+  const trimmed = review.trim();
+
+  return (await sql`
+    update ratings
+    set review = ${trimmed.length > 0 ? trimmed : null},
+      updated_at = now()
+    where user_id = ${userId}
+      and tmdb_id = ${tmdbId}
+      and media_type = ${mediaType}
+      and season_number = ${seasonNumber ?? -1}
+      and episode_number = ${episodeNumber ?? -1}
+    returning *
+  `) as Array<RatingRow>;
+};
+
+export const countOwnReviews = async () => {
+  const userId = await getAuthenticatedUserId();
+  const sql = getDatabaseSql();
+  const rows = (await sql`
+    select count(*)::int as review_count
+    from ratings
+    where user_id = ${userId}
+      and media_type in ('movie', 'tv')
+      and review is not null
+      and btrim(review) <> ''
+  `) as Array<{ review_count: number }>;
+
+  return rows.at(0)?.review_count ?? 0;
+};
+
+export const countPublicReviews = async (username: string) => {
+  const sql = getDatabaseSql();
+  const rows = (await sql`
+    select count(*)::int as review_count
+    from ratings
+    inner join profiles on profiles.user_id = ratings.user_id
+    where lower(btrim(profiles.username)) = ${username.trim().toLowerCase()}
+      and profiles.privacy_setting = 'public'
+      and ratings.media_type in ('movie', 'tv')
+      and ratings.review is not null
+      and btrim(ratings.review) <> ''
+  `) as Array<{ review_count: number }>;
+
+  return rows.at(0)?.review_count ?? 0;
 };
 
 export const upsertOwnWatchlistItem = async (input: WatchlistItemInput) => {

@@ -40,6 +40,7 @@ const migrationNames = [
   '0006_unify_library_membership.sql',
   '0007_reconcile_tv_progress_library.sql',
   '0008_profile_experience.sql',
+  '0009_reviews_and_public_profiles.sql',
 ] as const;
 
 const read = (path: string) => readFile(join(process.cwd(), path), 'utf8');
@@ -108,6 +109,7 @@ test('canonical profile statistics count finished content once and never fabrica
     missingTvRuntimeCount: 1,
     movieMinutesWatched: 120,
     moviesWatched: 2,
+    reviewsWritten: 0,
     tvMinutesWatched: 45,
     tvShowsWatched: 1,
   });
@@ -143,10 +145,11 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
     'Following',
     'Followers',
     'Movies Watched',
-    'Time Spent Watching Movies',
+    'Time in Movies',
     'TV Shows Watched',
-    'Time Spent Watching TV Shows',
+    'Time in TV Shows',
     'Episodes Watched',
+    'Number of Reviews',
     'Favourite Movies',
     'Favourite TV Shows',
   ]) {
@@ -173,7 +176,7 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
   assert.match(favoriteButton, /Mark as Favourite/);
   assert.match(favoriteButton, /Remove from Favourites/);
   assert.match(favoriteButton, /aria-pressed=\{favorite\}/);
-  assert.doesNotMatch(page, /Reviews|Favorite genres|Achievements|Streaks/);
+  assert.doesNotMatch(page, /Favorite genres|Achievements|Streaks/);
   assert.doesNotMatch(page, /Profile Information|Social Information/);
   assert.doesNotMatch(page, /Avatar/);
   assert.match(page, /LogoutButton/);
@@ -218,7 +221,7 @@ test('Edit Profile exposes secure profile, email, password, Google setup, and de
     'Display name',
     'Username',
     'Email',
-    'Biography',
+    'Bio',
     'Save Changes',
     'Change Password',
     'Delete Account',
@@ -258,7 +261,7 @@ test('Profile and Edit Profile include explicit mobile and desktop layouts', asy
 
   assert.match(profile, /fontSize=\{\{ base: 'xl', md: '2xl' \}\}/);
   assert.match(edit, /padding=\{\{ base: 5, md: 6 \}\}/);
-  assert.match(form, /maxLength=\{280\}/);
+  assert.match(form, /maxLength=\{BIO_MAX_LENGTH\}/);
   assert.match(form, /autoComplete="current-password"/);
   assert.match(form, /autoComplete="new-password"/);
 });
@@ -298,13 +301,7 @@ test('PostgreSQL profile lifecycle preserves identity and deletes personal data 
         const updated = await getRows<{ user_id: string; username: string }>(
           db,
           UPDATE_OWN_PROFILE_DETAILS_QUERY,
-          [
-            'user-a',
-            'Alice Updated',
-            'alice_updated',
-            'Updated biography',
-            'public',
-          ]
+          ['user-a', 'Alice Updated', 'alice_updated', 'Updated biography']
         );
         assert.deepEqual(
           updated.map(({ user_id, username }) => ({ user_id, username })),
@@ -323,7 +320,6 @@ test('PostgreSQL profile lifecycle preserves identity and deletes personal data 
             'Alice',
             'bob',
             '',
-            'public',
           ]),
           /profiles_username_(lower|normalized)_unique/
         );

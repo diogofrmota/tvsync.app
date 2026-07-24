@@ -53,6 +53,9 @@ export const LogoutButton = ({
   };
   return (
     <Button
+      _hover={{ background: 'gray.100', color: 'gray.900' }}
+      background="white"
+      color="gray.900"
       disabled={isPending}
       loading={isPending}
       onClick={handleSignOut}

@@ -6,22 +6,22 @@ import {
   Dialog,
   Field,
   Input,
-  NativeSelect,
   Stack,
   Text,
   Textarea,
 } from '@chakra-ui/react';
-import { PrivacySetting } from 'lib/types';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 
 import {
   changeOwnPassword,
+  checkUsernameAvailability,
   type DeleteAccountFormState,
   type PasswordFormState,
   type ProfileFormState,
   permanentlyDeleteOwnAccount,
+  type UsernameAvailability,
   updateOwnProfile,
 } from './actions';
 
@@ -29,9 +29,10 @@ export type ProfileFormValues = {
   bio: string;
   displayName: string;
   email: string;
-  privacySetting: PrivacySetting;
   username: string;
 };
+
+const BIO_MAX_LENGTH = 100;
 
 const Feedback = ({ error, success }: { error?: string; success?: string }) => (
   <>
@@ -58,6 +59,20 @@ const GoogleReauthentication = () => (
   </Button>
 );
 
+const usernameAvailabilityColor = (
+  status: UsernameAvailability['status'] | 'checking' | 'idle'
+) => {
+  if (status === 'available') {
+    return 'green.500';
+  }
+
+  if (status === 'checking') {
+    return 'fg.muted';
+  }
+
+  return 'red.500';
+};
+
 export const ProfileForm = ({
   hasCredentials,
   initialValues,
@@ -69,6 +84,45 @@ export const ProfileForm = ({
     ProfileFormState,
     FormData
   >(updateOwnProfile, {});
+  const [username, setUsername] = useState(initialValues.username);
+  const [availability, setAvailability] = useState<
+    UsernameAvailability | { status: 'checking' } | { status: 'idle' }
+  >({ status: 'idle' });
+  const latestUsernameRef = useRef(initialValues.username);
+
+  useEffect(() => {
+    latestUsernameRef.current = username;
+    const normalized = username.normalize('NFKC').trim().toLowerCase();
+    const currentUsername = initialValues.username
+      .normalize('NFKC')
+      .trim()
+      .toLowerCase();
+
+    if (!normalized || normalized === currentUsername) {
+      setAvailability({ status: 'idle' });
+      return;
+    }
+
+    setAvailability({ status: 'checking' });
+
+    const handle = window.setTimeout(() => {
+      checkUsernameAvailability(username).then((result) => {
+        if (latestUsernameRef.current === username) {
+          setAvailability(result);
+        }
+      });
+    }, 400);
+
+    return () => window.clearTimeout(handle);
+  }, [username, initialValues.username]);
+
+  let availabilityMessage: string | undefined;
+
+  if (availability.status === 'checking') {
+    availabilityMessage = 'Checking availability…';
+  } else if ('message' in availability) {
+    availabilityMessage = availability.message;
+  }
 
   return (
     <form action={formAction}>
@@ -98,15 +152,25 @@ export const ProfileForm = ({
             <Input
               autoCapitalize="none"
               autoComplete="username"
-              defaultValue={initialValues.username}
               maxLength={24}
               name="username"
+              onChange={(event) => setUsername(event.target.value)}
               pattern="[a-z0-9_]{3,24}"
               type="text"
+              value={username}
             />
             <Field.HelperText>
-              3-24 lowercase letters, numbers, or underscores.
+              3-24 lowercase letters, numbers or underscores.
             </Field.HelperText>
+            {availabilityMessage ? (
+              <Text
+                color={usernameAvailabilityColor(availability.status)}
+                fontSize="sm"
+                role="status"
+              >
+                {availabilityMessage}
+              </Text>
+            ) : null}
             <Field.ErrorText>{state.fieldErrors?.username}</Field.ErrorText>
           </Field.Root>
 
@@ -129,39 +193,17 @@ export const ProfileForm = ({
           </Field.Root>
 
           <Field.Root invalid={Boolean(state.fieldErrors?.bio)}>
-            <Field.Label>Biography</Field.Label>
+            <Field.Label>Bio</Field.Label>
             <Textarea
               defaultValue={initialValues.bio}
-              maxLength={280}
+              maxLength={BIO_MAX_LENGTH}
               name="bio"
               rows={5}
             />
-            <Field.HelperText>Up to 280 characters.</Field.HelperText>
-            <Field.ErrorText>{state.fieldErrors?.bio}</Field.ErrorText>
-          </Field.Root>
-
-          <Field.Root
-            invalid={Boolean(state.fieldErrors?.privacySetting)}
-            required
-          >
-            <Field.Label>Profile visibility</Field.Label>
-            <NativeSelect.Root>
-              <NativeSelect.Field
-                defaultValue={initialValues.privacySetting}
-                name="privacySetting"
-              >
-                <option value={PrivacySetting.Private}>Private</option>
-                <option value={PrivacySetting.Friends}>Friends</option>
-                <option value={PrivacySetting.Public}>Public</option>
-              </NativeSelect.Field>
-              <NativeSelect.Indicator />
-            </NativeSelect.Root>
             <Field.HelperText>
-              Public profiles can be opened and followed by other users.
+              Up to {BIO_MAX_LENGTH} characters.
             </Field.HelperText>
-            <Field.ErrorText>
-              {state.fieldErrors?.privacySetting}
-            </Field.ErrorText>
+            <Field.ErrorText>{state.fieldErrors?.bio}</Field.ErrorText>
           </Field.Root>
 
           {hasCredentials ? (
@@ -282,7 +324,14 @@ export const ChangePasswordForm = ({
           {!hasCredentials && state.error?.includes('Google again') ? (
             <GoogleReauthentication />
           ) : null}
-          <Button loading={isPending} type="submit" variant="outline">
+          <Button
+            _hover={{ background: 'gray.100', color: 'gray.900' }}
+            background="white"
+            color="gray.900"
+            loading={isPending}
+            type="submit"
+            variant="outline"
+          >
             {hasCredentials ? 'Change Password' : 'Create Password'}
           </Button>
         </Stack>

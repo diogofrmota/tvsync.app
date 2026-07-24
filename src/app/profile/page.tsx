@@ -32,6 +32,7 @@ const EMPTY_STATISTICS: ProfileStatistics = {
   missingTvRuntimeCount: 0,
   movieMinutesWatched: 0,
   moviesWatched: 0,
+  reviewsWritten: 0,
   tvMinutesWatched: 0,
   tvShowsWatched: 0,
 };

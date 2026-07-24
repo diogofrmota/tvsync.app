@@ -6,6 +6,7 @@ export type ProfileStatistics = {
   missingTvRuntimeCount: number;
   movieMinutesWatched: number;
   moviesWatched: number;
+  reviewsWritten: number;
   tvMinutesWatched: number;
   tvShowsWatched: number;
 };
@@ -39,6 +40,7 @@ export const calculateProfileStatistics = (input: {
   mediaRows: Array<ProfileStatisticsMediaRow>;
   movieRuntimeByTmdbId: ReadonlyMap<number, number | null | undefined>;
   progressRows: Array<ProfileStatisticsEpisodeRow>;
+  reviewsWritten?: number;
 }): ProfileStatistics => {
   const uniqueMedia = new Map<string, ProfileStatisticsMediaRow>();
 
@@ -98,6 +100,7 @@ export const calculateProfileStatistics = (input: {
     missingTvRuntimeCount,
     movieMinutesWatched,
     moviesWatched: watchedMovies.length,
+    reviewsWritten: input.reviewsWritten ?? 0,
     tvMinutesWatched,
     tvShowsWatched: completedShows.length,
   };
