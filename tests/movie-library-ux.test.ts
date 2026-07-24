@@ -269,8 +269,10 @@ test('TMDB image base URLs live outside any client-boundary module so Server Com
   );
 
   const serverConsumers = [
+    'src/lib/pages/tv/detail/components/casts-wrapper.tsx',
     'src/lib/pages/tv/episode/detail/index.tsx',
     'src/lib/pages/tv/season/detail/components/season-episode-list.tsx',
+    'src/lib/pages/movie/detail/components/casts-wrapper.tsx',
     'src/lib/components/movie/image/ImageSection.tsx',
     'src/lib/pages/media/media-search-bar.tsx',
   ];

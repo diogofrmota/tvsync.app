@@ -14,6 +14,7 @@ import PosterImage from 'lib/components/shared/PosterImage';
 import { MovieDetailLibraryControl } from 'lib/features/library/movie-detail-library-control';
 import { FavoriteButton } from 'lib/features/profile/favorite-button';
 import { RatingInput } from 'lib/features/reviews';
+import CastsWrapper from 'lib/pages/movie/detail/components/casts-wrapper';
 import { GenreList } from 'lib/pages/movie/detail/components/genre-list';
 import { MovieTrailer } from 'lib/pages/movie/detail/components/trailer';
 import type { MovieCreditsResponse } from 'lib/services/tmdb/movie/credits/types';
@@ -181,6 +182,8 @@ export const MovieDetailPage = ({
             {directors.length > 0 ? directors.join(', ') : 'Unavailable'}
           </Text>
         </Box>
+
+        <CastsWrapper credits={credits} />
       </Stack>
     </PageShell>
   );

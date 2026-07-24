@@ -52,15 +52,13 @@ test('movie page renders required metadata and focused sections in a clear hiera
     'Your movie',
     '<MovieTrailer',
     'Director',
+    '<CastsWrapper',
   ]);
   assert.doesNotMatch(
     page,
     /ReviewsSection|RecommendForm|Recommended movies|Revenue:|gallery/i
   );
-  assert.doesNotMatch(
-    page,
-    /CastsWrapper|StreamingAvailability|Similar movies/
-  );
+  assert.doesNotMatch(page, /StreamingAvailability|Similar movies/);
 });
 
 test('missing movie metadata is represented honestly and IMDb is never backed by TMDB votes', async () => {
@@ -139,11 +137,23 @@ test('trailer playback accepts only normalized YouTube trailer identifiers', asy
   assert.doesNotMatch(component, /dangerouslySetInnerHTML|trailer\.url/);
 });
 
-test('movie detail no longer exposes cast, streaming, or similar sections', async () => {
+test('cast list is shown but no longer links to per-person pages', async () => {
+  const [cast, page] = await Promise.all([
+    read('src/lib/pages/movie/detail/components/casts-wrapper.tsx'),
+    read('src/lib/pages/movie/detail/index.tsx'),
+  ]);
+
+  assert.match(page, /<CastsWrapper/);
+  assert.match(cast, /Cast</);
+  assert.match(cast, /\{movieCast\.name\}/);
+  assert.doesNotMatch(cast, /\/person\//);
+  assert.doesNotMatch(cast, /<Link|href=/);
+  assert.doesNotMatch(cast, /next\/link/);
+});
+
+test('movie detail no longer exposes streaming or similar sections', async () => {
   const page = await read('src/lib/pages/movie/detail/index.tsx');
 
-  assert.doesNotMatch(page, /\/person\//);
-  assert.doesNotMatch(page, /CastsWrapper/);
   assert.doesNotMatch(page, /StreamingAvailability/);
   assert.doesNotMatch(page, /Similar movies|similarMovie|SliderContainer/);
 });
@@ -216,9 +226,15 @@ test('public protected actions lead clearly to Login or Register', async () => {
 });
 
 test('movie detail layout has explicit mobile and desktop compositions', async () => {
-  const page = await read('src/lib/pages/movie/detail/index.tsx');
+  const [page, cast] = await Promise.all([
+    read('src/lib/pages/movie/detail/index.tsx'),
+    read('src/lib/pages/movie/detail/components/casts-wrapper.tsx'),
+  ]);
 
   assert.match(page, /base: 'minmax\(0, 1fr\)'/);
   assert.match(page, /md: '18rem minmax\(0, 1fr\)'/);
   assert.match(page, /base: '3xl', md: '5xl'/);
+  assert.match(cast, /base: 'repeat\(2, minmax\(0, 1fr\)\)'/);
+  assert.match(cast, /md: 'repeat\(4, minmax\(0, 1fr\)\)'/);
+  assert.match(cast, /xl: 'repeat\(6, minmax\(0, 1fr\)\)'/);
 });

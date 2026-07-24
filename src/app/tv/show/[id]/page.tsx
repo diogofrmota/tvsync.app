@@ -2,6 +2,7 @@ import TvShowDetailPage, {
   type TvShowDetailPageProps,
 } from 'lib/pages/tv/detail';
 import { isTvShowDetailViewerAuthenticated } from 'lib/pages/tv/detail/load-viewer.server';
+import { getTVShowCreditsServer } from 'lib/services/tmdb/tv/credits/index.server';
 import { getTvShowDetail } from 'lib/services/tmdb/tv/detail/index.server';
 import { getTvExternalIdsServer } from 'lib/services/tmdb/tv/external-ids/index.server';
 import { getTvVideosServer } from 'lib/services/tmdb/tv/videos/index.server';
@@ -79,16 +80,23 @@ export default async function Page({
     }
 
     const data = await getTvShowDetail(showId);
-    const [videosData, externalIds, isAuthenticated] = await Promise.all([
-      getTvVideosServer(showId).catch(() => ({ id: showId, results: [] })),
-      getTvExternalIdsServer(showId).catch(() => ({
-        id: showId,
-        imdb_id: null,
-      })),
-      isTvShowDetailViewerAuthenticated(),
-    ]);
+    const [creditsData, videosData, externalIds, isAuthenticated] =
+      await Promise.all([
+        getTVShowCreditsServer(showId).catch(() => ({
+          cast: [],
+          crew: [],
+          id: showId,
+        })),
+        getTvVideosServer(showId).catch(() => ({ id: showId, results: [] })),
+        getTvExternalIdsServer(showId).catch(() => ({
+          id: showId,
+          imdb_id: null,
+        })),
+        isTvShowDetailViewerAuthenticated(),
+      ]);
 
     const props: TvShowDetailPageProps = {
+      creditsData,
       data,
       imdbId: externalIds.imdb_id,
       isAuthenticated,

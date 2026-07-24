@@ -29,9 +29,9 @@ test('TV show details remain public and load required sections independently', a
   const route = await read('src/app/tv/show/[id]/page.tsx');
 
   assert.match(route, /getTvShowDetail\(showId\)/);
+  assert.match(route, /getTVShowCreditsServer\(showId\)\.catch/);
   assert.match(route, /getTvVideosServer\(showId\)\.catch/);
   assert.match(route, /getTvExternalIdsServer\(showId\)\.catch/);
-  assert.doesNotMatch(route, /getTVShowCreditsServer/);
   assert.doesNotMatch(route, /getSimilarTVShowsServer/);
   assert.doesNotMatch(route, /getTvWatchProvidersServer/);
   assert.doesNotMatch(route, /redirect\(['"]\/login/);
@@ -53,16 +53,14 @@ test('TV show page renders required metadata and focused sections in a clear hie
     'Description',
     'Your TV show',
     '<TvTrailer',
+    '<TvCastsWrapper',
     '<SeasonsList',
   ]);
   assert.doesNotMatch(
     page,
     /ReviewsSection|RecommendForm|Recommended TV shows|WatchlistStateButton|MediaStatusControl/i
   );
-  assert.doesNotMatch(
-    page,
-    /TvCastsWrapper|TvStreamingAvailability|Similar TV shows/
-  );
+  assert.doesNotMatch(page, /TvStreamingAvailability|Similar TV shows/);
 });
 
 test('missing TV show metadata is represented honestly and IMDb is never backed by TMDB votes', async () => {
@@ -138,11 +136,23 @@ test('trailer playback accepts only normalized YouTube trailer identifiers', asy
   assert.doesNotMatch(component, /dangerouslySetInnerHTML|trailer\.url/);
 });
 
-test('TV show detail no longer exposes cast, streaming, or similar sections', async () => {
+test('cast list is shown but no longer links to per-person pages', async () => {
+  const [cast, page] = await Promise.all([
+    read('src/lib/pages/tv/detail/components/casts-wrapper.tsx'),
+    read('src/lib/pages/tv/detail/index.tsx'),
+  ]);
+
+  assert.match(page, /<TvCastsWrapper/);
+  assert.match(cast, /Cast</);
+  assert.match(cast, /\{tvCast\.name\}/);
+  assert.doesNotMatch(cast, /\/person\//);
+  assert.doesNotMatch(cast, /<Link|href=/);
+  assert.doesNotMatch(cast, /next\/link/);
+});
+
+test('TV show detail no longer exposes streaming or similar sections', async () => {
   const page = await read('src/lib/pages/tv/detail/index.tsx');
 
-  assert.doesNotMatch(page, /\/person\//);
-  assert.doesNotMatch(page, /TvCastsWrapper/);
   assert.doesNotMatch(page, /TvStreamingAvailability/);
   assert.doesNotMatch(page, /Similar TV shows|similarShow|SliderContainer/);
 });
@@ -264,13 +274,17 @@ test('public protected actions lead clearly to Login or Register', async () => {
 });
 
 test('TV show detail layout has explicit mobile and desktop compositions', async () => {
-  const [page, seasons] = await Promise.all([
+  const [page, cast, seasons] = await Promise.all([
     read('src/lib/pages/tv/detail/index.tsx'),
+    read('src/lib/pages/tv/detail/components/casts-wrapper.tsx'),
     read('src/lib/pages/tv/detail/components/seasons-list.tsx'),
   ]);
 
   assert.match(page, /base: 'minmax\(0, 1fr\)'/);
   assert.match(page, /md: '18rem minmax\(0, 1fr\)'/);
   assert.match(page, /base: '3xl', md: '5xl'/);
+  assert.match(cast, /base: 'repeat\(2, minmax\(0, 1fr\)\)'/);
+  assert.match(cast, /md: 'repeat\(4, minmax\(0, 1fr\)\)'/);
+  assert.match(cast, /xl: 'repeat\(6, minmax\(0, 1fr\)\)'/);
   assert.match(seasons, /base: '1fr', md: 'repeat\(2, 1fr\)'/);
 });

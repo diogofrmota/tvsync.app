@@ -15,14 +15,17 @@ import { TvDetailLibraryControl } from 'lib/features/library/tv-detail-library-c
 import { FavoriteButton } from 'lib/features/profile/favorite-button';
 import { RatingInput } from 'lib/features/reviews';
 import { TvProgressSummary } from 'lib/features/tracking';
+import { TvCastsWrapper } from 'lib/pages/tv/detail/components/casts-wrapper';
 import { SeasonsList } from 'lib/pages/tv/detail/components/seasons-list';
 import { TvTrailer } from 'lib/pages/tv/detail/components/trailer';
+import type { TVCreditsResponse } from 'lib/services/tmdb/tv/credits/types';
 import type { TvShowDetail } from 'lib/services/tmdb/tv/detail/types';
 import type { TvVideo } from 'lib/services/tmdb/tv/videos/types';
 import { MediaType } from 'lib/types';
 import Link from 'next/link';
 
 export type TvShowDetailPageProps = {
+  creditsData: TVCreditsResponse;
   data: TvShowDetail;
   imdbId: string | null;
   isAuthenticated: boolean;
@@ -36,6 +39,7 @@ const getReleaseYear = (date: string) => {
 };
 
 const TvShowDetailPage = ({
+  creditsData: credits,
   data: show,
   imdbId,
   isAuthenticated,
@@ -177,6 +181,8 @@ const TvShowDetailPage = ({
         </Grid>
 
         <TvTrailer trailer={trailer} />
+
+        <TvCastsWrapper credits={credits} />
 
         <SeasonsList seasons={show.seasons} showId={show.id} />
       </Stack>
