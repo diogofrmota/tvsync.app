@@ -107,7 +107,9 @@ test('See All and poster links lead to the four complete lists and public detail
 test('popular and highest-rated queries have distinct intent and cached top-rated safeguards', () => {
   const loader = read('src/lib/pages/home/load-home-discovery.server.ts');
 
-  assert.match(loader, /HOME_TMDB_REVALIDATE_SECONDS = 86_400/);
+  // Popular refreshes daily; highest-rated only needs a weekly refresh.
+  assert.match(loader, /HOME_POPULAR_REVALIDATE_SECONDS = 86_400/);
+  assert.match(loader, /HOME_TOP_RATED_REVALIDATE_SECONDS = 604_800/);
   assert.match(loader, /unstable_cache/);
   assert.match(loader, /\['home-popular-movies'\]/);
   assert.match(loader, /\['home-top-rated-movies'\]/);

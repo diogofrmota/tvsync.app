@@ -1,3 +1,4 @@
+import { TMDB_REVALIDATE_SECONDS } from 'lib/services/tmdb/constants';
 import {
   movieListEndpoint,
   normalizeMovieListResponse,
@@ -5,6 +6,27 @@ import {
 import { tmdbServerFetcherCore } from 'lib/services/tmdb/utils.server';
 
 import type { ListType, MovieListParams, MovieListResponse } from './types';
+
+// Free-text searches are high cardinality and change often, top-rated ordering
+// barely moves, and everything else refreshes on the shared daily window.
+const movieListRevalidate = (
+  section: ListType,
+  params?: MovieListParams
+): number => {
+  if (params?.query) {
+    return TMDB_REVALIDATE_SECONDS.search;
+  }
+
+  if (section === 'top_rated') {
+    return TMDB_REVALIDATE_SECONDS.topRated;
+  }
+
+  if (section === 'trending_week') {
+    return TMDB_REVALIDATE_SECONDS.trending;
+  }
+
+  return TMDB_REVALIDATE_SECONDS.list;
+};
 
 export const getMovieListServer = ({
   section = 'popular',
@@ -24,7 +46,7 @@ export const getMovieListServer = ({
       with_genres: params?.with_genres,
     }),
     params,
-    reqInit: { cache: 'no-store' },
+    reqInit: { next: { revalidate: movieListRevalidate(section, params) } },
   }).then(normalizeMovieListResponse);
 
 export const getTrendingMoviesServer = (
@@ -34,7 +56,7 @@ export const getTrendingMoviesServer = (
   tmdbServerFetcherCore<MovieListResponse>({
     path: `/trending/movie/${timeWindow}`,
     params,
-    reqInit: { next: { revalidate: 43_200 } },
+    reqInit: { next: { revalidate: TMDB_REVALIDATE_SECONDS.trending } },
   }).then(normalizeMovieListResponse);
 
 export const getMovieRecommendationsServer = (
@@ -44,12 +66,12 @@ export const getMovieRecommendationsServer = (
   tmdbServerFetcherCore<MovieListResponse>({
     path: `/movie/${id}/recommendations`,
     params,
-    reqInit: { cache: 'no-store' },
+    reqInit: { next: { revalidate: TMDB_REVALIDATE_SECONDS.recommendations } },
   }).then(normalizeMovieListResponse);
 
 export const getSimilarMoviesServer = (id: number, params?: MovieListParams) =>
   tmdbServerFetcherCore<MovieListResponse>({
     path: `/movie/${id}/similar`,
     params,
-    reqInit: { cache: 'no-store' },
+    reqInit: { next: { revalidate: TMDB_REVALIDATE_SECONDS.recommendations } },
   }).then(normalizeMovieListResponse);

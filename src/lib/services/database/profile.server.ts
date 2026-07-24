@@ -9,6 +9,7 @@ import {
 } from 'lib/services/auth/security';
 import type { PrivacySetting, TrackableMediaType } from 'lib/types';
 
+import { revalidateSessionVersion } from './auth.server';
 import { getDatabaseSql } from './core.server';
 import {
   CONSUME_EMAIL_CHANGE_TOKEN_QUERY,
@@ -185,8 +186,15 @@ export const consumeEmailChangeToken = async (token: string) => {
     previous_email: string;
     user_id: string;
   }>;
+  const changed = rows.at(0) ?? null;
 
-  return rows.at(0) ?? null;
+  if (changed) {
+    // Confirming an email change rotates session_version; drop the cached
+    // value so the user's other sessions re-check immediately.
+    revalidateSessionVersion(changed.user_id);
+  }
+
+  return changed;
 };
 
 export const setOwnPassword = async (passwordHash: string) => {
@@ -196,8 +204,13 @@ export const setOwnPassword = async (passwordHash: string) => {
     userId,
     passwordHash,
   ])) as Array<{ user_id: string }>;
+  const saved = Boolean(rows.at(0));
 
-  return Boolean(rows.at(0));
+  if (saved) {
+    revalidateSessionVersion(userId);
+  }
+
+  return saved;
 };
 
 export const deleteOwnAccount = async () => {
@@ -206,8 +219,15 @@ export const deleteOwnAccount = async () => {
   const rows = (await sql.query(DELETE_OWN_ACCOUNT_QUERY, [userId])) as Array<{
     user_id: string;
   }>;
+  const deleted = Boolean(rows.at(0));
 
-  return Boolean(rows.at(0));
+  if (deleted) {
+    // The profile row is gone, so getSessionVersion now returns null; bust the
+    // cache so lingering sessions are invalidated on their next request.
+    revalidateSessionVersion(userId);
+  }
+
+  return deleted;
 };
 
 export const listOwnFavorites = async () => {
@@ -259,6 +279,13 @@ export const getOwnFavorite = async (
   return rows.length > 0;
 };
 
+// Public profile statistics fan out to roughly one TMDB read per watched title,
+// so the runtime aggregation is capped to bound the worst-case cost of a single
+// cold profile view. Real libraries sit far below these caps; only extreme
+// outliers see an approximate ("partial") total, which the UI already surfaces.
+const PUBLIC_STATS_MEDIA_CAP = 750;
+const PUBLIC_STATS_PROGRESS_CAP = 3000;
+
 export const listPublicProfileStatisticsMedia = async (username: string) => {
   const sql = getDatabaseSql();
 
@@ -272,6 +299,7 @@ export const listPublicProfileStatisticsMedia = async (username: string) => {
       and profiles.privacy_setting = 'public'
       and media.privacy_setting = 'public'
     order by media.date_added desc
+    limit ${PUBLIC_STATS_MEDIA_CAP}
   `) as Array<UserMediaRow>;
 };
 
@@ -292,7 +320,8 @@ export const listPublicProfileStatisticsProgress = async (username: string) => {
     where lower(btrim(profiles.username)) = ${username.trim().toLowerCase()}
       and profiles.privacy_setting = 'public'
       and media.privacy_setting = 'public'
-    order by progress.tmdb_show_id, progress.season_number,
-      progress.episode_number
+    order by progress.watched_at desc nulls last,
+      progress.tmdb_show_id, progress.season_number, progress.episode_number
+    limit ${PUBLIC_STATS_PROGRESS_CAP}
   `) as Array<EpisodeProgressRow>;
 };

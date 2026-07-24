@@ -9,6 +9,7 @@ import {
   normalizeLoginIdentifier,
   normalizeUsername,
 } from 'lib/services/auth/security';
+import { revalidateTag, unstable_cache } from 'next/cache';
 
 import {
   CONSUME_AUTH_RATE_LIMIT_QUERY,
@@ -399,8 +400,15 @@ export const resetPasswordWithToken = async (
     tokenDigest,
     passwordHash,
   ])) as Array<{ user_id: string }>;
+  const userId = rows.at(0)?.user_id;
 
-  return Boolean(rows.at(0));
+  if (userId) {
+    // A reset rotates session_version to sign every existing session out; drop
+    // the cached version immediately so other devices fail their next check.
+    revalidateSessionVersion(userId);
+  }
+
+  return Boolean(userId);
 };
 
 export const getSessionVersion = async (userId: string) => {
@@ -410,6 +418,32 @@ export const getSessionVersion = async (userId: string) => {
   }>;
 
   return rows.at(0)?.session_version ?? null;
+};
+
+// The NextAuth JWT callback checks session_version on every authenticated
+// request to honour "sign out everywhere". A short-lived cache turns that from
+// one database round trip per request into one per user per window, and every
+// path that rotates session_version busts the tag so revocation stays instant.
+const SESSION_VERSION_REVALIDATE_SECONDS = 30;
+
+const sessionVersionCacheTag = (userId: string) =>
+  `auth-session-version:${userId}`;
+
+export const getCachedSessionVersion = (userId: string) =>
+  unstable_cache(
+    () => getSessionVersion(userId),
+    ['auth-session-version', userId],
+    {
+      revalidate: SESSION_VERSION_REVALIDATE_SECONDS,
+      tags: [sessionVersionCacheTag(userId)],
+    }
+  )();
+
+export const revalidateSessionVersion = (userId: string) => {
+  // `'max'` is the Next 16 replacement for the legacy single-argument purge and,
+  // unlike `updateTag`, is valid in route handlers (e.g. the email-change
+  // verification link) as well as server actions.
+  revalidateTag(sessionVersionCacheTag(userId), 'max');
 };
 
 export const consumeAuthRateLimit = async (input: {
@@ -427,3 +461,56 @@ export const consumeAuthRateLimit = async (input: {
 
   return (rows.at(0)?.attempt_count ?? input.limit + 1) <= input.limit;
 };
+
+type AuthCleanupSummary = {
+  emailChangeTokens: number;
+  passwordResetTokens: number;
+  rateLimits: number;
+  verificationTokens: number;
+};
+
+/**
+ * Both the rate-limit table and the one-time token tables grow with every
+ * authentication attempt but are never read again once their window closes or
+ * their token is consumed/expired. A scheduled purge keeps them from
+ * accumulating unbounded rows. Windows top out at one hour, so rate-limit rows
+ * untouched for two hours are dead; tokens are kept a day past expiry/use for a
+ * short forensic trail before removal.
+ */
+export const purgeExpiredAuthRecords =
+  async (): Promise<AuthCleanupSummary> => {
+    const sql = getDatabaseSql();
+    const [rateLimits, verification, reset, emailChange] =
+      await sql.transaction((tx) => [
+        tx`
+          delete from auth_rate_limits
+          where updated_at < now() - interval '2 hours'
+          returning 1
+        `,
+        tx`
+          delete from auth_email_verification_tokens
+          where expires_at < now() - interval '1 day'
+            or (consumed_at is not null and consumed_at < now() - interval '1 day')
+          returning 1
+        `,
+        tx`
+          delete from auth_password_reset_tokens
+          where expires_at < now() - interval '1 day'
+            or (consumed_at is not null and consumed_at < now() - interval '1 day')
+          returning 1
+        `,
+        tx`
+          delete from auth_email_change_tokens
+          where expires_at < now() - interval '1 day'
+            or (consumed_at is not null and consumed_at < now() - interval '1 day')
+          returning 1
+        `,
+      ]);
+
+    return {
+      emailChangeTokens: emailChange.length,
+      passwordResetTokens: reset.length,
+      rateLimits: rateLimits.length,
+      verificationTokens: verification.length,
+    };
+  };

@@ -19,7 +19,11 @@ import { MediaType } from 'lib/types';
 import type { Route } from 'next';
 import { unstable_cache } from 'next/cache';
 
-const HOME_TMDB_REVALIDATE_SECONDS = 86_400;
+// Popular rankings shuffle daily; top-rated ordering is effectively stable, so
+// it only needs a weekly refresh. Fetching either more often just burns the
+// shared TMDB rate budget without changing what visitors see.
+const HOME_POPULAR_REVALIDATE_SECONDS = 86_400; // 24h
+const HOME_TOP_RATED_REVALIDATE_SECONDS = 604_800; // 7d
 
 const topRatedMovieParams = {
   include_adult: 'false',
@@ -72,7 +76,7 @@ const loadPopularMovies = unstable_cache(
       section: 'popular',
     }).then((response) => response.results.map(mapMovieOverviewItem)),
   ['home-popular-movies'],
-  { revalidate: HOME_TMDB_REVALIDATE_SECONDS }
+  { revalidate: HOME_POPULAR_REVALIDATE_SECONDS }
 );
 
 const loadTopRatedMovies = unstable_cache(
@@ -82,7 +86,7 @@ const loadTopRatedMovies = unstable_cache(
       section: 'top_rated',
     }).then((response) => response.results.map(mapMovieOverviewItem)),
   ['home-top-rated-movies'],
-  { revalidate: HOME_TMDB_REVALIDATE_SECONDS }
+  { revalidate: HOME_TOP_RATED_REVALIDATE_SECONDS }
 );
 
 const loadPopularTVShows = unstable_cache(
@@ -91,7 +95,7 @@ const loadPopularTVShows = unstable_cache(
       response.results.map(mapTVShowOverviewItem)
     ),
   ['home-popular-tv-shows'],
-  { revalidate: HOME_TMDB_REVALIDATE_SECONDS }
+  { revalidate: HOME_POPULAR_REVALIDATE_SECONDS }
 );
 
 const loadTopRatedTVShows = unstable_cache(
@@ -101,7 +105,7 @@ const loadTopRatedTVShows = unstable_cache(
       ...topRatedTVParams,
     }).then((response) => response.results.map(mapTVShowOverviewItem)),
   ['home-top-rated-tv-shows'],
-  { revalidate: HOME_TMDB_REVALIDATE_SECONDS }
+  { revalidate: HOME_TOP_RATED_REVALIDATE_SECONDS }
 );
 
 export const loadHomeDiscoverySections = async (): Promise<
