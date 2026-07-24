@@ -11,11 +11,11 @@ import {
 import {
   getRatingState,
   type RatingStateResult,
-  REVIEW_MAX_LENGTH,
   removeRating,
   saveRating,
   saveReview,
 } from 'lib/features/reviews/actions';
+import { REVIEW_MAX_LENGTH } from 'lib/features/reviews/constants';
 import type { RatingTarget } from 'lib/types';
 import type { Route } from 'next';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';

@@ -1,5 +1,6 @@
 'use server';
 
+import { REVIEW_MAX_LENGTH } from 'lib/features/reviews/constants';
 import { getAuthSession } from 'lib/services/auth/session.server';
 import {
   deleteOwnRating,
@@ -11,8 +12,6 @@ import {
 import { MediaType, type RatingTarget } from 'lib/types';
 
 type ActionStatus = 'deleted' | 'error' | 'login_required' | 'saved';
-
-export const REVIEW_MAX_LENGTH = 2000;
 
 export type RatingStateResult = {
   averageRating: number | null;
