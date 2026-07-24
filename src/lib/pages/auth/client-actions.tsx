@@ -23,6 +23,9 @@ export const OAuthButtons = ({
   };
   return (
     <Button
+      _hover={{ background: 'gray.100' }}
+      background="white"
+      color="gray.900"
       disabled={!googleEnabled || isPending}
       loading={isPending}
       onClick={handleGoogleSignIn}
