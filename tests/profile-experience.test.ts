@@ -178,7 +178,10 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
   assert.match(favoriteButton, /aria-pressed=\{favorite\}/);
   assert.doesNotMatch(page, /Favorite genres|Achievements|Streaks/);
   assert.doesNotMatch(page, /Profile Information|Social Information/);
-  assert.doesNotMatch(page, /Avatar/);
+  // The profile avatar is generated from the display name and nothing else:
+  // no image source, no upload control, no stored avatar column.
+  assert.match(page, /<Avatar\.Fallback name=\{displayName\} \/>/);
+  assert.doesNotMatch(page, /Avatar\.Image|type="file"|avatar_url|avatarUrl/);
   assert.match(page, /LogoutButton/);
 });
 
@@ -260,6 +263,14 @@ test('Profile and Edit Profile include explicit mobile and desktop layouts', asy
   ]);
 
   assert.match(profile, /fontSize=\{\{ base: 'xl', md: '2xl' \}\}/);
+  // The identity block is the page header itself: one compact row that keeps
+  // the name, handle, follow counts, biography, and account actions together
+  // instead of a separate route title plus a tall centred profile card.
+  assert.doesNotMatch(profile, /PageHeading/);
+  assert.doesNotMatch(profile, /maxWidth="26rem"/);
+  assert.match(profile, /<Heading as="h1"/);
+  assert.match(profile, /<FollowCountChip/);
+  assert.match(profile, /direction=\{\{ base: 'column', md: 'row' \}\}/);
   assert.match(edit, /padding=\{\{ base: 5, md: 6 \}\}/);
   assert.match(form, /maxLength=\{BIO_MAX_LENGTH\}/);
   assert.match(form, /autoComplete="current-password"/);

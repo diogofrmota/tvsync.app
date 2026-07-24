@@ -44,7 +44,12 @@ test('Search exposes exactly linkable Movies and TV Shows tabs with type-scoped 
   assert.equal(getSearchMediaType('person'), MediaType.Movie);
   assert.match(movies, /'\/explore\?type=movie'/);
   assert.match(tvShows, /'\/explore\?type=tv'/);
-  assert.match(route, /getCallbackUrl\(await searchParams\)/);
+  // Next resolves searchParams asynchronously. /explore awaits it once and
+  // reuses that value, so signed-out visitors keep their browse/search intent
+  // through the login redirect.
+  assert.match(route, /const resolvedSearchParams = await searchParams;/);
+  assert.match(route, /getCallbackUrl\(resolvedSearchParams\)/);
+  assert.match(route, /callbackUrl=\$\{encodeURIComponent\(callbackUrl\)\}/);
 });
 
 test('title submit and termless browsing use the correct TMDB endpoint families', async () => {

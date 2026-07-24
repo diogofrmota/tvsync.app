@@ -51,18 +51,17 @@ export const LogoutButton = ({
     setIsPending(true);
     await signOut({ callbackUrl }).catch(() => setIsPending(false));
   };
+  // Signing out is a secondary action next to "Edit Profile", so it keeps the
+  // quieter outline treatment instead of competing with the primary button.
   return (
     <Button
-      _hover={{ background: 'gray.100', color: 'gray.900' }}
-      background="white"
-      color="gray.900"
       disabled={isPending}
       loading={isPending}
       onClick={handleSignOut}
       size="sm"
       variant="outline"
     >
-      <FiLogOut />
+      <FiLogOut aria-hidden />
       Log out
     </Button>
   );

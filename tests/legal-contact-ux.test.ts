@@ -55,7 +55,10 @@ test('footer exposes exactly Privacy Policy, Terms of Service, and Contact, in o
     ]
   );
   assert.match(footer, /Copyright/);
-  assert.match(footer, /direction=\{\{ base: 'column', sm: 'row' \}\}/);
+  // The footer centres a wrapping link row above the copyright line, so the
+  // responsive behaviour lives in that nav row, not in the outer column.
+  assert.match(footer, /gap=\{\{ base: 3, sm: 5 \}\}/);
+  assert.match(footer, /wrap="wrap"/);
 });
 
 test('footer only renders for the signed-out public shell, never the authenticated shell', async () => {

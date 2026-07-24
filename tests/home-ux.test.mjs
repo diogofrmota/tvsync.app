@@ -31,6 +31,7 @@ const getExportBody = (source, exportName) => {
 test('public shell and Home content follow UX 1.1 and 1.2 order exactly', () => {
   const header = read('src/lib/layout/Header.tsx');
   const home = read('src/lib/pages/home/index.tsx');
+  const hero = read('src/lib/pages/home/Hero.tsx');
   const config = read('src/lib/pages/home/config.ts');
   const footer = read('src/lib/layout/Footer.tsx');
 
@@ -39,19 +40,21 @@ test('public shell and Home content follow UX 1.1 and 1.2 order exactly', () => 
     "label: 'Register'",
     "label: 'Login'",
   ]);
-  assertInOrder(home, [
-    'TvSync',
-    'Track your TV shows and movies in one place.',
-    'TvSync focuses on a clean design and essential features, without',
-    'Join a community of TV show and movie lovers.',
-    'Create an Account',
+  // The signed-out hero lives in its own client component. Its contract is the
+  // order of headline, promise, cost, and the two account calls to action.
+  assertInOrder(hero, [
+    'Everything you watch,',
+    'synced in one place',
+    'Track Movies and TV Shows you are watching and discover what to',
+    'Free to use',
+    'Create your account',
+    'Log in',
   ]);
-  assertInOrder(home, [
-    'Track what you are watching',
+  assertInOrder(hero, [
+    'Track what you watch',
     'Build your watchlist',
-    'Discover new TV shows and movies',
-    'Check what is popular',
-    'View your personal statistics',
+    'Discover what to watch',
+    'See your progress',
   ]);
   assertInOrder(config, [
     "'Popular Movies'",
@@ -65,7 +68,10 @@ test('public shell and Home content follow UX 1.1 and 1.2 order exactly', () => 
     "label: 'Contact'",
     'Copyright &copy;',
   ]);
-  assert.doesNotMatch(home, /testimonial|pricing|news|carousel|quick search/i);
+  assert.doesNotMatch(
+    `${home}\n${hero}`,
+    /testimonial|pricing|news|carousel|quick search/i
+  );
 });
 
 test('each successful preview is exactly nine posters with 3-column mobile and 9-column desktop grids', () => {
