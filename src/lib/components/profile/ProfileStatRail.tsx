@@ -5,6 +5,7 @@ import type { IconType } from 'react-icons';
 import {
   FiBarChart2,
   FiClock,
+  FiEdit3,
   FiFilm,
   FiPlayCircle,
   FiTv,
@@ -19,9 +20,10 @@ export type ProfileStatCard = {
 const iconsByLabel: Record<string, IconType> = {
   'Episodes Watched': FiPlayCircle,
   'Movies Watched': FiFilm,
+  'Number of Reviews': FiEdit3,
   'TV Shows Watched': FiTv,
-  'Time Spent Watching Movies': FiClock,
-  'Time Spent Watching TV Shows': FiClock,
+  'Time in Movies': FiClock,
+  'Time in TV Shows': FiClock,
 };
 
 const getStatIcon = (label: string): IconType =>

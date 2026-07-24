@@ -29,16 +29,17 @@ const getStatCards = (
   { label: 'Movies Watched', value: statistics.moviesWatched },
   {
     detail: runtimeDetail(statistics.missingMovieRuntimeCount),
-    label: 'Time Spent Watching Movies',
+    label: 'Time in Movies',
     value: formatWatchTime(statistics.movieMinutesWatched),
   },
   { label: 'TV Shows Watched', value: statistics.tvShowsWatched },
   {
     detail: runtimeDetail(statistics.missingTvRuntimeCount),
-    label: 'Time Spent Watching TV Shows',
+    label: 'Time in TV Shows',
     value: formatWatchTime(statistics.tvMinutesWatched),
   },
   { label: 'Episodes Watched', value: statistics.episodesWatched },
+  { label: 'Number of Reviews', value: statistics.reviewsWritten },
 ];
 
 const Favorites = ({

@@ -111,7 +111,6 @@ export const verifyOwnCurrentPassword = async (password: string) => {
 export const updateOwnProfileDetails = async (input: {
   bio: string;
   displayName: string;
-  privacySetting: PrivacySetting;
   username: string;
 }) => {
   const userId = await getAuthenticatedUserId();
@@ -121,7 +120,6 @@ export const updateOwnProfileDetails = async (input: {
     input.displayName,
     input.username,
     input.bio,
-    input.privacySetting,
   ])) as Array<ProfileDetailsRow>;
 
   return rows.at(0) ?? null;

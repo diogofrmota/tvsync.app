@@ -159,6 +159,7 @@ const TvShowDetailPage = ({
                   <FavoriteButton mediaType={MediaType.Tv} tmdbId={show.id} />
                   <RatingInput
                     showAverage={false}
+                    showReview
                     target={{ mediaType: MediaType.Tv, tmdbId: show.id }}
                   />
                 </Grid>

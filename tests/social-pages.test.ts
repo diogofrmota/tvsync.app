@@ -77,10 +77,11 @@ test('public profile renders only the UX 3.1 public contract', async () => {
     'following_count',
     'follower_count',
     'Movies Watched',
-    'Time Spent Watching Movies',
+    'Time in Movies',
     'TV Shows Watched',
-    'Time Spent Watching TV Shows',
+    'Time in TV Shows',
     'Episodes Watched',
+    'Number of Reviews',
     'Favourite Movies',
     'Favourite TV Shows',
   ]) {

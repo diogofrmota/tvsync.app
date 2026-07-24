@@ -152,6 +152,7 @@ export const MovieDetailPage = ({
                   />
                   <RatingInput
                     showAverage={false}
+                    showReview
                     target={{ mediaType: MediaType.Movie, tmdbId: movie.id }}
                   />
                 </Grid>
