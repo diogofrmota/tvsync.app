@@ -166,6 +166,7 @@ export const TVEpisodeDetailPage = ({
 
             <RatingInput
               label="Your episode rating"
+              showReview
               target={{
                 episodeNumber: data.episode_number,
                 mediaType: 'tv_episode',

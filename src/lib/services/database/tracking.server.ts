@@ -325,7 +325,7 @@ export const upsertOwnMedia = async (input: MediaTrackingInput) => {
       ${input.mediaType},
       ${input.watchStatus},
       ${input.lastWatchedAt ?? null},
-      ${input.privacySetting ?? 'private'}
+      ${input.privacySetting ?? 'public'}
     )
     on conflict (user_id, tmdb_id, media_type) do update set
       watch_status = excluded.watch_status,
@@ -654,7 +654,6 @@ export const countOwnReviews = async () => {
     select count(*)::int as review_count
     from ratings
     where user_id = ${userId}
-      and media_type in ('movie', 'tv')
       and review is not null
       and btrim(review) <> ''
   `) as Array<{ review_count: number }>;
@@ -670,7 +669,6 @@ export const countPublicReviews = async (username: string) => {
     inner join profiles on profiles.user_id = ratings.user_id
     where lower(btrim(profiles.username)) = ${username.trim().toLowerCase()}
       and profiles.privacy_setting = 'public'
-      and ratings.media_type in ('movie', 'tv')
       and ratings.review is not null
       and btrim(ratings.review) <> ''
   `) as Array<{ review_count: number }>;
