@@ -55,9 +55,9 @@ test('public shell and Home content follow UX 1.1 and 1.2 order exactly', () => 
   ]);
   assertInOrder(config, [
     "'Popular Movies'",
-    "'Highest-Rated Movies of All Time'",
+    "'Highest-Rated Movies'",
     "'Popular TV Shows'",
-    "'Highest-Rated TV Shows of All Time'",
+    "'Highest-Rated TV Shows'",
   ]);
   assertInOrder(footer, [
     "label: 'Privacy Policy'",
