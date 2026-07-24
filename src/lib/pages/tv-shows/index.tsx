@@ -22,10 +22,11 @@ const statusLabels: Record<TvLibrarySectionStatus, string> = {
   [WatchStatus.Watching]: 'Watching',
 };
 const emptyMessages: Record<TvSectionKey, string> = {
-  completed: 'Why use this app if you never finished a tv show?',
+  completed:
+    'No finished TV shows yet. Discover TV shows to start tracking them.',
   planned:
-    'You need to find what the girlies are watching and add to your list.',
-  watching: 'Time to start a new TV Show!',
+    'No TV shows planned to watch yet. Discover TV shows to build your watchlist.',
+  watching: 'No TV shows in progress yet. Discover TV shows to start watching.',
 };
 
 const DiscoverTvShowsButton = ({ label = 'Discover TV Shows' }) => (

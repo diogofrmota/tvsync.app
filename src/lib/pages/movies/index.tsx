@@ -17,9 +17,9 @@ const statusLabels: Record<MovieWatchStatus, string> = {
   [WatchStatus.Watched]: 'Finished',
 };
 const emptyMessages: Record<MovieSectionKey, string> = {
-  finished: 'No finished movies yet, can you belive that? You have no culture.',
+  finished: 'No finished movies yet. Discover movies to start tracking them.',
   planned:
-    "No planned to watch movies yet. That's so sad! Go find some movies please.",
+    'No movies planned to watch yet. Discover movies to build your watchlist.',
 };
 
 const DiscoverMoviesButton = () => (

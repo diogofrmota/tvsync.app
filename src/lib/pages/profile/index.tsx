@@ -150,7 +150,7 @@ export const ProfilePage = ({
         </Flex>
 
         <Text color="fg.muted" maxWidth="32rem">
-          {profile.bio || 'No bio yet, yes I am misterius.'}
+          {profile.bio || 'You have not added a biography yet.'}
         </Text>
 
         <Flex gap={3}>
