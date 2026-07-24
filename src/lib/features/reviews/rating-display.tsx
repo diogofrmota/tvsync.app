@@ -7,7 +7,7 @@ type RatingDisplayProps = {
   rating: number | null;
 };
 
-export const formatUserRating = (rating: number | null) =>
+const formatUserRating = (rating: number | null) =>
   typeof rating === 'number' && Number.isFinite(rating)
     ? `${rating.toFixed(1)} / 10`
     : null;
