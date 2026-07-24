@@ -120,46 +120,65 @@ export const ProfilePage = ({
         title="Profile"
       />
 
-      <Stack align="center" gap={4} textAlign="center">
-        <Heading as="h2" fontSize={{ base: 'xl', md: '2xl' }}>
-          {displayName}
-        </Heading>
-        <Text color="fg.muted">@{profile.username}</Text>
+      <Box
+        alignSelf="center"
+        borderColor="border"
+        borderRadius="xl"
+        borderWidth="1px"
+        maxWidth="26rem"
+        paddingX={{ base: 5, md: 6 }}
+        paddingY={{ base: 6, md: 7 }}
+        width="full"
+      >
+        <Stack align="center" gap={5} textAlign="center">
+          <Stack gap={1}>
+            <Heading as="h2" fontSize={{ base: 'xl', md: '2xl' }}>
+              {displayName}
+            </Heading>
+            <Text color="fg.muted">@{profile.username}</Text>
+          </Stack>
 
-        <Flex gap={10} justify="center">
-          <Box asChild>
-            <Link href={`${baseProfilePath}/following` as Route}>
-              <Stack align="center" gap={0}>
-                <Text fontSize="2xl" fontWeight="bold">
-                  {followCounts.following_count}
-                </Text>
-                <Text color="fg.muted">Following</Text>
-              </Stack>
-            </Link>
-          </Box>
-          <Box asChild>
-            <Link href={`${baseProfilePath}/followers` as Route}>
-              <Stack align="center" gap={0}>
-                <Text fontSize="2xl" fontWeight="bold">
-                  {followCounts.follower_count}
-                </Text>
-                <Text color="fg.muted">Followers</Text>
-              </Stack>
-            </Link>
-          </Box>
-        </Flex>
+          <Flex gap={8} justify="center">
+            <Box asChild>
+              <Link href={`${baseProfilePath}/following` as Route}>
+                <Stack align="center" gap={0}>
+                  <Text fontSize="xl" fontWeight="bold">
+                    {followCounts.following_count}
+                  </Text>
+                  <Text color="fg.muted" fontSize="sm">
+                    Following
+                  </Text>
+                </Stack>
+              </Link>
+            </Box>
+            <Box asChild>
+              <Link href={`${baseProfilePath}/followers` as Route}>
+                <Stack align="center" gap={0}>
+                  <Text fontSize="xl" fontWeight="bold">
+                    {followCounts.follower_count}
+                  </Text>
+                  <Text color="fg.muted" fontSize="sm">
+                    Followers
+                  </Text>
+                </Stack>
+              </Link>
+            </Box>
+          </Flex>
 
-        <Text color="fg.muted" maxWidth="32rem">
-          {profile.bio || 'You have not added a biography yet.'}
-        </Text>
+          {profile.bio ? (
+            <Text color="fg.muted" fontSize="sm">
+              {profile.bio}
+            </Text>
+          ) : null}
 
-        <Flex gap={3}>
-          <Button asChild size="sm">
-            <Link href="/profile/edit">Edit Profile</Link>
-          </Button>
-          <LogoutButton />
-        </Flex>
-      </Stack>
+          <Flex gap={3}>
+            <Button asChild size="sm">
+              <Link href="/profile/edit">Edit Profile</Link>
+            </Button>
+            <LogoutButton />
+          </Flex>
+        </Stack>
+      </Box>
 
       <FavoriteSection
         emptyMessage="You have not added any favourite movies yet."
