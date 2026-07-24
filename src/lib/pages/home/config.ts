@@ -1,8 +1,11 @@
+import { MEDIA_RAIL_ITEM_LIMIT } from 'lib/components/shared/MediaRail';
 import type { MediaOverviewItem } from 'lib/pages/media/overview';
 import type { MediaType } from 'lib/types';
 import type { Route } from 'next';
 
-export const HOME_PREVIEW_ITEM_COUNT = 9;
+// Home previews the same number of titles per horizontally scrollable rail as
+// Explore and the Movies/TV overviews.
+export const HOME_PREVIEW_ITEM_COUNT = MEDIA_RAIL_ITEM_LIMIT;
 
 export const HOME_SECTION_TITLES = [
   'Popular Movies',

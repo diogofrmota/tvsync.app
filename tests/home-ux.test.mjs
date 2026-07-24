@@ -74,18 +74,44 @@ test('public shell and Home content follow UX 1.1 and 1.2 order exactly', () => 
   );
 });
 
-test('each successful preview is exactly nine posters with 3-column mobile and 9-column desktop grids', () => {
+test('each successful preview is one shared horizontally scrollable rail of fifteen posters', () => {
   const home = read('src/lib/pages/home/index.tsx');
   const config = read('src/lib/pages/home/config.ts');
-  const loading = read('src/lib/components/shared/Section.tsx');
+  const rail = read('src/lib/components/shared/MediaRail.tsx');
+  const explore = read('src/lib/pages/explore/discover.server.tsx');
+  const overview = read('src/lib/pages/media/overview.tsx');
 
-  assert.match(config, /HOME_PREVIEW_ITEM_COUNT = 9/);
+  assert.match(rail, /MEDIA_RAIL_ITEM_LIMIT = 15/);
+  assert.match(config, /HOME_PREVIEW_ITEM_COUNT = MEDIA_RAIL_ITEM_LIMIT/);
   assert.match(home, /section\.items\.length !== HOME_PREVIEW_ITEM_COUNT/);
-  assert.match(home, /section\.items\.map\(\(item\) =>/);
-  assert.match(home, /base: 'repeat\(3, minmax\(0, 1fr\)\)'/);
-  assert.match(home, /lg: 'repeat\(9, minmax\(0, 1fr\)\)'/);
-  assert.match(loading, /base: 'repeat\(3, minmax\(0, 1fr\)\)'/);
-  assert.match(loading, /lg: 'repeat\(9, minmax\(0, 1fr\)\)'/);
+
+  // Home, Explore, and the Movies/TV overviews share one rail implementation.
+  for (const source of [home, explore, overview]) {
+    assert.match(source, /from 'lib\/components\/shared\/MediaRail'/);
+    assert.match(source, /<MediaRail\b/);
+  }
+
+  assert.match(rail, /overflowX="auto"/);
+  assert.match(rail, /scrollSnapType="x proximity"/);
+  assert.match(rail, /layout="flex"/);
+  assert.doesNotMatch(home, /repeat\(9, minmax\(0, 1fr\)\)/);
+});
+
+test('See All opens one complete 99-title list with no pagination controls', () => {
+  const mediaList = read('src/lib/pages/media/media-list.server.tsx');
+  const movieRoute = read('src/app/movies/[section]/page.tsx');
+  const genreRoute = read('src/app/movies/genre/[genre]/page.tsx');
+  const tvRoute = read('src/app/tv/[listType]/page.tsx');
+
+  assert.match(mediaList, /MEDIA_LIST_ITEM_LIMIT = 99/);
+  assert.match(mediaList, /slice\(\s*0,\s*MEDIA_LIST_ITEM_LIMIT\s*\)/);
+  assert.match(movieRoute, /<MovieListPage\b/);
+  assert.match(genreRoute, /<MovieListPage\b/);
+  assert.match(tvRoute, /<TVShowListPage\b/);
+
+  for (const source of [mediaList, movieRoute, genreRoute, tvRoute]) {
+    assert.doesNotMatch(source, /PageNavButtons|totalPages|onClickNext/);
+  }
 });
 
 test('See All and poster links lead to the four complete lists and public detail routes', () => {
@@ -201,7 +227,7 @@ test('loading, empty, incomplete, and per-section API errors retain the four-sec
   const loader = read('src/lib/pages/home/load-home-discovery.server.ts');
 
   assert.match(home, /HOME_SECTION_TITLES\.map\(\(title\) =>/);
-  assert.match(home, /SectionLoading count=\{HOME_PREVIEW_ITEM_COUNT\}/);
+  assert.match(home, /MediaRailLoading count=\{HOME_PREVIEW_ITEM_COUNT\}/);
   assert.match(home, /section\.items\.length === 0/);
   assert.match(home, /There are no titles available in this list right now\./);
   assert.match(home, /TMDB returned an incomplete preview\./);

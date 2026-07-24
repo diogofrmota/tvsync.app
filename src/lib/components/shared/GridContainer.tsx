@@ -2,10 +2,10 @@ import { Grid } from '@chakra-ui/react';
 import { SectionLoading } from 'lib/components/shared/Section';
 
 const GridContainer = ({
-  isLoading,
+  isLoading = false,
   children,
 }: {
-  isLoading: boolean;
+  isLoading?: boolean;
   children: React.ReactNode;
 }) => {
   if (isLoading) {

@@ -1,23 +1,21 @@
-import { Grid, SimpleGrid, Skeleton, Stack } from '@chakra-ui/react';
+import { SimpleGrid, Skeleton, Stack } from '@chakra-ui/react';
+import { MediaRail, MediaRailLoading } from 'lib/components/shared/MediaRail';
 import { PageShell } from 'lib/components/shared/PageShell';
-import PosterCard from 'lib/components/shared/PosterCard';
-import {
-  SectionHeading,
-  SectionLoading,
-  StatePanel,
-} from 'lib/components/shared/Section';
+import { SectionHeading, StatePanel } from 'lib/components/shared/Section';
 import {
   HOME_PREVIEW_ITEM_COUNT,
   HOME_SECTION_TITLES,
   type HomeDiscoverySection,
 } from 'lib/pages/home/config';
 import Hero from 'lib/pages/home/Hero';
+import type { ReactNode } from 'react';
 
 export type { HomeDiscoverySection } from 'lib/pages/home/config';
 
 const heroFeatureKeys = ['feature-a', 'feature-b', 'feature-c', 'feature-d'];
 
-const DiscoveryContent = ({ section }: { section: HomeDiscoverySection }) => {
+// Returns null when the rail itself should render; anything else replaces it.
+const discoveryFallback = (section: HomeDiscoverySection): ReactNode => {
   if (section.error) {
     return (
       <StatePanel
@@ -47,37 +45,18 @@ const DiscoveryContent = ({ section }: { section: HomeDiscoverySection }) => {
     );
   }
 
-  return (
-    <Grid
-      aria-label={`${section.title} preview`}
-      columnGap={{ base: 3, md: 4 }}
-      rowGap={{ base: 7, md: 8 }}
-      templateColumns={{
-        base: 'repeat(3, minmax(0, 1fr))',
-        md: 'repeat(6, minmax(0, 1fr))',
-        lg: 'repeat(9, minmax(0, 1fr))',
-      }}
-    >
-      {section.items.map((item) => (
-        <PosterCard
-          id={item.id}
-          imageUrl={item.posterPath}
-          key={`${section.mediaType}-${item.id}`}
-          layout="grid"
-          mediaType={section.mediaType}
-          name={item.title}
-          prefetch={false}
-        />
-      ))}
-    </Grid>
-  );
+  return null;
 };
 
 const DiscoverySection = ({ section }: { section: HomeDiscoverySection }) => (
-  <Stack as="section" gap={5}>
-    <SectionHeading seeAllHref={section.seeAllHref} title={section.title} />
-    <DiscoveryContent section={section} />
-  </Stack>
+  <MediaRail
+    fallback={discoveryFallback(section)}
+    itemLimit={HOME_PREVIEW_ITEM_COUNT}
+    items={section.items}
+    mediaType={section.mediaType}
+    seeAllHref={section.seeAllHref}
+    title={section.title}
+  />
 );
 
 export const Home = ({
@@ -141,7 +120,7 @@ export const HomeLoading = () => (
     {HOME_SECTION_TITLES.map((title) => (
       <Stack gap={5} key={title}>
         <SectionHeading title={title} />
-        <SectionLoading count={HOME_PREVIEW_ITEM_COUNT} />
+        <MediaRailLoading count={HOME_PREVIEW_ITEM_COUNT} />
       </Stack>
     ))}
   </PageShell>
