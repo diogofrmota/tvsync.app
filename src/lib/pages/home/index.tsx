@@ -1,13 +1,4 @@
-import {
-  Box,
-  Button,
-  Grid,
-  Heading,
-  List,
-  Skeleton,
-  Stack,
-  Text,
-} from '@chakra-ui/react';
+import { Grid, SimpleGrid, Skeleton, Stack } from '@chakra-ui/react';
 import { PageShell } from 'lib/components/shared/PageShell';
 import PosterCard from 'lib/components/shared/PosterCard';
 import {
@@ -20,43 +11,11 @@ import {
   HOME_SECTION_TITLES,
   type HomeDiscoverySection,
 } from 'lib/pages/home/config';
-import Link from 'next/link';
+import Hero from 'lib/pages/home/Hero';
 
 export type { HomeDiscoverySection } from 'lib/pages/home/config';
 
-const benefits = [
-  'Track what you are watching',
-  'Build your watchlist',
-  'Discover new TV shows and movies',
-  'Check what is popular',
-  'View your personal statistics',
-];
-
-const Hero = () => (
-  <Stack align="flex-start" gap={5} maxWidth="48rem">
-    <Stack gap={3}>
-      <Heading as="h1" fontSize={{ base: '4xl', md: '6xl' }} fontWeight="700">
-        TvSync
-      </Heading>
-      <Text fontSize={{ base: 'xl', md: '2xl' }} fontWeight="600">
-        Track your TV shows and movies in one place.
-      </Text>
-      <Text color="fg.muted">
-        TvSync focuses on a clean design and essential features, without
-        unnecessary distractions.
-      </Text>
-      <Text>Join a community of TV show and movie lovers.</Text>
-    </Stack>
-    <List.Root gap={2} paddingLeft={5}>
-      {benefits.map((benefit) => (
-        <List.Item key={benefit}>{benefit}</List.Item>
-      ))}
-    </List.Root>
-    <Button asChild size="lg">
-      <Link href="/register">Create an Account</Link>
-    </Button>
-  </Stack>
-);
+const heroFeatureKeys = ['feature-a', 'feature-b', 'feature-c', 'feature-d'];
 
 const DiscoveryContent = ({ section }: { section: HomeDiscoverySection }) => {
   if (section.error) {
@@ -136,21 +95,48 @@ export const Home = ({
 
 export const HomeLoading = () => (
   <PageShell>
-    <Stack gap={5} maxWidth="48rem">
-      <Skeleton height={{ base: '3rem', md: '4.5rem' }} width="14rem" />
-      <Skeleton height="2rem" width="min(32rem, 100%)" />
-      <Stack gap={2}>
-        <Skeleton height="1rem" width="min(42rem, 100%)" />
-        <Skeleton height="1rem" width="min(34rem, 90%)" />
-      </Stack>
-      <Box paddingLeft={5}>
-        <Stack gap={2}>
-          {benefits.map((benefit) => (
-            <Skeleton height="1rem" key={benefit} width="18rem" />
-          ))}
+    <Stack gap={{ base: 10, md: 14 }}>
+      <Stack
+        align="center"
+        gap={6}
+        marginX="auto"
+        maxWidth="46rem"
+        width="full"
+      >
+        <Skeleton borderRadius="full" height="2rem" width="16rem" />
+        <Stack align="center" gap={3} width="full">
+          <Skeleton
+            height={{ base: '2.5rem', md: '3.75rem' }}
+            width="min(38rem, 100%)"
+          />
+          <Skeleton
+            height={{ base: '2.5rem', md: '3.75rem' }}
+            width="min(30rem, 80%)"
+          />
         </Stack>
-      </Box>
-      <Skeleton borderRadius="md" height="3rem" width="12rem" />
+        <Skeleton height="1.5rem" width="min(32rem, 90%)" />
+        <Stack
+          direction={{ base: 'column', sm: 'row' }}
+          gap={3}
+          width={{ base: 'full', sm: 'auto' }}
+        >
+          <Skeleton
+            borderRadius="full"
+            height="3rem"
+            width={{ base: 'full', sm: '12rem' }}
+          />
+          <Skeleton
+            borderRadius="full"
+            height="3rem"
+            width={{ base: 'full', sm: '8rem' }}
+          />
+        </Stack>
+      </Stack>
+      <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} gap={{ base: 3, md: 4 }}>
+        {heroFeatureKeys.map((key) => (
+          <Skeleton borderRadius="xl" height="10rem" key={key} />
+        ))}
+      </SimpleGrid>
     </Stack>
     {HOME_SECTION_TITLES.map((title) => (
       <Stack gap={5} key={title}>

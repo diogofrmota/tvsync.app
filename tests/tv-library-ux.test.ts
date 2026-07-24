@@ -124,10 +124,10 @@ test('TV Shows page has the exact required section names, order, and navigation 
   ]);
 
   assertInOrder(page, [
-    'Find new TV Shows to binge',
     'title="Watching"',
     'title="Planned to Watch"',
     'title="Finished"',
+    'Find new TV Shows to binge',
   ]);
   assert.doesNotMatch(
     page,
@@ -316,14 +316,8 @@ test('library status changes and remove-from-library controls were moved to the 
   assert.doesNotMatch(page, /Remove from library/);
   assert.doesNotMatch(page, /Library status/);
   assert.match(page, /groupTvLibraryItems\(initialItems\)/);
-  assert.match(
-    page,
-    /No TV shows planned to watch yet\. Discover TV shows to build your watchlist\./
-  );
-  assert.match(
-    page,
-    /No finished TV shows yet\. Discover TV shows to start tracking them\./
-  );
+  assert.match(page, /Discover TV shows to add to your watchlist\./);
+  assert.match(page, /No finished TV shows yet\./);
 });
 
 test('shared poster cards and responsive grids cover detail navigation, mobile, and desktop', async () => {
