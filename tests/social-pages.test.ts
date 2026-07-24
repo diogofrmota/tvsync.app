@@ -380,8 +380,7 @@ test('follow server actions derive authorization from the session and accept no 
     database.indexOf('export const unfollowProfile')
   );
   const unfollowHelper = database.slice(
-    database.indexOf('export const unfollowProfile'),
-    database.indexOf('export const listFollowedActivity')
+    database.indexOf('export const unfollowProfile')
   );
 
   assert.match(followHelper, /getAuthenticatedUserId\(\)/);

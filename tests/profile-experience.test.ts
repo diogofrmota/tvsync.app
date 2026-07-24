@@ -464,10 +464,6 @@ test('PostgreSQL profile lifecycle preserves identity and deletes personal data 
              user_id, tmdb_show_id, season_number, episode_number, watched
            ) values ('user-a', 20, 1, 1, true)`
         );
-        await db.query(
-          `insert into reviews (user_id, tmdb_id, media_type, body)
-           values ('user-a', 10, 'movie', 'Review body')`
-        );
         const deleted = await getRows<{ user_id: string }>(
           db,
           DELETE_OWN_ACCOUNT_QUERY,
@@ -480,7 +476,6 @@ test('PostgreSQL profile lifecycle preserves identity and deletes personal data 
           ['favorite_media', "user_id = 'user-a'"],
           ['user_media', "user_id = 'user-a'"],
           ['episode_progress', "user_id = 'user-a'"],
-          ['reviews', "user_id = 'user-a'"],
           [
             'follows',
             "follower_user_id = 'user-a' or following_user_id = 'user-a'",

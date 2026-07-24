@@ -120,38 +120,6 @@ create index if not exists ratings_user_id_idx
 create index if not exists ratings_media_lookup_idx
   on ratings (tmdb_id, media_type);
 
-create table if not exists reviews (
-  id uuid primary key default gen_random_uuid(),
-  user_id text not null references profiles(user_id) on delete cascade,
-  tmdb_id integer not null,
-  media_type text not null,
-  title text not null default '',
-  body text not null,
-  privacy_setting text not null default 'private',
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  constraint reviews_tmdb_id_positive_check
-    check (tmdb_id > 0),
-  constraint reviews_media_type_check
-    check (media_type in ('movie', 'tv')),
-  constraint reviews_privacy_setting_check
-    check (privacy_setting in ('private', 'friends', 'public')),
-  constraint reviews_body_not_blank_check
-    check (length(trim(body)) > 0),
-  constraint reviews_user_tmdb_media_unique
-    unique (user_id, tmdb_id, media_type)
-);
-
-create index if not exists reviews_user_id_idx
-  on reviews (user_id);
-
-create index if not exists reviews_media_lookup_idx
-  on reviews (tmdb_id, media_type);
-
-create index if not exists reviews_public_lookup_idx
-  on reviews (tmdb_id, media_type, created_at desc)
-  where privacy_setting = 'public';
-
 create table if not exists watchlist_items (
   id uuid primary key default gen_random_uuid(),
   user_id text not null references profiles(user_id) on delete cascade,

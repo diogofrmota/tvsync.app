@@ -70,14 +70,6 @@ export type RatingInput = {
   tmdbId: number;
 };
 
-export type ReviewInput = {
-  body: string;
-  mediaType: TrackableMediaType;
-  privacySetting?: PrivacySetting;
-  title?: string;
-  tmdbId: number;
-};
-
 export type WatchlistItemInput = {
   mediaType: TrackableMediaType;
   note?: string;
@@ -136,27 +128,6 @@ export type RatingRow = {
 export type RatingSummaryRow = {
   average_rating: number | null;
   rating_count: number;
-};
-
-export type ReviewRow = {
-  body: string;
-  created_at: string;
-  display_name: string;
-  id: string;
-  media_type: TrackableMediaType;
-  privacy_setting: PrivacySetting;
-  title: string;
-  tmdb_id: number;
-  updated_at: string;
-  user_id: string;
-  username: string;
-};
-
-export type PublicProfileStatsRow = {
-  completed_show_count: number;
-  currently_watching_count: number;
-  public_review_count: number;
-  watched_movie_count: number;
 };
 
 export const getAuthenticatedUserId = async () => {
@@ -306,60 +277,6 @@ export const listPublicMediaForProfile = async (username: string) => {
       )
     order by coalesce(user_media.last_watched_at, user_media.date_added) desc
   `) as Array<UserMediaRow>;
-};
-
-export const getPublicProfileStats = async (username: string) => {
-  const sql = getDatabaseSql();
-  const rows = (await sql`
-    select
-      (
-        select count(*)::int
-        from user_media
-        inner join profiles on profiles.user_id = user_media.user_id
-        where lower(profiles.username) = lower(${username})
-          and profiles.privacy_setting = 'public'
-          and user_media.privacy_setting = 'public'
-          and user_media.media_type = 'tv'
-          and user_media.watch_status = 'watching'
-      ) as currently_watching_count,
-      (
-        select count(*)::int
-        from user_media
-        inner join profiles on profiles.user_id = user_media.user_id
-        where lower(profiles.username) = lower(${username})
-          and profiles.privacy_setting = 'public'
-          and user_media.privacy_setting = 'public'
-          and user_media.media_type = 'tv'
-          and user_media.watch_status = 'completed'
-      ) as completed_show_count,
-      (
-        select count(*)::int
-        from user_media
-        inner join profiles on profiles.user_id = user_media.user_id
-        where lower(profiles.username) = lower(${username})
-          and profiles.privacy_setting = 'public'
-          and user_media.privacy_setting = 'public'
-          and user_media.media_type = 'movie'
-          and user_media.watch_status = 'watched'
-      ) as watched_movie_count,
-      (
-        select count(*)::int
-        from reviews
-        inner join profiles on profiles.user_id = reviews.user_id
-        where lower(profiles.username) = lower(${username})
-          and profiles.privacy_setting = 'public'
-          and reviews.privacy_setting = 'public'
-      ) as public_review_count
-  `) as Array<PublicProfileStatsRow>;
-
-  return (
-    rows.at(0) ?? {
-      completed_show_count: 0,
-      currently_watching_count: 0,
-      public_review_count: 0,
-      watched_movie_count: 0,
-    }
-  );
 };
 
 export const getOwnMedia = async (
@@ -695,110 +612,6 @@ export const deleteOwnRating = async ({
       and episode_number = ${episodeNumber ?? -1}
     returning id
   `) as Array<{ id: string }>;
-};
-
-export const upsertOwnReview = async (input: ReviewInput) => {
-  const userId = await getAuthenticatedUserId();
-  const sql = getDatabaseSql();
-
-  return sql`
-    insert into reviews (
-      user_id,
-      tmdb_id,
-      media_type,
-      title,
-      body,
-      privacy_setting
-    )
-    values (
-      ${userId},
-      ${input.tmdbId},
-      ${input.mediaType},
-      ${input.title ?? ''},
-      ${input.body},
-      ${input.privacySetting ?? 'private'}
-    )
-    on conflict (user_id, tmdb_id, media_type) do update set
-      title = excluded.title,
-      body = excluded.body,
-      privacy_setting = excluded.privacy_setting,
-      updated_at = now()
-    returning *
-  `;
-};
-
-export const deleteOwnReview = async (
-  tmdbId: number,
-  mediaType: TrackableMediaType
-) => {
-  const userId = await getAuthenticatedUserId();
-  const sql = getDatabaseSql();
-
-  return sql`
-    delete from reviews
-    where user_id = ${userId}
-      and tmdb_id = ${tmdbId}
-      and media_type = ${mediaType}
-    returning id
-  `;
-};
-
-export const getOwnReview = async (
-  tmdbId: number,
-  mediaType: TrackableMediaType
-) => {
-  const userId = await getAuthenticatedUserId();
-  const sql = getDatabaseSql();
-  const rows = (await sql`
-    select reviews.id, reviews.user_id, profiles.username, profiles.display_name, reviews.tmdb_id,
-      reviews.media_type, reviews.title, reviews.body, reviews.privacy_setting, reviews.created_at, reviews.updated_at
-    from reviews
-    inner join profiles on profiles.user_id = reviews.user_id
-    where reviews.user_id = ${userId}
-      and reviews.tmdb_id = ${tmdbId}
-      and reviews.media_type = ${mediaType}
-    limit 1
-  `) as Array<ReviewRow>;
-
-  return rows.at(0) ?? null;
-};
-
-export const listPublicReviewsForMedia = async (
-  tmdbId: number,
-  mediaType: TrackableMediaType
-) => {
-  const sql = getDatabaseSql();
-
-  return (await sql`
-    select reviews.id, reviews.user_id, profiles.username, profiles.display_name, reviews.tmdb_id,
-      reviews.media_type, reviews.title, reviews.body, reviews.privacy_setting, reviews.created_at, reviews.updated_at
-    from reviews
-    inner join profiles on profiles.user_id = reviews.user_id
-    where reviews.tmdb_id = ${tmdbId}
-      and reviews.media_type = ${mediaType}
-      and reviews.privacy_setting = 'public'
-      and profiles.privacy_setting = 'public'
-    order by reviews.created_at desc
-  `) as Array<ReviewRow>;
-};
-
-export const listPublicReviewsForProfile = async (
-  username: string,
-  limit = 6
-) => {
-  const sql = getDatabaseSql();
-
-  return (await sql`
-    select reviews.id, reviews.user_id, profiles.username, profiles.display_name, reviews.tmdb_id,
-      reviews.media_type, reviews.title, reviews.body, reviews.privacy_setting, reviews.created_at, reviews.updated_at
-    from reviews
-    inner join profiles on profiles.user_id = reviews.user_id
-    where lower(profiles.username) = lower(${username})
-      and profiles.privacy_setting = 'public'
-      and reviews.privacy_setting = 'public'
-    order by reviews.updated_at desc
-    limit ${limit}
-  `) as Array<ReviewRow>;
 };
 
 export const upsertOwnWatchlistItem = async (input: WatchlistItemInput) => {

@@ -145,5 +145,3 @@ export const customTheme = createSystem(defaultConfig, {
     },
   },
 });
-
-export default customTheme;

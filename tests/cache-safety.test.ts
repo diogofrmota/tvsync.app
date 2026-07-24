@@ -104,7 +104,6 @@ test('durable revalidation remains limited to bounded discovery sources', () => 
   const allowedCacheFiles = new Set([
     join('src', 'lib', 'pages', 'home', 'load-home-discovery.server.ts'),
     join('src', 'lib', 'services', 'tmdb', 'movie', 'list', 'index.server.ts'),
-    join('src', 'lib', 'services', 'tmdb', 'trending', 'index.server.ts'),
     join('src', 'lib', 'services', 'tmdb', 'tv', 'list', 'index.server.ts'),
   ]);
   const cacheFiles = listSourceFiles('src').filter((path) => {

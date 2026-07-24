@@ -431,7 +431,9 @@ test('episode and season mutations reconcile status while specials stay independ
   const [actions, server, progressControl] = await Promise.all([
     read('src/lib/features/tracking/actions.ts'),
     read('src/lib/features/library/tv-library.server.ts'),
-    read('src/lib/features/tracking/episode-progress-button.tsx'),
+    read(
+      'src/lib/pages/tv/episode/detail/components/episode-progress-panel.tsx'
+    ),
   ]);
 
   assert.match(actions, /setOwnTvEpisodeWatchedAndReconcile\(input\)/);

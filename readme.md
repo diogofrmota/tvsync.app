@@ -21,7 +21,7 @@ Repository: https://github.com/diogofrmota/tvsync.app
 
 - `src/app` - App Router routes, layout, 404, and the TMDB proxy route.
 - `src/lib/pages` - Route-level page UI for home, movie, TV, person, search, and 404 screens.
-- `src/lib/features` - Feature boundaries for dashboard data loading, watchlist and tracking actions, plus reserved auth, media, profile, reviews, social, and stats work.
+- `src/lib/features` - Feature boundaries for auth, contact, library, profile, ratings (`reviews`), social follows, tracking, and watchlist actions.
 - `src/lib/components` - Reusable Chakra UI components, movie/TV cards, sliders, list containers, and shared presentation helpers.
 - `src/lib/services/tmdb` - TMDB service layer split into server helpers, client SWR hooks, endpoint constants, and response types.
 - `src/lib/services/database` - Server-only Neon Postgres helpers for Server Components, Server Actions, and Route Handlers.
@@ -51,13 +51,13 @@ Repository: https://github.com/diogofrmota/tvsync.app
 
 The Neon Postgres schema lives in `database/migrations` and should be applied in numeric order.
 
-It creates `profiles`, `user_media`, `episode_progress`, `ratings`, `reviews`, and `watchlist_items`. Duplicate personal records are prevented with unique constraints on user/media keys, including `(user_id, tmdb_id, media_type)` and `(user_id, tmdb_show_id, season_number, episode_number)`. Lookup indexes cover owner lookups, TMDB media lookups, status filters, public review reads, and date-added ordering.
+It creates `profiles`, `user_media`, `episode_progress`, `ratings`, and `watchlist_items`. Duplicate personal records are prevented with unique constraints on user/media keys, including `(user_id, tmdb_id, media_type)` and `(user_id, tmdb_show_id, season_number, episode_number)`. Lookup indexes cover owner lookups, TMDB media lookups, status filters, and date-added ordering.
 
 `user_media.watch_status` is media-type aware. Movies support `planned` and `watched`; TV shows support `planned`, `watching`, `completed`, `dropped`, and `paused`. The shared `WatchStatus` contracts in `src/lib/types` are the source of truth for UI controls and Server Actions.
 
 `database/migrations/0002_watch_status_values.sql` updates existing databases from the previous generic status constraint to the media-specific constraint and migrates old `on_hold` values to `paused`.
 
-Runtime database access stays server-only through `src/lib/services/database`. Personal tracking queries should use `src/lib/services/database/tracking.server.ts`, which reads the authenticated NextAuth session, derives `session.user.id`, and scopes mutations to the current user id. Public reads are intentionally narrow: public profiles and public reviews only return rows where privacy settings allow it.
+Runtime database access stays server-only through `src/lib/services/database`. Personal tracking queries should use `src/lib/services/database/tracking.server.ts`, which reads the authenticated NextAuth session, derives `session.user.id`, and scopes mutations to the current user id. Public reads are intentionally narrow: public profiles only return rows where privacy settings allow it.
 
 Row-level security is not enabled in the initial migration. Authorization is enforced in the application/query layer so future Server Actions and Route Handlers must call the tracking helpers instead of querying these tables directly. If RLS is introduced later, document the transaction-local user context setup, for example `set_config('app.current_user_id', userId, true)`, and keep the app-layer checks as defense in depth.
 
@@ -86,7 +86,7 @@ TMDB access is split by runtime:
 - Endpoint response contracts live beside each endpoint in `types.ts`.
 - Endpoint normalizers live beside each endpoint in `utils.ts` and defensively normalize missing posters, backdrops, dates, overviews, credits, seasons, and episodes.
 
-Current typed TMDB helpers cover movie lists, true similar movies, movie videos, regional movie watch providers, trending movies, trending TV shows, weekly all-media trending, movie details, movie credits, TV show details, TV show credits, TV season details, TV episode details, movie images, person details, TV search, and multi-search. The search route consumes its client helpers through `/api/tmdb`; movie details consume server-only helpers and never expose the TMDB key.
+Current typed TMDB helpers cover movie lists, true similar movies, movie videos, regional movie watch providers, trending movies, trending TV shows, movie details, movie credits, TV show details, TV show credits, TV season details, TV episode details, movie images, person details, and TV search. The `/explore` route consumes its client helpers through `/api/tmdb`; movie details consume server-only helpers and never expose the TMDB key.
 
 Do not pass `TMDB_API_KEY` into client components or `NEXT_PUBLIC_*` variables. Add new TMDB endpoints by creating typed server/client helpers under `src/lib/services/tmdb`, then normalize raw TMDB JSON at that boundary before route-level UI consumes it.
 
@@ -123,20 +123,17 @@ Signed-in users can classify movies as planned or watched from movie detail page
 
 TV episode progress is stored in `episode_progress`. Episode detail pages and season episode lists can mark individual episodes watched or unwatched, and season pages can mark the entire season watched or unwatched. TV show detail pages summarize watched episode count, total progress percentage, next episode, watched seasons, and last watched date from Neon plus TMDB season data.
 
-## Dashboard
+## Home
 
-The `/` route is public but personalized when a user is signed in. Signed-out visitors see a title/subtitle hero, trending TV shows, trending movies, and a 16-title weekly popular mix. Signed-in users see a first-name welcome, Watchlist Preview, Upcoming Episodes, Friend Activity, and then the shared discovery shelves.
-
-Dashboard data loading lives in `src/lib/features/dashboard`. It keeps private Neon reads server-only, limits TMDB hydration to upcoming tracked shows and a small set of watchlist rows, and uses existing watchlist Server Actions for quick saved-title mutations.
+The `/` route is the signed-out discovery home: a title/subtitle hero plus trending and popular TMDB discovery shelves. Signed-in users are redirected to `/movies`; there is no separate personalized dashboard. Discovery loading lives in `src/lib/pages/home/load-home-discovery.server.ts` and caches TMDB reads with `unstable_cache` for serverless efficiency.
 
 ## Routes
 
-- `/` - Public discovery home page for signed-out visitors and a personalized dashboard for signed-in users with Watchlist Preview, Upcoming Episodes, Friend Activity, trending TV shows, trending movies, and weekly popular titles.
-- `/search` - Discovery search for movies and TV shows using TMDB multi-search, with debounced search input, All/Movies/TV Shows filters, linked results, watchlist save actions, and empty/error states.
+- `/` - Signed-out discovery home page (hero plus trending/popular shelves). Signed-in users are redirected to `/movies`.
+- `/explore` - Authenticated search/browse for movies and TV shows (one content type at a time via Movies/TV tabs) using TMDB popular lists and title search, with genre and sort filters, linked results, library save actions, and empty/error states.
 - `/movies/popular` - Main movie navigation target with search, Most Popular Movies, Trending Movies, and Highest Rated Movies of All Time sections.
 - `/movies/[section]` - Movie lists such as popular, top rated, upcoming, or now playing.
 - `/movies/genre/[genre]` - Movie discovery by genre.
-- `/movies/search` - Movie search list view.
 - `/movie/[id]` - Movie detail page with poster, backdrop, overview, release data, genres, director, cast, TMDB rating, runtime, recommended movies, watchlist add/remove state, and current-user watch status.
 - `/movie/[id]/images` - Movie image gallery.
 - `/tv/popular` - Main TV show navigation target with search, Most Popular TV Shows, Trending TV Shows, and Highest Rated TV Shows of All Time sections.
@@ -237,8 +234,8 @@ pnpm build
 
 Before deployment handoff, verify the public discovery flows, TMDB detail pages, and authenticated Neon-backed flows together:
 
-- Public: `/`, `/search`, `/movie/[id]`, `/tv/show/[id]`, `/tv/show/[id]/season/[seasonNumber]`, and `/tv/show/[id]/season/[seasonNumber]/episode/[episodeNumber]`.
-- Authenticated with Google OAuth and Neon configured: register/login, profile text editing, generated avatar display, watchlist add/remove, watch status updates, episode progress, dashboard progress, ratings, reviews, public profiles, social follows when enabled, recommendations, and statistics.
+- Public: `/`, `/movie/[id]`, `/tv/show/[id]`, `/tv/show/[id]/season/[seasonNumber]`, and `/tv/show/[id]/season/[seasonNumber]/episode/[episodeNumber]`.
+- Authenticated with Google OAuth and Neon configured: register/login, `/explore`, profile text editing, generated avatar display, watchlist add/remove, watch status updates, episode progress, ratings, public profiles, social follows, and statistics.
 - Runtime checks: watch the dev server/browser console for Next.js overlays, unsupported dynamic route links, missing environment variables, and failed TMDB/Neon calls.
 - Deployment checks: run `pnpm lint`, `pnpm type:check`, and `pnpm build` with `TMDB_API_KEY` available; confirm Vercel has pooled `DATABASE_URL`, `AUTH_SECRET`, `NEXTAUTH_URL`, and Google OAuth secrets before testing protected flows.
 
@@ -301,7 +298,7 @@ Vercel free tier constraints for this app:
 - Keep API routes and Server Actions lightweight.
 - Store secrets only in Vercel environment variables, not in client code or committed files.
 
-The existing `netlify.toml` remains in the repository for historical Netlify compatibility, but new deployment work should target Vercel.
+Deployment targets Vercel; `vercel.json` pins the build command to `pnpm build`.
 
 ## Roadmap
 
