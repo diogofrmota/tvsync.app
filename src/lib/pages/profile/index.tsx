@@ -3,7 +3,7 @@ import {
   type ProfileStatCard,
   ProfileStatRail,
 } from 'lib/components/profile/ProfileStatRail';
-import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
+import { PageShell } from 'lib/components/shared/PageShell';
 import PosterCard from 'lib/components/shared/PosterCard';
 import { SectionHeading, StatePanel } from 'lib/components/shared/Section';
 import type { ProfileFavoriteItem } from 'lib/features/profile/profile-favorites.server';
@@ -17,6 +17,7 @@ import type { FollowCountsRow } from 'lib/services/database/social.server';
 import type { OwnProfile } from 'lib/services/database/tracking.server';
 import type { Route } from 'next';
 import Link from 'next/link';
+import { FiEdit3 } from 'react-icons/fi';
 
 export const ProfileAccessIssue = ({ issue }: { issue: AuthSessionIssue }) => (
   <PageShell size="narrow">
@@ -82,6 +83,44 @@ const FavoriteSection = ({
   </Stack>
 );
 
+// Follow counts read as compact, obviously tappable chips so the identity
+// header stays one short block instead of a stacked number/label column.
+const FollowCountChip = ({
+  href,
+  label,
+  value,
+}: {
+  href: Route;
+  label: string;
+  value: number;
+}) => (
+  <Box
+    _hover={{ borderColor: 'gold.400', color: 'gold.300' }}
+    alignItems="center"
+    asChild
+    borderColor="border"
+    borderRadius="full"
+    borderWidth="1px"
+    display="inline-flex"
+    fontSize="sm"
+    gap={1.5}
+    paddingX={3}
+    paddingY={1}
+    transitionDuration="fast"
+    transitionProperty="border-color, color"
+    transitionTimingFunction="ease-out"
+  >
+    <Link href={href}>
+      <Text as="span" fontWeight="bold">
+        {value}
+      </Text>
+      <Text as="span" color="fg.muted">
+        {label}
+      </Text>
+    </Link>
+  </Box>
+);
+
 export const ProfilePage = ({
   favorites,
   followCounts,
@@ -116,61 +155,38 @@ export const ProfilePage = ({
 
   return (
     <PageShell>
-      <PageHeading
-        actions={
-          <Flex gap={3}>
-            <Button asChild size="sm">
-              <Link href="/profile/edit">Edit Profile</Link>
-            </Button>
-            <LogoutButton />
-          </Flex>
-        }
-        title="Profile"
-      />
-
-      <Box
-        alignSelf="center"
+      <Flex
+        align={{ base: 'stretch', md: 'center' }}
         borderColor="border"
         borderRadius="xl"
         borderWidth="1px"
-        maxWidth="26rem"
-        paddingX={{ base: 5, md: 6 }}
-        paddingY={{ base: 6, md: 7 }}
-        width="full"
+        direction={{ base: 'column', md: 'row' }}
+        gap={{ base: 4, md: 6 }}
+        justify="space-between"
+        paddingX={{ base: 4, md: 6 }}
+        paddingY={{ base: 4, md: 5 }}
       >
-        <Stack align="center" gap={5} textAlign="center">
-          <Stack gap={1}>
-            <Heading as="h2" fontSize={{ base: 'xl', md: '2xl' }}>
+        <Stack gap={2} minWidth={0}>
+          <Flex align="baseline" columnGap={3} rowGap={1} wrap="wrap">
+            <Heading as="h1" fontSize={{ base: 'xl', md: '2xl' }}>
               {displayName}
             </Heading>
-            <Text color="fg.muted">@{profile.username}</Text>
-          </Stack>
+            <Text color="fg.muted" fontSize="sm">
+              @{profile.username}
+            </Text>
+          </Flex>
 
-          <Flex gap={8} justify="center">
-            <Box asChild>
-              <Link href={`${baseProfilePath}/following` as Route}>
-                <Stack align="center" gap={0}>
-                  <Text fontSize="xl" fontWeight="bold">
-                    {followCounts.following_count}
-                  </Text>
-                  <Text color="fg.muted" fontSize="sm">
-                    Following
-                  </Text>
-                </Stack>
-              </Link>
-            </Box>
-            <Box asChild>
-              <Link href={`${baseProfilePath}/followers` as Route}>
-                <Stack align="center" gap={0}>
-                  <Text fontSize="xl" fontWeight="bold">
-                    {followCounts.follower_count}
-                  </Text>
-                  <Text color="fg.muted" fontSize="sm">
-                    Followers
-                  </Text>
-                </Stack>
-              </Link>
-            </Box>
+          <Flex gap={2} wrap="wrap">
+            <FollowCountChip
+              href={`${baseProfilePath}/following` as Route}
+              label="Following"
+              value={followCounts.following_count}
+            />
+            <FollowCountChip
+              href={`${baseProfilePath}/followers` as Route}
+              label="Followers"
+              value={followCounts.follower_count}
+            />
           </Flex>
 
           {profile.bio ? (
@@ -179,7 +195,17 @@ export const ProfilePage = ({
             </Text>
           ) : null}
         </Stack>
-      </Box>
+
+        <Flex flexShrink={0} gap={3}>
+          <Button asChild size="sm">
+            <Link href="/profile/edit">
+              <FiEdit3 aria-hidden />
+              Edit Profile
+            </Link>
+          </Button>
+          <LogoutButton />
+        </Flex>
+      </Flex>
 
       <FavoriteSection
         emptyMessage="You have not added any favourite movies."
