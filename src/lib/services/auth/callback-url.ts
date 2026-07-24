@@ -1,4 +1,4 @@
-const DEFAULT_AUTH_CALLBACK_URL = '/profile';
+const DEFAULT_AUTH_CALLBACK_URL = '/explore';
 const DEFAULT_APP_ORIGIN = 'https://tvsync.app';
 const MAX_NORMALIZE_ATTEMPTS = 3;
 

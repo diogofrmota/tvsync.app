@@ -5,7 +5,6 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { test } from 'node:test';
 
-import { normalizeTvWatchProvidersResponse } from '../src/lib/services/tmdb/tv/providers/utils';
 import {
   normalizeTvVideosResponse,
   selectTrustedTvTrailer,
@@ -26,15 +25,15 @@ const assertInOrder = (source: string, values: Array<string>) => {
   }
 };
 
-test('TV show details remain public and load required provider sections independently', async () => {
+test('TV show details remain public and load required sections independently', async () => {
   const route = await read('src/app/tv/show/[id]/page.tsx');
 
   assert.match(route, /getTvShowDetail\(showId\)/);
   assert.match(route, /getTVShowCreditsServer\(showId\)\.catch/);
-  assert.match(route, /getSimilarTVShowsServer\(showId\)\.catch/);
   assert.match(route, /getTvVideosServer\(showId\)\.catch/);
-  assert.match(route, /getTvWatchProvidersServer\(showId\)\.catch/);
   assert.match(route, /getTvExternalIdsServer\(showId\)\.catch/);
+  assert.doesNotMatch(route, /getSimilarTVShowsServer/);
+  assert.doesNotMatch(route, /getTvWatchProvidersServer/);
   assert.doesNotMatch(route, /redirect\(['"]\/login/);
   assert.doesNotMatch(route, /notFound\(\)[\s\S]*getServerSession/);
 });
@@ -55,24 +54,22 @@ test('TV show page renders required metadata and focused sections in a clear hie
     'Your TV show',
     '<TvTrailer',
     '<TvCastsWrapper',
-    '<TvStreamingAvailability',
     '<SeasonsList',
-    'Similar TV shows',
   ]);
   assert.doesNotMatch(
     page,
     /ReviewsSection|RecommendForm|Recommended TV shows|WatchlistStateButton|MediaStatusControl/i
   );
+  assert.doesNotMatch(page, /TvStreamingAvailability|Similar TV shows/);
 });
 
 test('missing TV show metadata is represented honestly and IMDb is never backed by TMDB votes', async () => {
-  const [page, trailer, streaming, seasons] = await Promise.all([
+  const [page, trailer, seasons] = await Promise.all([
     read('src/lib/pages/tv/detail/index.tsx'),
     read('src/lib/pages/tv/detail/components/trailer.tsx'),
-    read('src/lib/pages/tv/detail/components/streaming-availability.tsx'),
     read('src/lib/pages/tv/detail/components/seasons-list.tsx'),
   ]);
-  const renderedDetailSources = `${page}\n${trailer}\n${streaming}\n${seasons}`;
+  const renderedDetailSources = `${page}\n${trailer}\n${seasons}`;
 
   for (const fallback of [
     'Untitled TV show',
@@ -80,8 +77,6 @@ test('missing TV show metadata is represented honestly and IMDb is never backed 
     'Genres unavailable',
     'No description is available from TMDB.',
     'No trusted trailer is available.',
-    'No streaming availability is listed for this region.',
-    'TMDB does not list similar TV shows for this title yet.',
     'TMDB does not have season information for this show yet.',
   ]) {
     assert.match(
@@ -141,69 +136,25 @@ test('trailer playback accepts only normalized YouTube trailer identifiers', asy
   assert.doesNotMatch(component, /dangerouslySetInnerHTML|trailer\.url/);
 });
 
-test('cast and true similar-show navigation use correct detail routes', async () => {
-  const [cast, page, service] = await Promise.all([
+test('cast list is shown but no longer links to per-person pages', async () => {
+  const [cast, page] = await Promise.all([
     read('src/lib/pages/tv/detail/components/casts-wrapper.tsx'),
     read('src/lib/pages/tv/detail/index.tsx'),
-    read('src/lib/services/tmdb/tv/list/index.server.ts'),
   ]);
 
-  assert.match(cast, /href=\{`\/person\/\$\{tvCast\.id\}`\}/);
-  assert.match(cast, /View \$\{tvCast\.name\}/);
-  assert.match(service, /path: `\/tv\/\$\{id\}\/similar`/);
-  assert.match(page, /sectionTitle="Similar TV shows"/);
-  assert.match(page, /mediaType=\{MediaType\.Tv\}/);
-  assert.match(page, /id=\{similarShow\.id\}/);
+  assert.match(page, /<TvCastsWrapper/);
+  assert.match(cast, /Cast</);
+  assert.match(cast, /\{tvCast\.name\}/);
+  assert.doesNotMatch(cast, /\/person\//);
+  assert.doesNotMatch(cast, /<Link|href=/);
+  assert.doesNotMatch(cast, /next\/link/);
 });
 
-test('streaming availability is region-scoped and normalized without invented providers', async () => {
-  const providers = normalizeTvWatchProvidersResponse({
-    id: 10,
-    results: {
-      US: {
-        ads: [],
-        buy: [],
-        flatrate: [
-          {
-            displayPriority: 2,
-            logoPath: null,
-            providerId: 8,
-            providerName: 'Example',
-          },
-        ],
-        free: [],
-        link: 'https://www.themoviedb.org/tv/10/watch?locale=US',
-        rent: [],
-      },
-    },
-  });
-  const [route, component, env] = await Promise.all([
-    read('src/app/tv/show/[id]/page.tsx'),
-    read('src/lib/pages/tv/detail/components/streaming-availability.tsx'),
-    read('.env.example'),
-  ]);
+test('TV show detail no longer exposes streaming or similar sections', async () => {
+  const page = await read('src/lib/pages/tv/detail/index.tsx');
 
-  assert.equal(providers.results.US?.flatrate[0]?.providerName, 'Example');
-  assert.match(route, /process\.env\.TMDB_WATCH_REGION/);
-  assert.match(route, /providersData\.results\[streamingRegion\]/);
-  assert.match(component, /Availability for region \{region\}/);
-  assert.match(component, /JustWatch\s+via TMDB/);
-  assert.match(env, /TMDB_WATCH_REGION=US/);
-
-  const unsafeProviders = normalizeTvWatchProvidersResponse({
-    id: 10,
-    results: {
-      US: {
-        ads: [],
-        buy: [],
-        flatrate: [],
-        free: [],
-        link: 'javascript:alert(1)',
-        rent: [],
-      },
-    },
-  });
-  assert.equal(unsafeProviders.results.US?.link, '');
+  assert.doesNotMatch(page, /TvStreamingAvailability/);
+  assert.doesNotMatch(page, /Similar TV shows|similarShow|SliderContainer/);
 });
 
 test('seasons list shows number, poster, release year, and watched progress with one interaction pattern', async () => {

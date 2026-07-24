@@ -5,10 +5,6 @@ import { isTvShowDetailViewerAuthenticated } from 'lib/pages/tv/detail/load-view
 import { getTVShowCreditsServer } from 'lib/services/tmdb/tv/credits/index.server';
 import { getTvShowDetail } from 'lib/services/tmdb/tv/detail/index.server';
 import { getTvExternalIdsServer } from 'lib/services/tmdb/tv/external-ids/index.server';
-import { getSimilarTVShowsServer } from 'lib/services/tmdb/tv/list/index.server';
-import { getTvWatchProvidersServer } from 'lib/services/tmdb/tv/providers/index.server';
-import type { TvWatchProvidersResponse } from 'lib/services/tmdb/tv/providers/types';
-import { normalizeWatchRegion } from 'lib/services/tmdb/tv/providers/utils';
 import { getTvVideosServer } from 'lib/services/tmdb/tv/videos/index.server';
 import { selectTrustedTvTrailer } from 'lib/services/tmdb/tv/videos/utils';
 import { parsePositiveIntegerRouteParam } from 'lib/utils/route-params';
@@ -84,48 +80,26 @@ export default async function Page({
     }
 
     const data = await getTvShowDetail(showId);
-    const streamingRegion = normalizeWatchRegion(process.env.TMDB_WATCH_REGION);
-    const [
-      creditsData,
-      similarData,
-      videosData,
-      providersData,
-      externalIds,
-      isAuthenticated,
-    ] = await Promise.all([
-      getTVShowCreditsServer(showId).catch(() => ({
-        cast: [],
-        crew: [],
-        id: showId,
-      })),
-      getSimilarTVShowsServer(showId).catch(() => ({
-        page: 1,
-        results: [],
-        total_pages: 0,
-        total_results: 0,
-      })),
-      getTvVideosServer(showId).catch(() => ({ id: showId, results: [] })),
-      getTvWatchProvidersServer(showId).catch(
-        (): TvWatchProvidersResponse => ({
+    const [creditsData, videosData, externalIds, isAuthenticated] =
+      await Promise.all([
+        getTVShowCreditsServer(showId).catch(() => ({
+          cast: [],
+          crew: [],
           id: showId,
-          results: {},
-        })
-      ),
-      getTvExternalIdsServer(showId).catch(() => ({
-        id: showId,
-        imdb_id: null,
-      })),
-      isTvShowDetailViewerAuthenticated(),
-    ]);
+        })),
+        getTvVideosServer(showId).catch(() => ({ id: showId, results: [] })),
+        getTvExternalIdsServer(showId).catch(() => ({
+          id: showId,
+          imdb_id: null,
+        })),
+        isTvShowDetailViewerAuthenticated(),
+      ]);
 
     const props: TvShowDetailPageProps = {
       creditsData,
       data,
       imdbId: externalIds.imdb_id,
       isAuthenticated,
-      similarData,
-      streamingProviders: providersData.results[streamingRegion] ?? null,
-      streamingRegion,
       trailer: selectTrustedTvTrailer(videosData),
     };
 

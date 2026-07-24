@@ -1,7 +1,6 @@
 import { Avatar, Flex, Grid, Heading, Skeleton, Text } from '@chakra-ui/react';
 import { IMAGE_URL } from 'lib/components/shared/tmdb-image-urls';
 import type { TVCreditsResponse } from 'lib/services/tmdb/tv/credits/types';
-import Link from 'next/link';
 
 type TvCastsWrapperProps = {
   credits?: TVCreditsResponse;
@@ -32,32 +31,26 @@ export const TvCastsWrapper = ({
             }}
           >
             {cast.slice(0, 12).map((tvCast) => (
-              <Flex alignItems="center" asChild gap={3} key={tvCast.id}>
-                <Link
-                  aria-label={`View ${tvCast.name}`}
-                  href={`/person/${tvCast.id}`}
-                  prefetch={false}
-                >
-                  <Avatar.Root size="lg">
-                    <Avatar.Fallback name={tvCast.name} />
-                    {tvCast.profile_path ? (
-                      <Avatar.Image
-                        alt=""
-                        src={`${IMAGE_URL}${tvCast.profile_path}`}
-                      />
-                    ) : null}
-                  </Avatar.Root>
-                  <Grid gap={0} minWidth={0}>
-                    <Text fontWeight="600" lineClamp={2}>
-                      {tvCast.name}
+              <Flex alignItems="center" gap={3} key={tvCast.id}>
+                <Avatar.Root size="lg">
+                  <Avatar.Fallback name={tvCast.name} />
+                  {tvCast.profile_path ? (
+                    <Avatar.Image
+                      alt=""
+                      src={`${IMAGE_URL}${tvCast.profile_path}`}
+                    />
+                  ) : null}
+                </Avatar.Root>
+                <Grid gap={0} minWidth={0}>
+                  <Text fontWeight="600" lineClamp={2}>
+                    {tvCast.name}
+                  </Text>
+                  {tvCast.character ? (
+                    <Text color="fg.muted" fontSize="sm" lineClamp={2}>
+                      {tvCast.character}
                     </Text>
-                    {tvCast.character ? (
-                      <Text color="fg.muted" fontSize="sm" lineClamp={2}>
-                        {tvCast.character}
-                      </Text>
-                    ) : null}
-                  </Grid>
-                </Link>
+                  ) : null}
+                </Grid>
               </Flex>
             ))}
           </Grid>

@@ -22,7 +22,6 @@ const listSourceFiles = (directory: string): Array<string> =>
 const highCardinalityRoutes = [
   'src/app/movie/[id]/page.tsx',
   'src/app/movie/[id]/images/page.tsx',
-  'src/app/person/[id]/page.tsx',
   'src/app/tv/show/[id]/page.tsx',
   'src/app/tv/show/[id]/season/[seasonNumber]/page.tsx',
   'src/app/tv/show/[id]/season/[seasonNumber]/episode/[episodeNumber]/page.tsx',

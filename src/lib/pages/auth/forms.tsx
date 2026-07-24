@@ -96,11 +96,11 @@ const AuthLink = ({
 
 const ProviderDivider = () => (
   <Stack align="center" direction="row" gap={3}>
-    <Separator flex="1" />
+    <Separator borderColor="white" flex="1" />
     <Text color="fg.muted" fontSize="sm">
       or
     </Text>
-    <Separator flex="1" />
+    <Separator borderColor="white" flex="1" />
   </Stack>
 );
 
@@ -174,6 +174,7 @@ export const RegisterForm = ({
                 <Input
                   autoCapitalize="none"
                   autoComplete="email"
+                  borderColor="white"
                   defaultValue={state.email}
                   inputMode="email"
                   maxLength={254}
@@ -190,6 +191,7 @@ export const RegisterForm = ({
                 <Input
                   autoCapitalize="none"
                   autoComplete="username"
+                  borderColor="white"
                   defaultValue={state.username}
                   maxLength={24}
                   name="username"
@@ -208,6 +210,7 @@ export const RegisterForm = ({
                 <Field.Label>Password</Field.Label>
                 <Input
                   autoComplete="new-password"
+                  borderColor="white"
                   maxLength={128}
                   minLength={12}
                   name="password"
@@ -225,6 +228,7 @@ export const RegisterForm = ({
                 <Field.Label>Confirm password</Field.Label>
                 <Input
                   autoComplete="new-password"
+                  borderColor="white"
                   maxLength={128}
                   minLength={12}
                   name="confirmPassword"
@@ -246,7 +250,10 @@ export const RegisterForm = ({
       <OAuthButtons callbackUrl={callbackUrl} googleEnabled={googleEnabled} />
       <Text textAlign="center">
         <AuthLink href="/login">
-          Already registered? <Text as="span" fontWeight="700">Log in</Text>
+          Already registered?{' '}
+          <Text as="span" fontWeight="700">
+            Log in
+          </Text>
         </AuthLink>
       </Text>
     </Stack>
@@ -333,6 +340,7 @@ export const LoginForm = ({
               <Input
                 autoCapitalize="none"
                 autoComplete="username"
+                borderColor="white"
                 maxLength={254}
                 name="identifier"
                 onChange={(event) => setIdentifier(event.currentTarget.value)}
@@ -344,6 +352,7 @@ export const LoginForm = ({
               <Field.Label>Password</Field.Label>
               <Input
                 autoComplete="current-password"
+                borderColor="white"
                 maxLength={128}
                 name="password"
                 type="password"
@@ -364,7 +373,10 @@ export const LoginForm = ({
       </Text>
       <Text textAlign="center">
         <AuthLink href="/register">
-          New user? <Text as="span" fontWeight="700">Create an account</Text>
+          New user?{' '}
+          <Text as="span" fontWeight="700">
+            Create an account
+          </Text>
         </AuthLink>
       </Text>
     </Stack>

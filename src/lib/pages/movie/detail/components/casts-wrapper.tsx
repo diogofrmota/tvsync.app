@@ -1,7 +1,6 @@
 import { Avatar, Flex, Grid, Heading, Skeleton, Text } from '@chakra-ui/react';
 import { IMAGE_URL } from 'lib/components/shared/tmdb-image-urls';
 import type { MovieCreditsResponse } from 'lib/services/tmdb/movie/credits/types';
-import Link from 'next/link';
 
 type CastsWrapperProps = {
   isLoadingCredits?: boolean;
@@ -29,32 +28,26 @@ const CastsWrapper = ({ isLoadingCredits, credits }: CastsWrapperProps) => {
             }}
           >
             {cast.slice(0, 12).map((movieCast) => (
-              <Flex alignItems="center" asChild gap={3} key={movieCast.id}>
-                <Link
-                  aria-label={`View ${movieCast.name}`}
-                  href={`/person/${movieCast.id}`}
-                  prefetch={false}
-                >
-                  <Avatar.Root size="lg">
-                    <Avatar.Fallback name={movieCast.name} />
-                    {movieCast.profile_path ? (
-                      <Avatar.Image
-                        alt=""
-                        src={`${IMAGE_URL}${movieCast.profile_path}`}
-                      />
-                    ) : null}
-                  </Avatar.Root>
-                  <Grid gap={0} minWidth={0}>
-                    <Text fontWeight="600" lineClamp={2}>
-                      {movieCast.name}
+              <Flex alignItems="center" gap={3} key={movieCast.id}>
+                <Avatar.Root size="lg">
+                  <Avatar.Fallback name={movieCast.name} />
+                  {movieCast.profile_path ? (
+                    <Avatar.Image
+                      alt=""
+                      src={`${IMAGE_URL}${movieCast.profile_path}`}
+                    />
+                  ) : null}
+                </Avatar.Root>
+                <Grid gap={0} minWidth={0}>
+                  <Text fontWeight="600" lineClamp={2}>
+                    {movieCast.name}
+                  </Text>
+                  {movieCast.character ? (
+                    <Text color="fg.muted" fontSize="sm" lineClamp={2}>
+                      {movieCast.character}
                     </Text>
-                    {movieCast.character ? (
-                      <Text color="fg.muted" fontSize="sm" lineClamp={2}>
-                        {movieCast.character}
-                      </Text>
-                    ) : null}
-                  </Grid>
-                </Link>
+                  ) : null}
+                </Grid>
               </Flex>
             ))}
           </Grid>

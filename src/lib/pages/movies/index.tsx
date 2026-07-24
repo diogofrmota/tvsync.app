@@ -18,7 +18,7 @@ const statusLabels: Record<MovieWatchStatus, string> = {
 };
 const emptyMessages: Record<MovieSectionKey, string> = {
   finished: 'No finished movies yet.',
-  planned: 'Discover new movies to add to your watchlist.',
+  planned: 'Discover movies to add to your watchlist.',
 };
 
 const DiscoverMoviesButton = () => (
