@@ -196,16 +196,6 @@ export const groupTvLibraryItems = (
   ),
 });
 
-export const updateTvLibraryItemFromProjection = (
-  items: ReadonlyArray<TvLibraryItem>,
-  tmdbId: number,
-  intentStatus: TvWatchStatus,
-  projection: TvLibraryProjection
-) =>
-  items.map((item) =>
-    item.tmdbId === tmdbId ? { ...item, ...projection, intentStatus } : item
-  );
-
 export const getOptimisticTvLibraryProjection = (
   item: TvLibraryItem,
   status: TvLibrarySectionStatus
@@ -239,18 +229,3 @@ export const getOptimisticTvLibraryProjection = (
     watchedEpisodeCount,
   };
 };
-
-export const removeTvLibraryItem = (
-  items: ReadonlyArray<TvLibraryItem>,
-  tmdbId: number
-) => items.filter((item) => item.tmdbId !== tmdbId);
-
-export const restoreTvLibraryItem = (
-  items: ReadonlyArray<TvLibraryItem>,
-  restoredItem: TvLibraryItem
-) =>
-  items.some((item) => item.tmdbId === restoredItem.tmdbId)
-    ? [...items]
-    : [...items, restoredItem].toSorted((left, right) =>
-        right.dateAdded.localeCompare(left.dateAdded)
-      );
