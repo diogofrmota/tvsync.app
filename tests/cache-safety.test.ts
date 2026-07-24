@@ -71,12 +71,17 @@ test('strict route parsing accepts only safe positive decimal integers', () => {
   }
 });
 
-test('high-cardinality TMDB server reads opt out of durable data caching', () => {
+test('high-cardinality TMDB server reads use the shared durable Data Cache window', () => {
   for (const path of highCardinalityServices) {
     const source = read(path);
 
-    assert.match(source, /cache: 'no-store'/, path);
-    assert.doesNotMatch(source, /next:\s*\{\s*revalidate/, path);
+    assert.match(source, /TMDB_REVALIDATE_SECONDS/, path);
+    assert.match(
+      source,
+      /next:\s*\{\s*revalidate:\s*TMDB_REVALIDATE_SECONDS\./,
+      path
+    );
+    assert.doesNotMatch(source, /cache: 'no-store'/, path);
   }
 
   const movieLists = read('src/lib/services/tmdb/movie/list/index.server.ts');
@@ -84,40 +89,53 @@ test('high-cardinality TMDB server reads opt out of durable data caching', () =>
     movieLists.indexOf('export const getMovieRecommendationsServer')
   );
 
-  assert.match(recommendations, /cache: 'no-store'/);
-  assert.doesNotMatch(recommendations, /next:\s*\{\s*revalidate/);
+  assert.match(
+    recommendations,
+    /next:\s*\{\s*revalidate:\s*TMDB_REVALIDATE_SECONDS\.recommendations\s*\}/
+  );
+  assert.doesNotMatch(recommendations, /cache: 'no-store'/);
 });
 
-test('the TMDB proxy uses CDN-only response caching', () => {
+test('the TMDB proxy is rate limited and durably cached, keeping CDN headers', () => {
   const route = read('src/app/api/tmdb/[[...path]]/route.ts');
 
   assert.match(route, /export const dynamic = 'force-dynamic'/);
-  assert.match(route, /reqInit: \{ cache: 'no-store' \}/);
+  // Abuse of the shared TMDB key is shed per IP before the upstream fetch.
+  assert.match(route, /checkTmdbProxyRateLimit/);
+  assert.match(route, /status: 429/);
+  // Upstream reads are served from the Data Cache instead of hitting TMDB fresh.
+  assert.match(route, /next:\s*\{\s*revalidate:\s*proxyRevalidateSeconds/);
+  assert.doesNotMatch(route, /reqInit: \{ cache: 'no-store' \}/);
+  // The CDN response layer is retained on top of the Data Cache.
   assert.match(route, /'Vercel-CDN-Cache-Control'/);
   assert.match(route, /s-maxage=86400/);
   assert.match(route, /Number\.isSafeInteger\(Number\(segment\)\)/);
   assert.doesNotMatch(route, /export const revalidate/);
 });
 
-test('durable revalidation remains limited to bounded discovery sources', () => {
-  const allowedCacheFiles = new Set([
-    join('src', 'lib', 'pages', 'home', 'load-home-discovery.server.ts'),
-    join('src', 'lib', 'services', 'tmdb', 'movie', 'list', 'index.server.ts'),
-    join('src', 'lib', 'services', 'tmdb', 'tv', 'list', 'index.server.ts'),
-  ]);
-  const cacheFiles = listSourceFiles('src').filter((path) => {
-    const source = readFileSync(path, 'utf8');
+test('durable caching is centralized and personalized caches stay short-lived', () => {
+  // Every high-cardinality TMDB read shares one source of truth for windows,
+  // including the user's requested popular/top-rated cadence.
+  const constants = read('src/lib/services/tmdb/constants.ts');
+  assert.match(constants, /TMDB_REVALIDATE_SECONDS/);
+  assert.match(constants, /list: 86_400/);
+  assert.match(constants, /topRated: 604_800/);
 
-    return /unstable_cache|next:\s*\{\s*revalidate/.test(source);
-  });
+  const home = read('src/lib/pages/home/load-home-discovery.server.ts');
+  assert.equal(home.match(/unstable_cache\(/g)?.length, 4);
+  assert.match(home, /HOME_POPULAR_REVALIDATE_SECONDS = 86_400/);
+  assert.match(home, /HOME_TOP_RATED_REVALIDATE_SECONDS = 604_800/);
 
-  assert.deepEqual(
-    cacheFiles.map((path) => join(...path.split(/[\\/]/))).sort(),
-    Array.from(allowedCacheFiles).sort()
-  );
+  // The public profile statistics cache is bounded, not indefinite.
+  const stats = read('src/lib/features/profile/profile-statistics.server.ts');
+  assert.match(stats, /unstable_cache/);
+  assert.match(stats, /PUBLIC_PROFILE_STATISTICS_REVALIDATE_SECONDS = 3600/);
 
-  const homeCache = read('src/lib/pages/home/load-home-discovery.server.ts');
-  assert.equal(homeCache.match(/unstable_cache\(/g)?.length, 4);
+  // Session-version reads are cached only briefly and always tag-busted, so
+  // "sign out everywhere" stays effective.
+  const authDatabase = read('src/lib/services/database/auth.server.ts');
+  assert.match(authDatabase, /SESSION_VERSION_REVALIDATE_SECONDS = 30/);
+  assert.match(authDatabase, /revalidateTag\(sessionVersionCacheTag/);
 });
 
 test('dynamic and personalized mutations do not trigger ISR invalidation', () => {

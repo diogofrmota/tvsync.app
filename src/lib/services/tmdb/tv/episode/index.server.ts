@@ -1,3 +1,4 @@
+import { TMDB_REVALIDATE_SECONDS } from 'lib/services/tmdb/constants';
 import { tmdbServerFetcherCore } from 'lib/services/tmdb/utils.server';
 
 import { normalizeTVSeasonEpisode } from '../season/utils';
@@ -17,5 +18,5 @@ export const getTVEpisodeDetailsServer = ({
   tmdbServerFetcherCore<TVEpisodeDetailsResponse>({
     path: `/tv/${showId}/season/${seasonNumber}/episode/${episodeNumber}`,
     params,
-    reqInit: { cache: 'no-store' },
+    reqInit: { next: { revalidate: TMDB_REVALIDATE_SECONDS.detail } },
   }).then(normalizeTVSeasonEpisode);

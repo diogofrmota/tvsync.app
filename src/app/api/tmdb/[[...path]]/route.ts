@@ -1,7 +1,25 @@
+import { getClientIp } from 'lib/services/auth/rate-limit.server';
+import { TMDB_REVALIDATE_SECONDS } from 'lib/services/tmdb/constants';
+import { checkTmdbProxyRateLimit } from 'lib/services/tmdb/proxy-rate-limit.server';
 import { tmdbServerFetcherCore } from 'lib/services/tmdb/utils.server';
 import { type NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
+
+// Per-resource Data Cache windows for proxied reads. Search is high cardinality
+// and volatile; trending shifts twice daily; everything else is effectively
+// static content that only needs a daily refresh.
+const proxyRevalidateSeconds = (resource: string): number => {
+  if (resource === 'search') {
+    return TMDB_REVALIDATE_SECONDS.search;
+  }
+
+  if (resource === 'trending') {
+    return TMDB_REVALIDATE_SECONDS.trending;
+  }
+
+  return TMDB_REVALIDATE_SECONDS.list;
+};
 
 const allowedProxyParamNames = new Set([
   'first_air_date_year',
@@ -121,6 +139,17 @@ export async function GET(
     );
   }
 
+  const withinRateLimit = await checkTmdbProxyRateLimit(
+    getClientIp(request.headers)
+  );
+
+  if (!withinRateLimit) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please slow down and try again shortly.' },
+      { headers: { 'Cache-Control': 'no-store' }, status: 429 }
+    );
+  }
+
   const queryParams = getAllowedQueryParams(request.nextUrl.searchParams);
 
   const requestPath = `/${pathSegments.join('/')}`;
@@ -128,7 +157,9 @@ export async function GET(
   const data = await tmdbServerFetcherCore({
     path: requestPath,
     params: queryParams,
-    reqInit: { cache: 'no-store' },
+    reqInit: {
+      next: { revalidate: proxyRevalidateSeconds(pathSegments[0] ?? '') },
+    },
   });
 
   return NextResponse.json(data, {

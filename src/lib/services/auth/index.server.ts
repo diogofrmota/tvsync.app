@@ -16,6 +16,7 @@ import {
   AuthAccountConflictError,
   ensureGoogleAuthIdentity,
   findCredentialAccount,
+  getCachedSessionVersion,
   getSessionVersion,
 } from 'lib/services/database/auth.server';
 import type { NextAuthOptions, User } from 'next-auth';
@@ -161,7 +162,9 @@ export const authOptions: NextAuthOptions = {
         return tvsyncToken;
       }
 
-      const currentSessionVersion = await getSessionVersion(tvsyncToken.sub);
+      const currentSessionVersion = await getCachedSessionVersion(
+        tvsyncToken.sub
+      );
 
       if (
         currentSessionVersion === null ||

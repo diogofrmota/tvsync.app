@@ -1,3 +1,4 @@
+import { TMDB_REVALIDATE_SECONDS } from 'lib/services/tmdb/constants';
 import { TV_SHOW_SEARCH_RESOURCE_PATH } from 'lib/services/tmdb/tv/list/constants';
 import {
   normalizeTVShowListResponse,
@@ -15,6 +16,20 @@ import type {
   TVShowListType,
 } from './types';
 
+// Top-rated ordering barely moves, trending refreshes twice daily, and the
+// remaining curated lists share the daily discovery window.
+const tvListRevalidate = (listType: TVShowListType): number => {
+  if (listType === 'top_rated') {
+    return TMDB_REVALIDATE_SECONDS.topRated;
+  }
+
+  if (listType === 'trending_week') {
+    return TMDB_REVALIDATE_SECONDS.trending;
+  }
+
+  return TMDB_REVALIDATE_SECONDS.list;
+};
+
 export const getTVShowByListType = (
   listType: TVShowListType,
   params?: TVShowListParams
@@ -29,14 +44,14 @@ export const getTVShowByListType = (
       with_genres: params?.with_genres,
     }),
     params,
-    reqInit: { cache: 'no-store' },
+    reqInit: { next: { revalidate: tvListRevalidate(listType) } },
   }).then(normalizeTVShowListResponse);
 
 export const getDiscoverTVShowsServer = (params?: TVShowListParams) =>
   tmdbServerFetcherCore<TVShowListResponse>({
     path: '/discover/tv',
     params,
-    reqInit: { next: { revalidate: 86_400 } },
+    reqInit: { next: { revalidate: TMDB_REVALIDATE_SECONDS.list } },
   }).then(normalizeTVShowListResponse);
 
 export const getTVShowSearchResultList = (params: SearchTVShowParams) =>
@@ -52,7 +67,7 @@ export const getTrendingTVShowsServer = (
   tmdbServerFetcherCore<TVShowListResponse>({
     path: `/trending/tv/${timeWindow}`,
     params,
-    reqInit: { next: { revalidate: 43_200 } },
+    reqInit: { next: { revalidate: TMDB_REVALIDATE_SECONDS.trending } },
   }).then(normalizeTVShowListResponse);
 
 export const getSimilarTVShowsServer = (
@@ -62,5 +77,5 @@ export const getSimilarTVShowsServer = (
   tmdbServerFetcherCore<TVShowListResponse>({
     path: `/tv/${id}/similar`,
     params,
-    reqInit: { cache: 'no-store' },
+    reqInit: { next: { revalidate: TMDB_REVALIDATE_SECONDS.recommendations } },
   }).then(normalizeTVShowListResponse);

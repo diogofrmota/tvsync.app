@@ -13,6 +13,7 @@ import {
 import { getMovieDetailServer } from 'lib/services/tmdb/movie/detail/index.server';
 import { getTVSeasonDetailsServer } from 'lib/services/tmdb/tv/season/index.server';
 import { MediaType, WatchStatus } from 'lib/types';
+import { unstable_cache } from 'next/cache';
 
 import {
   calculateProfileStatistics,
@@ -97,7 +98,16 @@ export const getOwnProfileStatistics = async (): Promise<ProfileStatistics> => {
   return hydrateProfileStatistics(mediaRows, progressRows, reviewsWritten);
 };
 
-export const getPublicProfileStatistics = async (username: string) => {
+// A public profile can be opened by any anonymous visitor, and every open used
+// to re-run the full per-title TMDB runtime fan-out. Caching the computed
+// result per username keeps repeat views (and the follower-comparison view,
+// which asks for up to 20 profiles at once) off TMDB entirely. One hour of
+// staleness on someone else's watch totals is imperceptible.
+const PUBLIC_PROFILE_STATISTICS_REVALIDATE_SECONDS = 3600; // 1h
+
+const computePublicProfileStatistics = async (
+  username: string
+): Promise<ProfileStatistics> => {
   const [mediaRows, progressRows, reviewsWritten] = await Promise.all([
     listPublicProfileStatisticsMedia(username),
     listPublicProfileStatisticsProgress(username),
@@ -105,4 +115,16 @@ export const getPublicProfileStatistics = async (username: string) => {
   ]);
 
   return hydrateProfileStatistics(mediaRows, progressRows, reviewsWritten);
+};
+
+export const getPublicProfileStatistics = (
+  username: string
+): Promise<ProfileStatistics> => {
+  const normalizedUsername = username.normalize('NFKC').trim().toLowerCase();
+
+  return unstable_cache(
+    () => computePublicProfileStatistics(username),
+    ['public-profile-statistics', normalizedUsername],
+    { revalidate: PUBLIC_PROFILE_STATISTICS_REVALIDATE_SECONDS }
+  )();
 };

@@ -139,6 +139,12 @@ export type RatingSummaryRow = {
   rating_count: number;
 };
 
+// The "see all" library and watchlist pages render one poster per row with no
+// pagination, so they cap at the most recent entries instead of streaming an
+// unbounded personal history. Statistics and search-state reads deliberately
+// stay uncapped elsewhere because they need every row to stay correct.
+const OWN_LIBRARY_LIST_CAP = 500;
+
 export const getAuthenticatedUserId = async () => {
   const session = await getAuthSession();
   const userId = session?.user?.id;
@@ -265,6 +271,7 @@ export const listOwnMediaByType = async (mediaType: TrackableMediaType) => {
     where user_id = ${userId}
       and media_type = ${mediaType}
     order by date_added desc
+    limit ${OWN_LIBRARY_LIST_CAP}
   `) as Array<UserMediaRow>;
 };
 
@@ -711,6 +718,7 @@ export const listOwnWatchlistItems = async () => {
     from watchlist_items
     where user_id = ${userId}
     order by date_added desc
+    limit ${OWN_LIBRARY_LIST_CAP}
   `) as Array<WatchlistItemRow>;
 };
 
