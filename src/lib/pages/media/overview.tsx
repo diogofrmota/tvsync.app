@@ -56,7 +56,7 @@ const MediaSection = ({
   mediaType: MediaType.Movie | MediaType.Tv;
   section: MediaOverviewSection;
 }) => {
-  const items = section.items.slice(0, section.itemLimit ?? 21);
+  const items = section.items.slice(0, section.itemLimit ?? 15);
 
   return (
     <Stack gap={5}>

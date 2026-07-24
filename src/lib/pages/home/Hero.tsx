@@ -109,12 +109,18 @@ const Hero = () => {
               lineHeight="1.6"
               maxWidth="34rem"
             >
-              Track what you are watching, both movies and tv shows, and
-              discover what to watch next. All in one app.
+              Track Movies and TV Shows you are watching and discover what to
+              watch next.
             </Text>
           </MotionBox>
 
-          <MotionBox {...reveal(0.24)} width={{ base: 'full', sm: 'auto' }}>
+          <MotionBox {...reveal(0.22)}>
+            <Text color="fg.muted" fontSize="sm">
+              Free to use&nbsp;&nbsp;·&nbsp;&nbsp;No ads
+            </Text>
+          </MotionBox>
+
+          <MotionBox {...reveal(0.28)} width={{ base: 'full', sm: 'auto' }}>
             <Flex
               align="center"
               direction={{ base: 'column', sm: 'row' }}
@@ -126,23 +132,17 @@ const Hero = () => {
                 <Link href="/register">Create your account</Link>
               </Button>
               <Button
+                _hover={{ background: 'gray.100' }}
                 asChild
                 background="white"
                 color="gray.900"
                 size="lg"
                 variant="outline"
                 width={{ base: 'full', sm: 'auto' }}
-                _hover={{ background: 'gray.100' }}
               >
                 <Link href="/login">Log in</Link>
               </Button>
             </Flex>
-          </MotionBox>
-
-          <MotionBox {...reveal(0.3)}>
-            <Text color="fg.muted" fontSize="sm">
-              Free to use · Clean UI · No ads
-            </Text>
           </MotionBox>
         </Stack>
       </Box>

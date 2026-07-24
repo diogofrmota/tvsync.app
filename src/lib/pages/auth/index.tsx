@@ -51,7 +51,7 @@ export const AuthShell = ({
     ) : null}
     <Stack
       background="bg.surface"
-      borderColor="border"
+      borderColor="white"
       borderRadius="xl"
       borderWidth="1px"
       boxShadow="0 24px 70px -24px rgba(0, 0, 0, 0.7)"

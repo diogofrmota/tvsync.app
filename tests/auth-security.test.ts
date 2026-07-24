@@ -130,12 +130,12 @@ test('authentication redirects reject cross-origin and encoded slash variants', 
   const origin = 'https://tvsync.app';
 
   assert.equal(getSafeCallbackUrl('/movies?page=2', origin), '/movies?page=2');
-  assert.equal(getSafeCallbackUrl('https://evil.example', origin), '/profile');
-  assert.equal(getSafeCallbackUrl('//evil.example', origin), '/profile');
-  assert.equal(getSafeCallbackUrl('/%2f%2fevil.example', origin), '/profile');
+  assert.equal(getSafeCallbackUrl('https://evil.example', origin), '/explore');
+  assert.equal(getSafeCallbackUrl('//evil.example', origin), '/explore');
+  assert.equal(getSafeCallbackUrl('/%2f%2fevil.example', origin), '/explore');
   assert.equal(
     getSafeCallbackUrl('/%255c%255cevil.example', origin),
-    '/profile'
+    '/explore'
   );
   assert.equal(
     getSafeAuthRedirectUrl('https://evil.example/path', origin),

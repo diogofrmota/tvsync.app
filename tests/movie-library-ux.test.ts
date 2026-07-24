@@ -192,7 +192,7 @@ test('Movies page groups exact statuses and renders direct discover empty states
 
   assert.match(page, /groupMovieLibraryItems\(initialItems\)/);
   assert.match(page, /items\.length > 0/);
-  assert.match(page, /Discover new movies to add to your watchlist\./);
+  assert.match(page, /Discover movies to add to your watchlist\./);
   assert.match(page, /No finished movies yet\./);
 });
 
@@ -269,12 +269,8 @@ test('TMDB image base URLs live outside any client-boundary module so Server Com
   );
 
   const serverConsumers = [
-    'src/lib/pages/tv/detail/components/casts-wrapper.tsx',
-    'src/lib/pages/tv/detail/components/streaming-availability.tsx',
     'src/lib/pages/tv/episode/detail/index.tsx',
     'src/lib/pages/tv/season/detail/components/season-episode-list.tsx',
-    'src/lib/pages/movie/detail/components/casts-wrapper.tsx',
-    'src/lib/pages/movie/detail/components/streaming-availability.tsx',
     'src/lib/components/movie/image/ImageSection.tsx',
     'src/lib/pages/media/media-search-bar.tsx',
   ];
