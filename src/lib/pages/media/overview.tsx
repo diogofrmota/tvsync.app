@@ -1,19 +1,14 @@
-import { Stack } from '@chakra-ui/react';
+import { MediaRail } from 'lib/components/shared/MediaRail';
+import type { MediaCardItem } from 'lib/components/shared/media-item';
 import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
-import { SectionHeading } from 'lib/components/shared/Section';
 import { MediaSearchBar } from 'lib/pages/media/media-search-bar';
-import { OverviewShelf } from 'lib/pages/media/overview-shelf';
 import type { MovieListItemType } from 'lib/services/tmdb/movie/list/types';
 import type { TVShowItem } from 'lib/services/tmdb/tv/list/types';
 import type { MediaType } from 'lib/types';
 import type Link from 'next/link';
 import type { ComponentProps } from 'react';
 
-export type MediaOverviewItem = {
-  id: number;
-  posterPath: string | null;
-  title: string;
-};
+export type MediaOverviewItem = MediaCardItem;
 
 type MediaOverviewSection = {
   items: Array<MediaOverviewItem>;
@@ -49,27 +44,6 @@ export const uniqueMediaOverviewItems = (
 ): Array<MediaOverviewItem> =>
   Array.from(new Map(items.map((item) => [item.id, item])).values());
 
-const MediaSection = ({
-  mediaType,
-  section,
-}: {
-  mediaType: MediaType.Movie | MediaType.Tv;
-  section: MediaOverviewSection;
-}) => {
-  const items = section.items.slice(0, section.itemLimit ?? 15);
-
-  return (
-    <Stack gap={5}>
-      <SectionHeading seeAllHref={section.seeAllHref} title={section.title} />
-      <OverviewShelf
-        items={items}
-        mediaType={mediaType}
-        seeAllHref={section.seeAllHref}
-      />
-    </Stack>
-  );
-};
-
 export const MediaOverviewPage = ({
   mediaType,
   searchPlaceholder,
@@ -87,10 +61,13 @@ export const MediaOverviewPage = ({
     />
 
     {sections.map((section) => (
-      <MediaSection
+      <MediaRail
+        itemLimit={section.itemLimit}
+        items={section.items}
         key={section.title}
         mediaType={mediaType}
-        section={section}
+        seeAllHref={section.seeAllHref}
+        title={section.title}
       />
     ))}
   </PageShell>

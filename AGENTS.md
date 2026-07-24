@@ -101,6 +101,8 @@ Primary navigation currently lives in `src/lib/layout/Header.tsx` and is centere
 - Keep the signed-out Home page discovery-focused: title/subtitle hero, trending TV shows, trending movies, and a 16-title weekly popular mix are appropriate. Do not add a quick-search block to the home hero.
 - Signed-in users are redirected from `/` to `/movies`; there is no separate personalized home/dashboard. Keep the root route (`src/lib/pages/home`) as the signed-out discovery experience.
 - Keep the `/explore` page discovery-focused: browse or search one content type at a time (Movies/TV tabs) using TMDB popular lists and title search, with genre and sort filters, linking results to detail pages and sending logged-out users to login before saving library items.
+- Render every discovery list (signed-out Home, `/explore`, and the Movies/TV overviews) with the shared horizontally scrollable rail in `src/lib/components/shared/MediaRail.tsx`. Keep the preview size in `MEDIA_RAIL_ITEM_LIMIT` instead of restating it per page, and do not reintroduce a page-specific poster grid preview.
+- Keep the "See All" list routes (`/movies/[section]`, `/movies/genre/[genre]`, `/tv/[listType]`) server-rendered through `src/lib/pages/media/media-list.server.tsx`: one complete list of up to 99 titles in a single grid, with no page navigation. Only `/explore` search results stay paginated.
 
 ## Environment Notes
 

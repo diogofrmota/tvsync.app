@@ -1,4 +1,4 @@
-import { MovieListContainer } from 'lib/components/movie/list';
+import { MovieListPage } from 'lib/pages/media/media-list.server';
 import {
   getMovieSectionMetadata,
   MovieOverview,
@@ -33,5 +33,7 @@ export default async function Page({
     return <MovieOverview />;
   }
 
-  return <MovieListContainer listMode="section" section={section} />;
+  return (
+    <MovieListPage searchParams={resolvedSearchParams} section={section} />
+  );
 }

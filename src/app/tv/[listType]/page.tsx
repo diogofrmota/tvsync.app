@@ -1,3 +1,4 @@
+import { TVShowListPage } from 'lib/pages/media/media-list.server';
 import {
   hasMediaListQuery,
   type MediaListSearchParams,
@@ -6,7 +7,6 @@ import {
   getTVShowListMetadata,
   TVOverview,
 } from 'lib/pages/media/tv-overview.server';
-import TVShowList from 'lib/pages/tv/list';
 import type { TVShowListType } from 'lib/services/tmdb/tv/list/types';
 
 export async function generateMetadata({
@@ -33,5 +33,7 @@ export default async function Page({
     return <TVOverview />;
   }
 
-  return <TVShowList listType={listType} />;
+  return (
+    <TVShowListPage listType={listType} searchParams={resolvedSearchParams} />
+  );
 }

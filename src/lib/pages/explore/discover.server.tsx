@@ -1,8 +1,9 @@
 import 'server-only';
 
 import { Stack } from '@chakra-ui/react';
+import { MediaRail } from 'lib/components/shared/MediaRail';
 import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
-import { SectionHeading, StatePanel } from 'lib/components/shared/Section';
+import { StatePanel } from 'lib/components/shared/Section';
 import { GenreChips } from 'lib/pages/explore/genre-chips';
 import { ExploreHero, type ExploreHeroItem } from 'lib/pages/explore/hero';
 import { MediaSearchBar } from 'lib/pages/media/media-search-bar';
@@ -18,7 +19,6 @@ import {
   qualityFilterFromParams,
   takeMediaOverviewItems,
 } from 'lib/pages/media/overview.server';
-import { OverviewShelf } from 'lib/pages/media/overview-shelf';
 import { loadSearchLibraryState } from 'lib/pages/search/load-search-library-state.server';
 import {
   getMovieListServer,
@@ -165,17 +165,6 @@ const buildTVShowHref = (
   params: Record<string, number | string> = {}
 ) => buildMediaOverviewHref({ basePath: '/tv', listType, params });
 
-const ExploreRailSection = ({ rail }: { rail: ExploreRail }) => (
-  <Stack as="section" gap={5}>
-    <SectionHeading seeAllHref={rail.seeAllHref} title={rail.title} />
-    <OverviewShelf
-      items={rail.items}
-      mediaType={rail.mediaType}
-      seeAllHref={rail.seeAllHref}
-    />
-  </Stack>
-);
-
 export const ExploreDiscover = async () => {
   const libraryItems = await loadSearchLibraryState().catch(() => []);
   const libraryMovieIds = new Set(
@@ -319,7 +308,15 @@ export const ExploreDiscover = async () => {
         <GenreChips />
       </Stack>
       {rails.length > 0 ? (
-        rails.map((rail) => <ExploreRailSection key={rail.title} rail={rail} />)
+        rails.map((rail) => (
+          <MediaRail
+            items={rail.items}
+            key={rail.title}
+            mediaType={rail.mediaType}
+            seeAllHref={rail.seeAllHref}
+            title={rail.title}
+          />
+        ))
       ) : (
         <StatePanel
           message="Discovery is unavailable right now. Please try again shortly."

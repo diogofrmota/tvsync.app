@@ -1,4 +1,5 @@
-import { MovieListContainer } from 'lib/components/movie/list';
+import { MovieListPage } from 'lib/pages/media/media-list.server';
+import type { MediaListSearchParams } from 'lib/pages/media/overview.server';
 import type { Metadata } from 'next';
 
 const formatGenreTitle = (genre: string) => `Genre ${genre}`;
@@ -24,10 +25,19 @@ export async function generateMetadata({
 
 export default async function Page({
   params,
+  searchParams,
 }: {
   params: Promise<{ genre: string }>;
+  searchParams: Promise<MediaListSearchParams>;
 }) {
   const { genre } = await params;
+  const resolvedSearchParams = await searchParams;
 
-  return <MovieListContainer genre={genre} listMode="discover" />;
+  return (
+    <MovieListPage
+      genre={genre}
+      searchParams={resolvedSearchParams}
+      section="popular"
+    />
+  );
 }
