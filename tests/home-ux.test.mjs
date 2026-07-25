@@ -86,10 +86,11 @@ test('each successful preview is one shared horizontally scrollable rail of twen
   assert.match(rail, /MEDIA_RAIL_ITEM_LIMIT = 20/);
   assert.match(rail, /items\.slice\(0, itemLimit\)/);
   assert.match(config, /HOME_PREVIEW_ITEM_COUNT = MEDIA_RAIL_ITEM_LIMIT/);
-  assert.match(home, /section\.items\.length !== HOME_PREVIEW_ITEM_COUNT/);
-  // A TMDB page holds exactly one rail, so Home reads two for de-duplication
-  // headroom.
-  assert.match(loader, /HOME_PAGE_NUMBERS = \[1, 2\]/);
+  assert.match(loader, /slice\(0, HOME_PREVIEW_ITEM_COUNT\)/);
+  // A TMDB page holds exactly one rail, so every section costs one request and
+  // a short section previews as-is instead of erroring.
+  assert.doesNotMatch(loader, /page: 2|HOME_PAGE_NUMBERS/);
+  assert.doesNotMatch(home, /items\.length !== HOME_PREVIEW_ITEM_COUNT/);
 
   // Home, Explore, the Movies/TV overviews, and Profile share one rail.
   for (const source of [home, explore, overview, profile]) {
@@ -202,9 +203,9 @@ test('popular and highest-rated queries have distinct intent and cached top-rate
     loader.indexOf('const loadTopRatedTVShows =')
   );
 
-  assert.match(popularMovie, /params: \{ page \}/);
+  assert.match(popularMovie, /params: \{ page: 1 \}/);
   assert.doesNotMatch(popularMovie, /vote_average|vote_count|sort_by/);
-  assert.match(popularTv, /\{ page \}/);
+  assert.match(popularTv, /\{ page: 1 \}/);
   assert.doesNotMatch(popularTv, /vote_average|vote_count|sort_by/);
 });
 
@@ -264,7 +265,7 @@ test('tracking, watchlist, and rating mutations authenticate before writes and p
   }
 });
 
-test('loading, empty, incomplete, and per-section API errors retain the four-section structure', () => {
+test('loading, empty, and per-section API errors retain the four-section structure', () => {
   const home = read('src/lib/pages/home/index.tsx');
   const loader = read('src/lib/pages/home/load-home-discovery.server.ts');
 
@@ -272,7 +273,9 @@ test('loading, empty, incomplete, and per-section API errors retain the four-sec
   assert.match(home, /MediaRailLoading count=\{HOME_PREVIEW_ITEM_COUNT\}/);
   assert.match(home, /section\.items\.length === 0/);
   assert.match(home, /There are no titles available in this list right now\./);
-  assert.match(home, /TMDB returned an incomplete preview\./);
+  // Only failed and empty sections replace the rail; a short section previews
+  // the titles it has.
+  assert.doesNotMatch(home, /incomplete preview/);
   assert.match(home, /if \(section\.error\)/);
   assert.match(home, /This section could not be loaded from TMDB\./);
   assert.match(loader, /catch \(error\)/);

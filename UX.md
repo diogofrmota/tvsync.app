@@ -316,7 +316,8 @@ Sections, in this order
 Every list section uses the same rail as Home and Explore: up to the first twenty
 titles scroll horizontally, and a See All button sits on the section title line
 and opens the complete list. The rail ends with the last poster; See All is never
-repeated as a tile inside the rail.
+repeated as a tile inside the rail. A section with fewer than twenty titles shows
+the titles it has.
 
 Statistics
 
