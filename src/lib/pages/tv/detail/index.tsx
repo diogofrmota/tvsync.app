@@ -9,6 +9,7 @@ import {
   Stack,
   Text,
 } from '@chakra-ui/react';
+import { ImdbRatingPanel } from 'lib/components/shared/ImdbRating';
 import { PageShell } from 'lib/components/shared/PageShell';
 import PosterImage from 'lib/components/shared/PosterImage';
 import { TvDetailLibraryControl } from 'lib/features/library/tv-detail-library-control';
@@ -18,6 +19,7 @@ import { TvProgressSummary } from 'lib/features/tracking';
 import { TvCastsWrapper } from 'lib/pages/tv/detail/components/casts-wrapper';
 import { SeasonsList } from 'lib/pages/tv/detail/components/seasons-list';
 import { TvTrailer } from 'lib/pages/tv/detail/components/trailer';
+import type { ImdbRating } from 'lib/services/omdb/types';
 import type { TVCreditsResponse } from 'lib/services/tmdb/tv/credits/types';
 import type { TvShowDetail } from 'lib/services/tmdb/tv/detail/types';
 import type { TvVideo } from 'lib/services/tmdb/tv/videos/types';
@@ -28,6 +30,7 @@ export type TvShowDetailPageProps = {
   creditsData: TVCreditsResponse;
   data: TvShowDetail;
   imdbId: string | null;
+  imdbRating: ImdbRating | null;
   isAuthenticated: boolean;
   trailer: TvVideo | null;
 };
@@ -42,6 +45,7 @@ const TvShowDetailPage = ({
   creditsData: credits,
   data: show,
   imdbId,
+  imdbRating,
   isAuthenticated,
   trailer,
 }: TvShowDetailPageProps) => {
@@ -106,24 +110,7 @@ const TvShowDetailPage = ({
               <Text color="fg.muted">Genres unavailable</Text>
             )}
 
-            <Box>
-              <Text fontWeight="600">IMDb rating</Text>
-              <Text color="fg.muted">
-                Unavailable — TMDB provides the IMDb title identifier, but not a
-                genuine IMDb rating value.
-              </Text>
-              {imdbId ? (
-                <Text asChild fontSize="sm" marginTop={1}>
-                  <a
-                    href={`https://www.imdb.com/title/${imdbId}`}
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    View this title on IMDb
-                  </a>
-                </Text>
-              ) : null}
-            </Box>
+            <ImdbRatingPanel imdbId={imdbId} rating={imdbRating} />
 
             <Box>
               <Heading fontSize="xl" marginBottom={2}>

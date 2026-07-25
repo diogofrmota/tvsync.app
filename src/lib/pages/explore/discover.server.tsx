@@ -5,7 +5,11 @@ import { MediaRail } from 'lib/components/shared/MediaRail';
 import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
 import { StatePanel } from 'lib/components/shared/Section';
 import { GenreChips } from 'lib/pages/explore/genre-chips';
-import { ExploreHero, type ExploreHeroItem } from 'lib/pages/explore/hero';
+import {
+  EXPLORE_HERO_SLIDE_COUNT,
+  ExploreHero,
+  type ExploreHeroItem,
+} from 'lib/pages/explore/hero';
 import { MediaSearchBar } from 'lib/pages/media/media-search-bar';
 import {
   type MediaOverviewItem,
@@ -115,10 +119,12 @@ const shapeShows = (shows: Array<TVShowItem>, filter: MediaQualityFilter) =>
 const yearFromDate = (date: string | null | undefined) =>
   date ? date.slice(0, 4) : '';
 
-const buildHeroItem = (
+// The featured slideshow mixes the most popular trending movies and shows, most
+// popular first, and only keeps titles with the artwork and copy a slide needs.
+const buildHeroItems = (
   movies: Array<MovieListItemType>,
   shows: Array<TVShowItem>
-): ExploreHeroItem | null => {
+): Array<ExploreHeroItem> => {
   const movieCandidates = movies
     .filter((movie) => movie.backdrop_path && movie.overview)
     .map((movie) => ({
@@ -143,16 +149,10 @@ const buildHeroItem = (
       voteAverage: show.vote_average,
       year: yearFromDate(show.first_air_date),
     }));
-  const [best] = [...movieCandidates, ...showCandidates].sort(
-    (left, right) => right.popularity - left.popularity
-  );
-
-  if (!best) {
-    return null;
-  }
-
-  const { popularity: _popularity, ...heroItem } = best;
-  return heroItem;
+  return [...movieCandidates, ...showCandidates]
+    .sort((left, right) => right.popularity - left.popularity)
+    .slice(0, EXPLORE_HERO_SLIDE_COUNT)
+    .map(({ popularity: _popularity, ...heroItem }) => heroItem);
 };
 
 const buildMovieHref = (
@@ -204,7 +204,7 @@ export const ExploreDiscover = async () => {
       : Promise.resolve({ results: [] as Array<MovieListItemType> }),
   ]);
 
-  const hero = buildHeroItem(
+  const heroItems = buildHeroItems(
     settledResults<MovieListItemType>(trendingMovies),
     settledResults<TVShowItem>(trendingShows)
   );
@@ -304,7 +304,7 @@ export const ExploreDiscover = async () => {
           subtitle="Discover trending titles, new releases, and all-time highlights across movies and TV — all in one place."
           title="Explore"
         />
-        {hero ? <ExploreHero item={hero} /> : null}
+        {heroItems.length > 0 ? <ExploreHero items={heroItems} /> : null}
         <GenreChips />
       </Stack>
       {rails.length > 0 ? (

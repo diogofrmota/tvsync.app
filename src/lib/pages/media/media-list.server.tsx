@@ -24,11 +24,11 @@ import { MediaType } from 'lib/types';
 
 /**
  * "See All" shows one complete list instead of a pager. TMDB serves 20 titles
- * per page, so six pages leave enough headroom for quality filtering (trending
- * endpoints ignore the vote parameters) to still fill the full list.
+ * per page, so four pages leave enough headroom for quality filtering (trending
+ * endpoints ignore the vote parameters) to still fill the full list of 30.
  */
-const MEDIA_LIST_ITEM_LIMIT = 99;
-const MEDIA_LIST_PAGE_NUMBERS = [1, 2, 3, 4, 5, 6] as const;
+const MEDIA_LIST_ITEM_LIMIT = 30;
+const MEDIA_LIST_PAGE_NUMBERS = [1, 2, 3, 4] as const;
 
 type MediaListResult = {
   failed: boolean;

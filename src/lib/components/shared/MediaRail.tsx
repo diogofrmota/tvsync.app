@@ -56,7 +56,7 @@ const railSkeletonKeys = [
 
 const posterWidth = { base: '7rem', sm: '8rem', md: '9rem' } as const;
 
-const BrowseAllTile = ({ href }: { href: RailHref }) => (
+const SeeAllTile = ({ href }: { href: RailHref }) => (
   <Stack
     flex="0 0 auto"
     gap={2}
@@ -85,9 +85,9 @@ const BrowseAllTile = ({ href }: { href: RailHref }) => (
         transitionProperty="background, border-color, color, transform"
         transitionTimingFunction="ease-out"
       >
-        <Link aria-label="Browse all titles" href={href}>
+        <Link aria-label="See all titles" href={href}>
           <Text fontSize={{ base: 'sm', md: 'md' }} fontWeight="700">
-            Browse All
+            See All
           </Text>
         </Link>
       </Box>
@@ -129,7 +129,7 @@ const MediaShelf = ({
             />
           </Box>
         ))}
-        <BrowseAllTile href={seeAllHref} />
+        <SeeAllTile href={seeAllHref} />
       </Flex>
     </Flex>
   );

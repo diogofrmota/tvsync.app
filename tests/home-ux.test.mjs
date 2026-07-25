@@ -91,19 +91,40 @@ test('each successful preview is one shared horizontally scrollable rail of fift
     assert.match(source, /<MediaRail\b/);
   }
 
+  // The trailing rail tile matches the section action wording.
+  assert.match(rail, /See All/);
+  assert.doesNotMatch(rail, /Browse All/);
   assert.match(rail, /overflowX="auto"/);
   assert.match(rail, /scrollSnapType="x proximity"/);
   assert.match(rail, /layout="flex"/);
   assert.doesNotMatch(home, /repeat\(9, minmax\(0, 1fr\)\)/);
 });
 
-test('See All opens one complete 99-title list with no pagination controls', () => {
+test('the Explore featured area is a ten-slide carousel that rotates every five seconds', () => {
+  const hero = read('src/lib/pages/explore/hero.tsx');
+  const discover = read('src/lib/pages/explore/discover.server.tsx');
+
+  assert.match(hero, /^'use client';/);
+  assert.match(hero, /EXPLORE_HERO_SLIDE_COUNT = 10/);
+  assert.match(hero, /AUTO_ADVANCE_MS = 5000/);
+  assert.match(hero, /aria-roledescription="carousel"/);
+  assert.match(hero, /Previous featured title/);
+  assert.match(hero, /Next featured title/);
+  assert.match(hero, /slice\(0, EXPLORE_HERO_SLIDE_COUNT\)/);
+  assert.match(discover, /<ExploreHero items=\{heroItems\}/);
+  assert.match(
+    discover,
+    /slice\(EXPLORE_HERO_SLIDE_COUNT\)|EXPLORE_HERO_SLIDE_COUNT/
+  );
+});
+
+test('See All opens one complete 30-title list with no pagination controls', () => {
   const mediaList = read('src/lib/pages/media/media-list.server.tsx');
   const movieRoute = read('src/app/movies/[section]/page.tsx');
   const genreRoute = read('src/app/movies/genre/[genre]/page.tsx');
   const tvRoute = read('src/app/tv/[listType]/page.tsx');
 
-  assert.match(mediaList, /MEDIA_LIST_ITEM_LIMIT = 99/);
+  assert.match(mediaList, /MEDIA_LIST_ITEM_LIMIT = 30/);
   assert.match(mediaList, /slice\(\s*0,\s*MEDIA_LIST_ITEM_LIMIT\s*\)/);
   assert.match(movieRoute, /<MovieListPage\b/);
   assert.match(genreRoute, /<MovieListPage\b/);

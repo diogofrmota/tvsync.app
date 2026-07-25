@@ -20,7 +20,7 @@ Guidance for AI agents and contributors working in this repository.
 - Do not add major product features until the current architecture is understood and documented.
 - Keep route files in `src/app` thin; route UI belongs in `src/lib/pages` and reusable pieces in `src/lib/components`.
 - Keep the global app shell and primary navigation in `src/lib/layout`; route links should stay aligned with the shared header navigation.
-- Keep TMDB access behind `src/lib/services/tmdb`.
+- Keep TMDB access behind `src/lib/services/tmdb`, and OMDb (genuine IMDb ratings) behind `src/lib/services/omdb`.
 - Do not expose `TMDB_API_KEY` to client code. Client components should use existing SWR hooks that call `/api/tmdb`.
 - Add TMDB endpoints as typed server/client helpers under `src/lib/services/tmdb/**`, with endpoint-specific `types.ts` contracts and `utils.ts` normalizers.
 - Normalize TMDB response data at the service boundary for nullable posters, backdrops, dates, overviews, credits, seasons, and episodes before page UI consumes it.
@@ -49,6 +49,7 @@ Guidance for AI agents and contributors working in this repository.
 - `src/lib/pages/auth` - Login/register route UI and client auth actions.
 - `src/lib/services/database` - Server-only Neon Postgres helpers for Server Components, Server Actions, and Route Handlers.
 - `src/lib/services/tmdb` - TMDB clients, endpoint helpers, response types, and TMDB-specific utilities.
+- `src/lib/services/omdb` - Server-only OMDb client for genuine IMDb rating values.
 - `src/lib/types` - App-level types such as `MediaType`, `WatchStatus`, `RatingValue`, `PrivacySetting`, `UserProfile`, `UserMedia`, and `EpisodeProgress`.
 - `src/lib/styles` - Chakra theme and global CSS.
 - `src/lib/utils` - Cross-cutting utility functions.
@@ -96,13 +97,14 @@ Primary navigation currently lives in `src/lib/layout/Header.tsx` and is centere
 - Use `/explore` (labeled "Explore") as the authenticated search/browse link.
 - Keep the legacy `/watchlist` route auth-protected while library behavior migrates to the Movies and TV Shows routes; do not restore it to primary navigation.
 - Watchlist items should show and update the current user's saved watch status where available.
-- Keep `/profile` auth-protected. It opens with a single compact identity header instead of a separate route title block: an initials avatar generated from the display name, display name plus `@username` on one line, follow-count chips linking to `/following` and `/followers`, the biography when present, and the Edit Profile / Log out actions aligned right on desktop. Other routes keep the left-aligned route title/subtitle page pattern. Current-user profile editing should save name, username, display name, bio, and privacy setting to Neon through server-only code; Google email remains auth-owned unless the auth design changes.
+- Keep `/profile` auth-protected. It opens with the shared route title pattern like every other page: the `Profile` heading first, with the Edit Profile and Log out actions on that same line. Below it, a centred identity block holds the display name plus `@username`, follow-count chips linking to `/following` and `/followers`, and the biography when present. The own-profile page shows no avatar of any kind. Current-user profile editing should save name, username, display name, bio, and privacy setting to Neon through server-only code; Google email remains auth-owned unless the auth design changes.
 - Maintain both desktop active-route styling and the mobile bottom navigation when adding or changing primary routes.
 - Keep the signed-out Home page discovery-focused: title/subtitle hero, trending TV shows, trending movies, and a 16-title weekly popular mix are appropriate. Do not add a quick-search block to the home hero.
 - Signed-in users are redirected from `/` to `/movies`; there is no separate personalized home/dashboard. Keep the root route (`src/lib/pages/home`) as the signed-out discovery experience.
+- Render the `/explore` featured area as the `ExploreHero` slideshow: up to `EXPLORE_HERO_SLIDE_COUNT` (10) trending titles that advance automatically every five seconds and can also be moved with the arrows or slide dots.
 - Keep the `/explore` page discovery-focused: browse or search one content type at a time (Movies/TV tabs) using TMDB popular lists and title search, with genre and sort filters, linking results to detail pages and sending logged-out users to login before saving library items.
 - Render every discovery list (signed-out Home, `/explore`, and the Movies/TV overviews) with the shared horizontally scrollable rail in `src/lib/components/shared/MediaRail.tsx`. Keep the preview size in `MEDIA_RAIL_ITEM_LIMIT` instead of restating it per page, and do not reintroduce a page-specific poster grid preview.
-- Keep the "See All" list routes (`/movies/[section]`, `/movies/genre/[genre]`, `/tv/[listType]`) server-rendered through `src/lib/pages/media/media-list.server.tsx`: one complete list of up to 99 titles in a single grid, with no page navigation. Only `/explore` search results stay paginated.
+- Keep the "See All" list routes (`/movies/[section]`, `/movies/genre/[genre]`, `/tv/[listType]`) server-rendered through `src/lib/pages/media/media-list.server.tsx`: one complete list of up to 30 titles in a single grid, with no page navigation. Only `/explore` search results stay paginated. The rail's trailing tile is labeled "See All" to match the section action.
 
 ## Environment Notes
 
@@ -117,6 +119,7 @@ Required:
 Optional:
 
 - `TMDB_API_URL`
+- `OMDB_API_KEY` before movie/TV detail pages can show a genuine IMDb rating value. Without it the IMDb rating stays unavailable; TMDB votes are never substituted for it.
 - `DATABASE_URL_UNPOOLED` for migration tooling.
 - `AUTH_URL`
 - `NEXTAUTH_URL`

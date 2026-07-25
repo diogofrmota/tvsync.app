@@ -1,17 +1,9 @@
-import {
-  Avatar,
-  Box,
-  Button,
-  Flex,
-  Heading,
-  Stack,
-  Text,
-} from '@chakra-ui/react';
+import { Box, Button, Flex, Heading, Stack, Text } from '@chakra-ui/react';
 import {
   type ProfileStatCard,
   ProfileStatRail,
 } from 'lib/components/profile/ProfileStatRail';
-import { PageShell } from 'lib/components/shared/PageShell';
+import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
 import PosterCard from 'lib/components/shared/PosterCard';
 import { SectionHeading, StatePanel } from 'lib/components/shared/Section';
 import type { ProfileFavoriteItem } from 'lib/features/profile/profile-favorites.server';
@@ -163,75 +155,61 @@ export const ProfilePage = ({
 
   return (
     <PageShell>
-      <Flex
-        align={{ base: 'stretch', md: 'center' }}
+      {/* The route title leads the page exactly like Movies and TV Shows, with
+          the account actions on the same horizontal line. */}
+      <PageHeading
+        actions={
+          <Flex gap={3}>
+            <Button asChild size="sm">
+              <Link href="/profile/edit">
+                <FiEdit3 aria-hidden />
+                Edit Profile
+              </Link>
+            </Button>
+            <LogoutButton />
+          </Flex>
+        }
+        title="Profile"
+      />
+
+      {/* Identity reads as one centred block: no avatar image of any kind, just
+          the name, handle, follow counts, and biography. */}
+      <Stack
+        align="center"
         borderColor="border"
         borderRadius="xl"
         borderWidth="1px"
-        direction={{ base: 'column', md: 'row' }}
-        gap={{ base: 4, md: 6 }}
-        justify="space-between"
+        gap={3}
         paddingX={{ base: 4, md: 6 }}
-        paddingY={{ base: 4, md: 5 }}
+        paddingY={{ base: 5, md: 6 }}
+        textAlign="center"
       >
-        <Flex align="center" gap={{ base: 3, md: 5 }} minWidth={0}>
-          {/* Avatars are generated from the display name only: TvSync never
-              accepts an uploaded image, so initials are the whole contract.
-              The name sits right beside it, so it is decorative here. */}
-          <Avatar.Root
-            aria-hidden
-            background="bg.surface"
-            borderColor="border"
-            borderWidth="1px"
-            color="gold.300"
-            flexShrink={0}
-            fontWeight="bold"
-            size={{ base: 'xl', md: '2xl' }}
-          >
-            <Avatar.Fallback name={displayName} />
-          </Avatar.Root>
+        <Stack align="center" gap={1}>
+          <Heading fontSize={{ base: 'xl', md: '2xl' }}>{displayName}</Heading>
+          <Text color="fg.muted" fontSize="sm">
+            @{profile.username}
+          </Text>
+        </Stack>
 
-          <Stack gap={2} minWidth={0}>
-            <Flex align="baseline" columnGap={3} rowGap={1} wrap="wrap">
-              <Heading as="h1" fontSize={{ base: 'xl', md: '2xl' }}>
-                {displayName}
-              </Heading>
-              <Text color="fg.muted" fontSize="sm">
-                @{profile.username}
-              </Text>
-            </Flex>
-
-            <Flex gap={2} wrap="wrap">
-              <FollowCountChip
-                href={`${baseProfilePath}/following` as Route}
-                label="Following"
-                value={followCounts.following_count}
-              />
-              <FollowCountChip
-                href={`${baseProfilePath}/followers` as Route}
-                label="Followers"
-                value={followCounts.follower_count}
-              />
-            </Flex>
-
-            {profile.bio ? (
-              <Text color="fg.muted" fontSize="sm">
-                {profile.bio}
-              </Text>
-            ) : null}
-          </Stack>
+        <Flex gap={2} justify="center" wrap="wrap">
+          <FollowCountChip
+            href={`${baseProfilePath}/following` as Route}
+            label="Following"
+            value={followCounts.following_count}
+          />
+          <FollowCountChip
+            href={`${baseProfilePath}/followers` as Route}
+            label="Followers"
+            value={followCounts.follower_count}
+          />
         </Flex>
 
-        <Flex flexShrink={0} gap={3}>
-          <Button asChild size="sm">
-            <Link href="/profile/edit">
-              <FiEdit3 aria-hidden />
-              Edit Profile
-            </Link>
-          </Button>
-          <LogoutButton />
-        </Flex>
-      </Flex>
+        {profile.bio ? (
+          <Text color="fg.muted" fontSize="sm" maxWidth="42rem">
+            {profile.bio}
+          </Text>
+        ) : null}
+      </Stack>
 
       <FavoriteSection
         emptyMessage="You have not added any favourite movies."

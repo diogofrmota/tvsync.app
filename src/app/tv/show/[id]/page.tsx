@@ -2,6 +2,7 @@ import TvShowDetailPage, {
   type TvShowDetailPageProps,
 } from 'lib/pages/tv/detail';
 import { isTvShowDetailViewerAuthenticated } from 'lib/pages/tv/detail/load-viewer.server';
+import { getImdbRatingServer } from 'lib/services/omdb/index.server';
 import { getTVShowCreditsServer } from 'lib/services/tmdb/tv/credits/index.server';
 import { getTvShowDetail } from 'lib/services/tmdb/tv/detail/index.server';
 import { getTvExternalIdsServer } from 'lib/services/tmdb/tv/external-ids/index.server';
@@ -99,6 +100,7 @@ export default async function Page({
       creditsData,
       data,
       imdbId: externalIds.imdb_id,
+      imdbRating: await getImdbRatingServer(externalIds.imdb_id),
       isAuthenticated,
       trailer: selectTrustedTvTrailer(videosData),
     };

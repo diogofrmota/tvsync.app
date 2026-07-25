@@ -9,6 +9,7 @@ import {
   Stack,
   Text,
 } from '@chakra-ui/react';
+import { ImdbRatingPanel } from 'lib/components/shared/ImdbRating';
 import { PageShell } from 'lib/components/shared/PageShell';
 import PosterImage from 'lib/components/shared/PosterImage';
 import { MovieDetailLibraryControl } from 'lib/features/library/movie-detail-library-control';
@@ -17,6 +18,7 @@ import { RatingInput } from 'lib/features/reviews';
 import CastsWrapper from 'lib/pages/movie/detail/components/casts-wrapper';
 import { GenreList } from 'lib/pages/movie/detail/components/genre-list';
 import { MovieTrailer } from 'lib/pages/movie/detail/components/trailer';
+import type { ImdbRating } from 'lib/services/omdb/types';
 import type { MovieCreditsResponse } from 'lib/services/tmdb/movie/credits/types';
 import type { MovieDetailResponse } from 'lib/services/tmdb/movie/detail/types';
 import type { MovieVideo } from 'lib/services/tmdb/movie/videos/types';
@@ -26,6 +28,7 @@ import Link from 'next/link';
 export type MovieDetailPageProps = {
   creditsData: MovieCreditsResponse;
   detailData: MovieDetailResponse;
+  imdbRating: ImdbRating | null;
   isAuthenticated: boolean;
   trailer: MovieVideo | null;
 };
@@ -41,6 +44,7 @@ const getReleaseYear = (releaseDate: string) => {
 export const MovieDetailPage = ({
   detailData: movie,
   creditsData: credits,
+  imdbRating,
   isAuthenticated,
   trailer,
 }: MovieDetailPageProps) => {
@@ -97,24 +101,10 @@ export const MovieDetailPage = ({
               <Text color="fg.muted">Genres unavailable</Text>
             )}
 
-            <Box>
-              <Text fontWeight="600">IMDb rating</Text>
-              <Text color="fg.muted">
-                Unavailable — TMDB provides the IMDb title identifier, but not a
-                genuine IMDb rating value.
-              </Text>
-              {movie.imdb_id ? (
-                <Text asChild fontSize="sm" marginTop={1}>
-                  <a
-                    href={`https://www.imdb.com/title/${movie.imdb_id}`}
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    View this title on IMDb
-                  </a>
-                </Text>
-              ) : null}
-            </Box>
+            <ImdbRatingPanel
+              imdbId={movie.imdb_id ?? null}
+              rating={imdbRating}
+            />
 
             <Box>
               <Heading fontSize="xl" marginBottom={2}>
