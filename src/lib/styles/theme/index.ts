@@ -21,10 +21,14 @@ const buttonRecipe = defineRecipe({
         color: 'gray.900',
         _hover: { bg: 'gold.300' },
       },
+      // The quiet action pairs with the gold one: on TvSync's near-black
+      // surfaces a transparent button reads as a black button, so the
+      // secondary style is a filled white pill with dark text instead.
       outline: {
-        borderColor: 'gray.500',
-        color: 'fg',
-        _hover: { borderColor: 'gold.400', color: 'gold.300' },
+        bg: 'white',
+        borderColor: 'white',
+        color: 'gray.900',
+        _hover: { bg: 'gray.50', borderColor: 'gray.50', color: 'gray.900' },
       },
     },
   },

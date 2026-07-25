@@ -132,10 +132,7 @@ const Hero = () => {
                 <Link href="/register">Create your account</Link>
               </Button>
               <Button
-                _hover={{ background: 'gray.100' }}
                 asChild
-                background="white"
-                color="gray.900"
                 size="lg"
                 variant="outline"
                 width={{ base: 'full', sm: 'auto' }}

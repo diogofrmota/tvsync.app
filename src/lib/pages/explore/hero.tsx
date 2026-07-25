@@ -201,10 +201,9 @@ const HeroSlide = ({
           <Flex gap={3} wrap="wrap">
             <Button
               asChild
-              background="white"
-              color="gray.900"
               fontWeight="700"
               size={{ base: 'sm', md: 'md' }}
+              variant="outline"
             >
               <Link href={detailHref(slide)} tabIndex={inactiveTabIndex}>
                 View details
@@ -212,7 +211,9 @@ const HeroSlide = ({
             </Button>
             {slide.trailerUrl ? (
               <Button
+                _hover={{ background: 'whiteAlpha.200' }}
                 asChild
+                background="transparent"
                 borderColor="whiteAlpha.500"
                 color="white"
                 fontWeight="700"
