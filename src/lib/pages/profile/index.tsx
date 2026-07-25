@@ -3,6 +3,7 @@ import {
   type ProfileStatCard,
   ProfileStatRail,
 } from 'lib/components/profile/ProfileStatRail';
+import { FavoriteHeartIcon } from 'lib/components/shared/FavoriteHeart';
 import { MediaRail } from 'lib/components/shared/MediaRail';
 import type { MediaCardItem } from 'lib/components/shared/media-item';
 import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
@@ -16,7 +17,7 @@ import type { OwnProfile } from 'lib/services/database/tracking.server';
 import { MediaType } from 'lib/types';
 import type { Route } from 'next';
 import Link from 'next/link';
-import type { ComponentProps } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { FiEdit3 } from 'react-icons/fi';
 
 export const ProfileAccessIssue = ({ issue }: { issue: AuthSessionIssue }) => (
@@ -47,12 +48,14 @@ const ProfileRail = ({
   mediaType,
   seeAllHref,
   title,
+  titleIcon,
 }: {
   emptyMessage: string;
   items: Array<MediaCardItem>;
   mediaType: MediaType.Movie | MediaType.Tv;
   seeAllHref: ComponentProps<typeof Link>['href'];
   title: string;
+  titleIcon?: ReactNode;
 }) => (
   <MediaRail
     fallback={items.length === 0 ? <StatePanel message={emptyMessage} /> : null}
@@ -61,6 +64,7 @@ const ProfileRail = ({
     mediaType={mediaType}
     seeAllHref={seeAllHref}
     title={title}
+    titleIcon={titleIcon}
   />
 );
 
@@ -200,7 +204,8 @@ export const ProfilePage = ({
         items={favoriteTvShows}
         mediaType={MediaType.Tv}
         seeAllHref={'/profile/favorites/tv-shows' as Route}
-        title="❤️ Favourite TV Shows"
+        title="Favourite TV Shows"
+        titleIcon={<FavoriteHeartIcon />}
       />
       <ProfileRail
         emptyMessage="You have not added any movies to your library yet."
@@ -214,7 +219,8 @@ export const ProfilePage = ({
         items={favoriteMovies}
         mediaType={MediaType.Movie}
         seeAllHref={'/profile/favorites/movies' as Route}
-        title="❤️ Favourite Movies"
+        title="Favourite Movies"
+        titleIcon={<FavoriteHeartIcon />}
       />
     </PageShell>
   );

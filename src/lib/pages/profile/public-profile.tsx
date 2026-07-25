@@ -1,5 +1,6 @@
 import { Avatar, Box, Flex, Heading, Stack, Text } from '@chakra-ui/react';
 import { ProfileStatRail } from 'lib/components/profile/ProfileStatRail';
+import { FavoriteHeartIcon } from 'lib/components/shared/FavoriteHeart';
 import { MediaRail } from 'lib/components/shared/MediaRail';
 import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
 import { SectionHeading, StatePanel } from 'lib/components/shared/Section';
@@ -31,6 +32,7 @@ const Favorites = ({
     mediaType={mediaType}
     seeAllHref={seeAllHref}
     title={title}
+    titleIcon={<FavoriteHeartIcon />}
   />
 );
 
@@ -136,14 +138,14 @@ export const PublicProfilePage = ({ data }: { data: PublicProfileData }) => {
         items={favoriteTvShows}
         mediaType={MediaType.Tv}
         seeAllHref={`${profilePath}/favorites/tv-shows` as Route}
-        title="❤️ Favourite TV Shows"
+        title="Favourite TV Shows"
       />
       <Favorites
         emptyMessage="No favourite movies are public yet."
         items={favoriteMovies}
         mediaType={MediaType.Movie}
         seeAllHref={`${profilePath}/favorites/movies` as Route}
-        title="❤️ Favourite Movies"
+        title="Favourite Movies"
       />
     </PageShell>
   );

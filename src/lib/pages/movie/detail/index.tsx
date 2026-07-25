@@ -9,7 +9,8 @@ import {
   Stack,
   Text,
 } from '@chakra-ui/react';
-import { ImdbRatingPanel } from 'lib/components/shared/ImdbRating';
+import { MediaRatingPanel } from 'lib/components/shared/MediaRating';
+import { MediaReviews } from 'lib/components/shared/MediaReviews';
 import { PageShell } from 'lib/components/shared/PageShell';
 import PosterImage from 'lib/components/shared/PosterImage';
 import { MovieDetailLibraryControl } from 'lib/features/library/movie-detail-library-control';
@@ -19,17 +20,21 @@ import CastsWrapper from 'lib/pages/movie/detail/components/casts-wrapper';
 import { GenreList } from 'lib/pages/movie/detail/components/genre-list';
 import { MovieTrailer } from 'lib/pages/movie/detail/components/trailer';
 import type { ImdbRating } from 'lib/services/omdb/types';
+import type { MediaCertification } from 'lib/services/tmdb/certification';
 import type { MovieCreditsResponse } from 'lib/services/tmdb/movie/credits/types';
 import type { MovieDetailResponse } from 'lib/services/tmdb/movie/detail/types';
 import type { MovieVideo } from 'lib/services/tmdb/movie/videos/types';
+import type { MediaReview } from 'lib/services/tmdb/reviews';
 import { MediaType } from 'lib/types';
 import Link from 'next/link';
 
 export type MovieDetailPageProps = {
+  certification: MediaCertification | null;
   creditsData: MovieCreditsResponse;
   detailData: MovieDetailResponse;
   imdbRating: ImdbRating | null;
   isAuthenticated: boolean;
+  reviews: Array<MediaReview>;
   trailer: MovieVideo | null;
 };
 
@@ -42,10 +47,12 @@ const getReleaseYear = (releaseDate: string) => {
 };
 
 export const MovieDetailPage = ({
+  certification,
   detailData: movie,
   creditsData: credits,
   imdbRating,
   isAuthenticated,
+  reviews,
   trailer,
 }: MovieDetailPageProps) => {
   const directors = credits.crew
@@ -102,9 +109,12 @@ export const MovieDetailPage = ({
               {directors.length > 0 ? directors.join(', ') : 'Unavailable'}
             </Text>
 
-            <ImdbRatingPanel
+            <MediaRatingPanel
+              certification={certification}
               imdbId={movie.imdb_id ?? null}
-              rating={imdbRating}
+              imdbRating={imdbRating}
+              voteAverage={movie.vote_average}
+              voteCount={movie.vote_count}
             />
           </Stack>
         </Grid>
@@ -175,6 +185,8 @@ export const MovieDetailPage = ({
         <MovieTrailer trailer={trailer} />
 
         <CastsWrapper credits={credits} />
+
+        <MediaReviews reviews={reviews} />
       </Stack>
     </PageShell>
   );

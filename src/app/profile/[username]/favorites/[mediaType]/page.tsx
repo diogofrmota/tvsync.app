@@ -12,8 +12,8 @@ export const metadata: Metadata = {
 };
 
 const favoriteSections = {
-  movies: { mediaType: MediaType.Movie, title: '❤️ Favourite Movies' },
-  'tv-shows': { mediaType: MediaType.Tv, title: '❤️ Favourite TV Shows' },
+  movies: { mediaType: MediaType.Movie, title: 'Favourite Movies' },
+  'tv-shows': { mediaType: MediaType.Tv, title: 'Favourite TV Shows' },
 } as const;
 
 type FavoriteSectionKey = keyof typeof favoriteSections;

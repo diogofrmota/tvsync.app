@@ -1,4 +1,5 @@
 import { Button } from '@chakra-ui/react';
+import { FavoriteHeartIcon } from 'lib/components/shared/FavoriteHeart';
 import { MediaGrid } from 'lib/components/shared/MediaGrid';
 import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
 import { StatePanel } from 'lib/components/shared/Section';
@@ -33,6 +34,7 @@ export const ProfileFavoritesPage = ({
       }
       subtitle={subtitle}
       title={title}
+      titleIcon={<FavoriteHeartIcon />}
     />
     {items.length > 0 ? (
       <MediaGrid

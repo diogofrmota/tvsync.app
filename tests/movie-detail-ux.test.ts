@@ -50,25 +50,26 @@ test('movie page renders required metadata and focused sections in a clear hiera
     'Status:',
     '<GenreList',
     'Director:',
-    '<ImdbRatingPanel',
+    '<MediaRatingPanel',
     'Your movie',
     'Description',
     '<MovieTrailer',
     '<CastsWrapper',
+    '<MediaReviews',
   ]);
   assert.doesNotMatch(
     page,
-    /ReviewsSection|RecommendForm|Recommended movies|Revenue:|gallery/i
+    /RecommendForm|Recommended movies|Revenue:|gallery/i
   );
   assert.doesNotMatch(page, /StreamingAvailability|Similar movies/);
 });
 
-test('missing movie metadata is represented honestly and IMDb is never backed by TMDB votes', async () => {
-  const [page, trailer, detailUtils, imdbPanel] = await Promise.all([
+test('missing movie metadata is represented honestly and every score is labelled', async () => {
+  const [page, trailer, detailUtils, ratingPanel] = await Promise.all([
     read('src/lib/pages/movie/detail/index.tsx'),
     read('src/lib/pages/movie/detail/components/trailer.tsx'),
     read('src/lib/services/tmdb/movie/detail/utils.ts'),
-    read('src/lib/components/shared/ImdbRating.tsx'),
+    read('src/lib/components/shared/MediaRating.tsx'),
   ]);
   const renderedDetailSources = `${page}\n${trailer}`;
 
@@ -85,17 +86,51 @@ test('missing movie metadata is represented honestly and IMDb is never backed by
     );
   }
 
-  // The IMDb value comes from OMDb, so an absent rating stays unavailable and
-  // TMDB vote data is never shown in its place.
-  assert.match(imdbPanel, /IMDb rating[\s\S]*Unavailable/);
-  assert.match(imdbPanel, /rating\.rating\.toFixed\(1\)/);
-  assert.doesNotMatch(imdbPanel, /vote_average|TMDB rating/);
-  assert.doesNotMatch(page, /vote_average|TMDB rating/);
-  assert.match(page, /<ImdbRatingPanel[\s\S]{0,80}movie\.imdb_id/);
+  // IMDb scores are unavailable without OMDb, so the always-available TMDB
+  // score leads — labelled TMDB, never dressed up as an IMDb value — with the
+  // age certificate beside it and IMDb added only when OMDb returns one.
+  assert.match(ratingPanel, /\/ 10 · TMDB/);
+  assert.match(ratingPanel, /voteAverage\.toFixed\(1\)/);
+  assert.match(ratingPanel, /No TMDB score yet/);
+  assert.match(ratingPanel, /imdbRating \?[\s\S]{0,200}IMDb \{imdbRating/);
+  assert.match(ratingPanel, /certification\.certification/);
+  assert.match(page, /<MediaRatingPanel[\s\S]{0,200}movie\.imdb_id/);
+  assert.match(page, /voteAverage=\{movie\.vote_average\}/);
   assert.doesNotMatch(
     detailUtils,
     /status: response\?\.status \?\? 'Released'/
   );
+});
+
+test('movie certificates and member reviews come from TMDB with safe fallbacks', async () => {
+  const [route, releaseDates, reviews, reviewList] = await Promise.all([
+    read('src/app/movie/[id]/page.tsx'),
+    read('src/lib/services/tmdb/movie/release-dates/index.server.ts'),
+    read('src/lib/services/tmdb/reviews.ts'),
+    read('src/lib/components/shared/MediaReviews.tsx'),
+  ]);
+
+  assert.match(releaseDates, /\/movie\/\$\{id\}\/release_dates/);
+  assert.match(
+    releaseDates,
+    /next:\s*\{\s*revalidate:\s*TMDB_REVALIDATE_SECONDS\.detail\s*\}/
+  );
+  assert.match(route, /getMovieReleaseDatesServer\(movieId\)\.catch/);
+  assert.match(route, /getMovieReviewsServer\(movieId\)\.catch/);
+  assert.match(
+    route,
+    /certification=\{selectMovieCertification\(releaseDates\)\}/
+  );
+  assert.match(route, /reviews=\{reviews\.results\}/);
+
+  // Review links are only ever TMDB permalinks, and an empty list still renders.
+  assert.match(
+    reviews,
+    /TMDB_REVIEW_URL = 'https:\/\/www\.themoviedb\.org\/review\//
+  );
+  assert.match(reviews, /url\.startsWith\(TMDB_REVIEW_URL\)/);
+  assert.match(reviewList, /No TMDB member has reviewed this title yet\./);
+  assert.match(reviewList, /rel="noopener noreferrer"/);
 });
 
 test('trailer playback accepts only normalized YouTube trailer identifiers', async () => {

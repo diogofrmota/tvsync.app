@@ -101,8 +101,12 @@ export const MediaSearchBar = ({
   return (
     <Box asChild width="full">
       <form action="/explore" onSubmit={handleSubmit}>
+        {/* The field is sized so its own placeholder ("Search movies and TV
+            shows") is readable without typing: full width on mobile and a
+            comfortable fixed width beside the page title on desktop. */}
         <Box
           maxWidth={{ base: 'full', md: '36rem' }}
+          minWidth={{ base: 'auto', md: '26rem' }}
           position="relative"
           width="full"
         >

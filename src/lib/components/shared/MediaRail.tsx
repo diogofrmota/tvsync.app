@@ -31,6 +31,8 @@ type MediaRailProps = MediaShelfProps & {
   fallback?: ReactNode;
   seeAllHref: RailHref;
   title: string;
+  /** Rendered after the rail title, e.g. the red heart on favourite lists. */
+  titleIcon?: ReactNode;
 };
 
 const railSkeletonKeys = Array.from(
@@ -91,12 +93,14 @@ export const MediaRail = ({
   mediaType,
   seeAllHref,
   title,
+  titleIcon,
 }: MediaRailProps) => (
   <Stack as="section" gap={5}>
     <SectionHeading
       description={description}
       seeAllHref={seeAllHref}
       title={title}
+      titleIcon={titleIcon}
     />
     {fallback ?? (
       <MediaShelf

@@ -25,10 +25,13 @@ export const PageShell = ({
 
 export const PageHeading = ({
   title,
+  titleIcon,
   subtitle,
   actions,
 }: {
   title: string;
+  /** Rendered after the title, e.g. the red heart on favourite lists. */
+  titleIcon?: ReactNode;
   subtitle?: string;
   actions?: ReactNode;
 }) => (
@@ -39,11 +42,25 @@ export const PageHeading = ({
     justify="space-between"
   >
     <Stack gap={2} maxWidth="48rem" minWidth={0}>
-      <Heading as="h1" fontSize={{ base: '2xl', md: '4xl' }} fontWeight="600">
+      <Heading
+        alignItems="center"
+        as="h1"
+        display="flex"
+        fontSize={{ base: '2xl', md: '4xl' }}
+        fontWeight="600"
+        gap={3}
+      >
         {title}
+        {titleIcon}
       </Heading>
       {subtitle ? <Text color="fg.muted">{subtitle}</Text> : null}
     </Stack>
-    {actions ? <Box flexShrink={0}>{actions}</Box> : null}
+    {/* Actions keep their own width on desktop; on mobile they stretch so a
+        search field is wide enough to read its own placeholder. */}
+    {actions ? (
+      <Box flexShrink={0} width={{ base: 'full', md: 'auto' }}>
+        {actions}
+      </Box>
+    ) : null}
   </Flex>
 );

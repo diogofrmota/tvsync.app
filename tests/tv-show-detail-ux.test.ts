@@ -32,6 +32,8 @@ test('TV show details remain public and load required sections independently', a
   assert.match(route, /getTVShowCreditsServer\(showId\)\.catch/);
   assert.match(route, /getTvVideosServer\(showId\)\.catch/);
   assert.match(route, /getTvExternalIdsServer\(showId\)\.catch/);
+  assert.match(route, /getTvContentRatingsServer\(showId\)\.catch/);
+  assert.match(route, /getTvReviewsServer\(showId\)\.catch/);
   assert.doesNotMatch(route, /getSimilarTVShowsServer/);
   assert.doesNotMatch(route, /getTvWatchProvidersServer/);
   assert.doesNotMatch(route, /redirect\(['"]\/login/);
@@ -41,8 +43,9 @@ test('TV show details remain public and load required sections independently', a
 test('TV show page renders required metadata and focused sections in a clear hierarchy', async () => {
   const page = await read('src/lib/pages/tv/detail/index.tsx');
 
-  // Header first, then the personal controls, then the seasons: episodes are
-  // reachable without scrolling past the trailer, cast, and description.
+  // Header first, then the episodes: the slider and the season dropdowns come
+  // straight after the facts, ahead of the personal panel and the reading
+  // sections that close the page.
   assertInOrder(page, [
     'poster`}',
     'as="h1"',
@@ -51,28 +54,29 @@ test('TV show page renders required metadata and focused sections in a clear hie
     'Episodes:',
     'Status:',
     'Genres unavailable',
-    '<ImdbRatingPanel',
+    '<MediaRatingPanel',
+    '<EpisodeTracker',
     'Your TV show',
-    '<SeasonsList',
     'Description',
     '<TvTrailer',
     '<TvCastsWrapper',
+    '<MediaReviews',
   ]);
   assert.doesNotMatch(
     page,
-    /ReviewsSection|RecommendForm|Recommended TV shows|WatchlistStateButton|MediaStatusControl/i
+    /RecommendForm|Recommended TV shows|WatchlistStateButton|MediaStatusControl/i
   );
   assert.doesNotMatch(page, /TvStreamingAvailability|Similar TV shows/);
 });
 
-test('missing TV show metadata is represented honestly and IMDb is never backed by TMDB votes', async () => {
-  const [page, trailer, seasons, imdbPanel] = await Promise.all([
+test('missing TV show metadata is represented honestly and every score is labelled', async () => {
+  const [page, trailer, tracker, ratingPanel] = await Promise.all([
     read('src/lib/pages/tv/detail/index.tsx'),
     read('src/lib/pages/tv/detail/components/trailer.tsx'),
-    read('src/lib/pages/tv/detail/components/seasons-list.tsx'),
-    read('src/lib/components/shared/ImdbRating.tsx'),
+    read('src/lib/pages/tv/detail/components/episode-tracker.tsx'),
+    read('src/lib/components/shared/MediaRating.tsx'),
   ]);
-  const renderedDetailSources = `${page}\n${trailer}\n${seasons}`;
+  const renderedDetailSources = `${page}\n${trailer}\n${tracker}`;
 
   for (const fallback of [
     'Untitled TV show',
@@ -81,6 +85,7 @@ test('missing TV show metadata is represented honestly and IMDb is never backed 
     'No description is available from TMDB.',
     'No trusted trailer is available.',
     'TMDB does not have season information for this show yet.',
+    'TMDB does not have episode information for this season yet.',
   ]) {
     assert.match(
       renderedDetailSources,
@@ -88,13 +93,37 @@ test('missing TV show metadata is represented honestly and IMDb is never backed 
     );
   }
 
-  // The IMDb value comes from OMDb, so an absent rating stays unavailable and
-  // TMDB vote data is never shown in its place.
-  assert.match(imdbPanel, /IMDb rating[\s\S]*Unavailable/);
-  assert.match(imdbPanel, /rating\.rating\.toFixed\(1\)/);
-  assert.doesNotMatch(imdbPanel, /vote_average|TMDB rating/);
-  assert.doesNotMatch(page, /vote_average|TMDB rating/);
-  assert.match(page, /<ImdbRatingPanel imdbId=\{imdbId\}/);
+  // IMDb scores need OMDb and are often unavailable, so the TMDB score leads,
+  // always labelled TMDB, with the TMDB content rating certificate beside it.
+  assert.match(ratingPanel, /\/ 10 · TMDB/);
+  assert.match(ratingPanel, /voteAverage\.toFixed\(1\)/);
+  assert.match(ratingPanel, /No TMDB score yet/);
+  assert.match(ratingPanel, /imdbRating \?[\s\S]{0,200}IMDb \{imdbRating/);
+  assert.match(page, /<MediaRatingPanel/);
+  assert.match(page, /imdbId=\{imdbId\}/);
+  assert.match(page, /voteAverage=\{show\.vote_average\}/);
+});
+
+test('TV certificates and member reviews come from TMDB with safe fallbacks', async () => {
+  const [route, contentRatings, utils, reviews] = await Promise.all([
+    read('src/app/tv/show/[id]/page.tsx'),
+    read('src/lib/services/tmdb/tv/content-ratings/index.server.ts'),
+    read('src/lib/services/tmdb/tv/content-ratings/utils.ts'),
+    read('src/lib/services/tmdb/tv/reviews/index.server.ts'),
+  ]);
+
+  assert.match(contentRatings, /\/tv\/\$\{id\}\/content_ratings/);
+  assert.match(reviews, /\/tv\/\$\{id\}\/reviews/);
+  for (const source of [contentRatings, reviews]) {
+    assert.match(
+      source,
+      /next:\s*\{\s*revalidate:\s*TMDB_REVALIDATE_SECONDS\./
+    );
+  }
+  // One certificate is chosen deterministically, English-speaking boards first.
+  assert.match(utils, /selectPreferredCertification/);
+  assert.match(route, /certification: selectTvContentRating\(contentRatings\)/);
+  assert.match(route, /reviews: reviews\.results/);
 });
 
 test('trailer playback accepts only normalized YouTube trailer identifiers', async () => {
@@ -164,61 +193,76 @@ test('TV show detail no longer exposes streaming or similar sections', async () 
   assert.doesNotMatch(page, /Similar TV shows|similarShow|SliderContainer/);
 });
 
-test('seasons list shows number, poster, release year, and watched progress with one interaction pattern', async () => {
-  const seasons = await read(
-    'src/lib/pages/tv/detail/components/seasons-list.tsx'
+test('the current season slides left to right with a seen toggle on every episode', async () => {
+  const tracker = await read(
+    'src/lib/pages/tv/detail/components/episode-tracker.tsx'
   );
 
-  assert.match(seasons, /Season \{seasonNumber\}/);
-  assert.match(seasons, /getSeasonYear\(season\.air_date\)/);
-  assert.match(seasons, /<SeasonProgressBar/);
-  assert.match(seasons, /\{watchedCount\} \/ \{episodeCount\} watched/);
+  // A horizontal rail of episode cards, opened on the next unseen episode.
+  assert.match(tracker, /overflowX="auto"/);
+  assert.match(tracker, /scrollSnapType="x proximity"/);
+  assert.match(tracker, /<EpisodeCard/);
   assert.match(
-    seasons,
-    /season_number > 0[\s\S]*toSorted\(\(left, right\) => left\.season_number - right\.season_number\)/
+    tracker,
+    /S\{episode\.seasonNumber\} · E\{episode\.episodeNumber\}/
   );
+  assert.match(tracker, /data-next-episode/);
+  assert.match(tracker, /Scroll to earlier episodes/);
+  assert.match(tracker, /Scroll to later episodes/);
+  assert.match(tracker, /\{watched \? 'Seen' : 'Mark as seen'\}/);
+  // The rail follows the season being watched: the first with an unseen
+  // episode, and the final season once the show is finished.
+  assert.match(tracker, /regularSeasons\.find\(/);
   assert.match(
-    seasons,
-    /Specials are tracked on their own season page and are not counted/
+    tracker,
+    /\(watchedBySeason\[season\.season_number\] \?\? \[\]\)\.length </
   );
-  const linkCount = (seasons.match(/<Link/g) ?? []).length;
-  assert.equal(
-    linkCount,
-    1,
-    'seasons list should use exactly one navigation pattern per season card'
-  );
+  assert.match(tracker, /\?\? regularSeasons\.at\(-1\)/);
 });
 
-test('seasons expand in place so episodes can be marked from the show page', async () => {
-  const [seasons, actions] = await Promise.all([
-    read('src/lib/pages/tv/detail/components/seasons-list.tsx'),
+test('every season is a dropdown of episode titles that can each be marked seen', async () => {
+  const [tracker, actions] = await Promise.all([
+    read('src/lib/pages/tv/detail/components/episode-tracker.tsx'),
     read('src/lib/features/tracking/actions.ts'),
   ]);
 
-  // Expanding a season loads its episodes on demand and each episode toggles
-  // its own watched state without leaving the show page.
+  // Season rows expand in place; opening one loads its episodes on demand and
+  // each episode toggles its own state without leaving the show page.
+  assert.match(tracker, /<SeasonDropdown/);
+  assert.match(tracker, /aria-expanded=\{isExpanded\}/);
   assert.match(
-    seasons,
+    tracker,
+    /aria-controls=\{`season-\$\{seasonNumber\}-episodes`\}/
+  );
+  assert.match(
+    tracker,
     /getSeasonEpisodes\(\{ seasonNumber, tmdbShowId: showId \}\)/
   );
-  assert.match(seasons, /await setEpisodeWatched\(/);
-  assert.match(seasons, /Hide episodes/);
-  assert.match(seasons, /Mark watched/);
+  assert.match(tracker, /await setEpisodeWatched\(/);
+  assert.match(tracker, /\{episode\.episodeNumber\}\. \{episode\.name\}/);
+  assert.match(tracker, /\{watchedCount\} \/ \{episodeCount\} seen/);
+  assert.match(
+    tracker,
+    /season_number > 0[\s\S]*toSorted\(\(left, right\) => left\.season_number - right\.season_number\)/
+  );
   assert.match(actions, /export const getSeasonEpisodes/);
   // One read covers every season's progress instead of one call per season.
   assert.match(actions, /export const getShowSeasonProgress/);
   assert.match(actions, /listOwnEpisodeProgressForShow\(tmdbShowId\)/);
+  // The slider needs the still and the season of each episode.
+  assert.match(actions, /stillPath: episode\.still_path/);
+  assert.match(actions, /seasonNumber,/);
 });
 
-test('mark entire season watched and unwatched controls exist and roll back on failure', async () => {
-  const controls = await read(
-    'src/lib/pages/tv/detail/components/seasons-list.tsx'
+test('the whole-season toggle exists and rolls back on failure', async () => {
+  const tracker = await read(
+    'src/lib/pages/tv/detail/components/episode-tracker.tsx'
   );
 
-  assert.match(controls, /Mark season watched/);
-  assert.match(controls, /Mark season unwatched/);
-  assert.match(controls, /await setSeasonWatched\(/);
-  assert.match(controls, /setWatchedBySeason\(previous\)/);
+  assert.match(tracker, /Mark season seen/);
+  assert.match(tracker, /Mark season unseen/);
+  assert.match(tracker, /await setSeasonWatched\(/);
+  assert.match(tracker, /setWatchedBySeason\(previous\)/);
 });
 
 test('one unified authenticated library control adds, updates, removes, and rolls back', async () => {
@@ -250,15 +294,20 @@ test('one unified authenticated library control adds, updates, removes, and roll
 });
 
 test('overall show progress is automatically calculated from watched episodes and displayed', async () => {
-  const [page, summary, actions] = await Promise.all([
-    read('src/lib/pages/tv/detail/index.tsx'),
-    read('src/lib/features/tracking/tv-progress-summary.tsx'),
+  const [tracker, actions] = await Promise.all([
+    read('src/lib/pages/tv/detail/components/episode-tracker.tsx'),
     read('src/lib/features/tracking/actions.ts'),
   ]);
 
-  assert.match(page, /<TvProgressSummary/);
-  assert.match(summary, /Watched: \{summary\.watchedEpisodeCount\}/);
-  assert.match(summary, /Progress: \{summary\.progressPercent\}%/);
+  // Progress is counted from the stored episode rows and shown once, on the
+  // tracker, instead of being repeated in a separate summary panel.
+  assert.match(
+    tracker,
+    /\{watchedEpisodeCount\} of \{totalEpisodeCount\} episodes seen/
+  );
+  assert.match(tracker, /<ProgressBar total=\{totalEpisodeCount\}/);
+  assert.match(tracker, /percent >= 100 \? 'green\.400' : 'gold\.400'/);
+  assert.match(tracker, /getShowSeasonProgress\(showId\)/);
   assert.match(actions, /getAvailableRegularEpisodes/);
   assert.match(
     actions,
@@ -303,10 +352,10 @@ test('public protected actions lead clearly to Login or Register', async () => {
 });
 
 test('TV show detail layout has explicit mobile and desktop compositions', async () => {
-  const [page, cast, seasons] = await Promise.all([
+  const [page, cast, tracker] = await Promise.all([
     read('src/lib/pages/tv/detail/index.tsx'),
     read('src/lib/pages/tv/detail/components/casts-wrapper.tsx'),
-    read('src/lib/pages/tv/detail/components/seasons-list.tsx'),
+    read('src/lib/pages/tv/detail/components/episode-tracker.tsx'),
   ]);
 
   // The poster is a compact column beside the title on every screen size, so
@@ -317,5 +366,5 @@ test('TV show detail layout has explicit mobile and desktop compositions', async
   assert.match(cast, /base: 'repeat\(2, minmax\(0, 1fr\)\)'/);
   assert.match(cast, /md: 'repeat\(4, minmax\(0, 1fr\)\)'/);
   assert.match(cast, /xl: 'repeat\(6, minmax\(0, 1fr\)\)'/);
-  assert.match(seasons, /base: '1fr', md: 'repeat\(2, 1fr\)'/);
+  assert.match(tracker, /width=\{\{ base: '13rem', md: '15rem' \}\}/);
 });

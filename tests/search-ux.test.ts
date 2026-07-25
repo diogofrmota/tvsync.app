@@ -162,21 +162,42 @@ test('quick library actions keep working on results and stay batched', async () 
 });
 
 test('Explore discovery drops the recommendation rail and the genre browser', async () => {
-  const discover = await read('src/lib/pages/explore/discover.server.tsx');
+  const [discover, rails] = await Promise.all([
+    read('src/lib/pages/explore/discover.server.tsx'),
+    read('src/lib/pages/media/discovery-rails.ts'),
+  ]);
 
   assert.doesNotMatch(discover, /Recommended for you/);
   assert.doesNotMatch(discover, /getMovieRecommendationsServer/);
   assert.doesNotMatch(discover, /GenreChips|Browse by genre/);
-  // The remaining discovery rails are untouched.
+  // Explore shows every shared rail, named by the shared definitions so the
+  // lists it has in common with Home read identically on both pages.
+  assert.match(discover, /loadDiscoveryRails\(EXPLORE_DISCOVERY_RAIL_KEYS\)/);
   for (const rail of [
     'Trending Movies This Week',
     'Trending TV Shows This Week',
     'New & Upcoming Movies',
-    'Most Popular Movies',
-    'Most Popular TV Shows',
-    'Highest Rated Movies of All Time',
-    'Highest Rated TV Shows of All Time',
+    'Popular Movies',
+    'Popular TV Shows',
+    'Highest-Rated Movies',
+    'Highest-Rated TV Shows',
   ]) {
-    assert.ok(discover.includes(rail), `Expected the ${rail} rail`);
+    assert.ok(rails.includes(`'${rail}'`), `Expected the ${rail} rail`);
   }
+});
+
+test('Explore leads with the reworded subtitle and a readable search field', async () => {
+  const [discover, searchBar] = await Promise.all([
+    read('src/lib/pages/explore/discover.server.tsx'),
+    read('src/lib/pages/media/media-search-bar.tsx'),
+  ]);
+
+  assert.match(
+    discover,
+    /subtitle="Discover trending titles, new releases and all-time highlights across movies and TV Shows\."/
+  );
+  assert.doesNotMatch(discover, /all in one place/);
+  // The field is wide enough to read its own placeholder before typing.
+  assert.match(discover, /placeholder="Search movies and TV shows"/);
+  assert.match(searchBar, /minWidth=\{\{ base: 'auto', md: '26rem' \}\}/);
 });
