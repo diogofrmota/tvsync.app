@@ -131,7 +131,7 @@ const TvShowDetailPage = ({
             >
               <Stack gap={4}>
                 <TvDetailLibraryControl tmdbId={show.id} />
-                <Stack gap={2}>
+                <Stack alignItems="flex-start" gap={2}>
                   <FavoriteButton mediaType={MediaType.Tv} tmdbId={show.id} />
                 </Stack>
               </Stack>

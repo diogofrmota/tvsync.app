@@ -20,12 +20,14 @@ import {
   setEpisodeWatched,
   setSeasonWatched,
 } from 'lib/features/tracking/actions';
+import { getTvProgressSummaryKey } from 'lib/features/tracking/progress-keys';
 import type { Season } from 'lib/services/tmdb/tv/detail/types';
 import type { Route } from 'next';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { FiCheck, FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import { useSWRConfig } from 'swr';
 
 type SeasonsListProps = {
   seasons: Array<Season>;
@@ -167,7 +169,7 @@ const SeasonEpisodes = ({
   }
 
   return (
-    <Stack gap={2} maxHeight="22rem" overflowY="auto">
+    <Stack gap={2}>
       {episodes.map((episode) => (
         <EpisodeRow
           episode={episode}
@@ -305,6 +307,7 @@ export const SeasonsList = ({ seasons, showId }: SeasonsListProps) => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { mutate } = useSWRConfig();
   const [watchedBySeason, setWatchedBySeason] = useState<WatchedBySeason>({});
   const [episodesBySeason, setEpisodesBySeason] = useState<EpisodesBySeason>(
     {}
@@ -344,6 +347,13 @@ export const SeasonsList = ({ seasons, showId }: SeasonsListProps) => {
 
   const handleLoginRequired = () => {
     router.push(getLoginHref(pathname, searchParams));
+  };
+
+  // The overall progress block sits directly above these controls, so every
+  // saved change revalidates it along with the server-rendered tree.
+  const refreshProgress = () => {
+    mutate(getTvProgressSummaryKey(showId));
+    router.refresh();
   };
 
   const toggleSeason = (seasonNumber: number) => {
@@ -410,7 +420,7 @@ export const SeasonsList = ({ seasons, showId }: SeasonsListProps) => {
         ...current,
         [seasonNumber]: result.watchedEpisodeNumbers,
       }));
-      router.refresh();
+      refreshProgress();
     });
   };
 
@@ -445,7 +455,7 @@ export const SeasonsList = ({ seasons, showId }: SeasonsListProps) => {
         return;
       }
 
-      router.refresh();
+      refreshProgress();
     });
   };
 
@@ -453,8 +463,14 @@ export const SeasonsList = ({ seasons, showId }: SeasonsListProps) => {
     <Grid as="section" gap={4}>
       <Heading fontSize={{ base: 'xl', md: '2xl' }}>Seasons</Heading>
 
+      {/* Cards size to their own content, so expanding one season does not
+          stretch its neighbour to match. */}
       {visibleSeasons.length > 0 ? (
-        <Grid gap={4} templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }}>
+        <Grid
+          alignItems="start"
+          gap={4}
+          templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }}
+        >
           {visibleSeasons.map((season) => (
             <SeasonCard
               episodes={episodesBySeason[season.season_number] ?? []}

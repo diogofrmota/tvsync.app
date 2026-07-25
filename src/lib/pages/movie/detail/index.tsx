@@ -130,7 +130,7 @@ export const MovieDetailPage = ({
             >
               <Stack gap={4}>
                 <MovieDetailLibraryControl tmdbId={movie.id} />
-                <Stack gap={2}>
+                <Stack alignItems="flex-start" gap={2}>
                   <FavoriteButton
                     mediaType={MediaType.Movie}
                     tmdbId={movie.id}

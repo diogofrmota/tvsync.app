@@ -5,7 +5,8 @@ import {
   getTvProgressSummary,
   type TvProgressSummaryResult,
 } from 'lib/features/tracking/actions';
-import { useEffect, useState } from 'react';
+import { getTvProgressSummaryKey } from 'lib/features/tracking/progress-keys';
+import useSWR from 'swr';
 
 type TvProgressSummaryProps = {
   tmdbShowId: number;
@@ -26,21 +27,13 @@ const emptySummary: TvProgressSummaryResult = {
  * the posters use, the watched count, and the next episode to play.
  */
 export const TvProgressSummary = ({ tmdbShowId }: TvProgressSummaryProps) => {
-  const [summary, setSummary] = useState<TvProgressSummaryResult>(emptySummary);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    getTvProgressSummary(tmdbShowId).then((result) => {
-      if (isMounted) {
-        setSummary(result);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [tmdbShowId]);
+  // Episodes are marked from the seasons below this summary, so the value is
+  // held in the shared cache and revalidated by those controls instead of
+  // being read once when the page mounts.
+  const { data: summary = emptySummary } = useSWR<TvProgressSummaryResult>(
+    getTvProgressSummaryKey(tmdbShowId),
+    () => getTvProgressSummary(tmdbShowId)
+  );
 
   if (summary.status === 'login_required') {
     return null;

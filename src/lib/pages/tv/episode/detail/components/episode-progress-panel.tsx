@@ -5,10 +5,12 @@ import {
   getTvProgressSummary,
   setEpisodeWatched,
 } from 'lib/features/tracking/actions';
+import { getTvProgressSummaryKey } from 'lib/features/tracking/progress-keys';
 import type { Route } from 'next';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useState, useTransition } from 'react';
+import { useSWRConfig } from 'swr';
 
 type NextEpisode = {
   episodeNumber: number;
@@ -50,6 +52,7 @@ export const EpisodeProgressPanel = ({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { mutate } = useSWRConfig();
   const [watched, setWatched] = useState(initialWatched);
   const [nextEpisode, setNextEpisode] = useState(initialNextEpisode);
   const [feedback, setFeedback] = useState<{
@@ -93,6 +96,11 @@ export const EpisodeProgressPanel = ({
       const summary = await getTvProgressSummary(tmdbShowId);
       if (summary.status === 'saved') {
         setNextEpisode(summary.nextEpisode);
+        // The show page reads this same entry, so it already has the new
+        // totals when the user navigates back to it.
+        mutate(getTvProgressSummaryKey(tmdbShowId), summary, {
+          revalidate: false,
+        });
       }
       setFeedback({
         message: result.watched ? 'Marked as watched.' : 'Marked as unwatched.',
