@@ -33,6 +33,7 @@ test('public shell and Home content follow UX 1.1 and 1.2 order exactly', () => 
   const home = read('src/lib/pages/home/index.tsx');
   const hero = read('src/lib/pages/home/Hero.tsx');
   const config = read('src/lib/pages/home/config.ts');
+  const rails = read('src/lib/pages/media/discovery-rails.ts');
   const footer = read('src/lib/layout/Footer.tsx');
 
   assertInOrder(header, [
@@ -56,12 +57,23 @@ test('public shell and Home content follow UX 1.1 and 1.2 order exactly', () => 
     'Discover what to watch',
     'See your progress',
   ]);
-  assertInOrder(config, [
-    "'Popular Movies'",
-    "'Highest-Rated Movies'",
-    "'Popular TV Shows'",
-    "'Highest-Rated TV Shows'",
-  ]);
+  // Home lists the shared discovery rails in the shared order, and takes their
+  // names from the shared definitions instead of restating them.
+  assertInOrder(
+    rails.slice(
+      rails.indexOf('HOME_DISCOVERY_RAIL_KEYS'),
+      rails.indexOf('EXPLORE_DISCOVERY_RAIL_KEYS')
+    ),
+    [
+      "'trending_movies'",
+      "'trending_tv_shows'",
+      "'popular_movies'",
+      "'popular_tv_shows'",
+      "'top_rated_movies'",
+      "'top_rated_tv_shows'",
+    ]
+  );
+  assert.match(config, /discoveryRailTitles\(\s*HOME_DISCOVERY_RAIL_KEYS/);
   assertInOrder(footer, [
     "label: 'Privacy Policy'",
     "label: 'Terms of Service'",
@@ -81,12 +93,15 @@ test('each successful preview is one shared horizontally scrollable rail of twen
   const explore = read('src/lib/pages/explore/discover.server.tsx');
   const overview = read('src/lib/pages/media/overview.tsx');
   const profile = read('src/lib/pages/profile/index.tsx');
-  const loader = read('src/lib/pages/home/load-home-discovery.server.ts');
+  const loader = read('src/lib/pages/media/discovery-rails.server.ts');
 
   assert.match(rail, /MEDIA_RAIL_ITEM_LIMIT = 20/);
   assert.match(rail, /items\.slice\(0, itemLimit\)/);
   assert.match(config, /HOME_PREVIEW_ITEM_COUNT = MEDIA_RAIL_ITEM_LIMIT/);
-  assert.match(loader, /slice\(0, HOME_PREVIEW_ITEM_COUNT\)/);
+  assert.match(
+    loader,
+    /slice\(MEDIA_RAIL_ITEM_LIMIT\)|slice\(0, MEDIA_RAIL_ITEM_LIMIT\)/
+  );
   // A TMDB page holds exactly one rail, so every section costs one request and
   // a short section previews as-is instead of erroring.
   assert.doesNotMatch(loader, /page: 2|HOME_PAGE_NUMBERS/);
@@ -157,20 +172,23 @@ test('See All opens one complete 30-title list with no pagination controls', () 
   }
 });
 
-test('See All and poster links lead to the four complete lists and public detail routes', () => {
-  const loader = read('src/lib/pages/home/load-home-discovery.server.ts');
+test('See All and poster links lead to the complete lists and public detail routes', () => {
+  const loader = read('src/lib/pages/media/discovery-rails.server.ts');
   const poster = read('src/lib/components/shared/PosterCard.tsx');
 
-  for (const path of [
-    '/movies/popular',
-    '/movies/top_rated',
-    '/tv/popular',
-    '/tv/top_rated',
+  assert.match(loader, /basePath: '\/movies'/);
+  assert.match(loader, /basePath: '\/tv'/);
+
+  for (const listType of [
+    "buildMovieHref('popular'",
+    "buildMovieHref('top_rated'",
+    "buildMovieHref('trending_week'",
+    "buildMovieHref('upcoming'",
+    "buildTVShowHref('popular'",
+    "buildTVShowHref('top_rated'",
+    "buildTVShowHref('trending_week'",
   ]) {
-    assert.match(
-      loader,
-      new RegExp(`buildHref\\(\\s*'${path.replaceAll('/', '\\/')}`)
-    );
+    assert.ok(loader.includes(listType), `Expected ${listType}`);
   }
 
   assert.match(poster, /movie: '\/movie'/);
@@ -179,34 +197,56 @@ test('See All and poster links lead to the four complete lists and public detail
   assert.match(poster, /aria-label=\{`Open \$\{label\}`\}/);
 });
 
-test('popular and highest-rated queries have distinct intent and cached top-rated safeguards', () => {
-  const loader = read('src/lib/pages/home/load-home-discovery.server.ts');
+test('Home and Explore read one shared, separately cached set of discovery rails', () => {
+  const rails = read('src/lib/pages/media/discovery-rails.ts');
+  const loader = read('src/lib/pages/media/discovery-rails.server.ts');
+  const home = read('src/lib/pages/home/load-home-discovery.server.ts');
+  const explore = read('src/lib/pages/explore/discover.server.tsx');
 
-  // Popular refreshes daily; highest-rated only needs a weekly refresh.
-  assert.match(loader, /HOME_POPULAR_REVALIDATE_SECONDS = 86_400/);
-  assert.match(loader, /HOME_TOP_RATED_REVALIDATE_SECONDS = 604_800/);
-  assert.match(loader, /unstable_cache/);
-  assert.match(loader, /\['home-popular-movies'\]/);
-  assert.match(loader, /\['home-top-rated-movies'\]/);
-  assert.match(loader, /\['home-popular-tv-shows'\]/);
-  assert.match(loader, /\['home-top-rated-tv-shows'\]/);
+  // Both pages resolve their lists through the same loader and the same keys,
+  // so a section they share shows the same titles under the same name.
+  assert.match(home, /loadDiscoveryRails\(HOME_DISCOVERY_RAIL_KEYS\)/);
+  assert.match(explore, /loadDiscoveryRails\(EXPLORE_DISCOVERY_RAIL_KEYS\)/);
+  for (const source of [home, explore]) {
+    assert.match(source, /from 'lib\/pages\/media\/discovery-rails/);
+    // Neither page may re-query TMDB for a list of its own.
+    assert.doesNotMatch(source, /getMovieListServer|getDiscoverTVShowsServer/);
+  }
+
+  // Every shared rail is defined exactly once, with its own cache entry.
+  for (const key of [
+    'popular_movies',
+    'popular_tv_shows',
+    'top_rated_movies',
+    'top_rated_tv_shows',
+    'trending_movies',
+    'trending_tv_shows',
+    'upcoming_movies',
+  ]) {
+    assert.ok(rails.includes(`${key}:`), `Expected the ${key} rail title`);
+    assert.ok(
+      loader.includes(`${key}: {`),
+      `Expected the ${key} rail definition`
+    );
+  }
+
+  assert.match(loader, /\['discovery-popular-movies'\]/);
+  assert.match(loader, /\['discovery-top-rated-movies'\]/);
+  assert.match(loader, /\['discovery-popular-tv-shows'\]/);
+  assert.match(loader, /\['discovery-top-rated-tv-shows'\]/);
+  assert.match(loader, /\['discovery-trending-movies'\]/);
+  assert.match(loader, /\['discovery-trending-tv-shows'\]/);
+  assert.match(loader, /\['discovery-upcoming-movies'\]/);
+
+  // Popular ranks by popularity and highest-rated by score, each behind the
+  // shared window that matches how fast the list actually moves.
+  assert.match(loader, /sort_by: 'popularity\.desc'/);
   assert.match(loader, /sort_by: 'vote_average\.desc'/);
   assert.match(loader, /'vote_count\.gte': '10000'/);
   assert.match(loader, /'vote_count\.gte': '1500'/);
-
-  const popularMovie = loader.slice(
-    loader.indexOf('const loadPopularMovies ='),
-    loader.indexOf('const loadTopRatedMovies =')
-  );
-  const popularTv = loader.slice(
-    loader.indexOf('const loadPopularTVShows ='),
-    loader.indexOf('const loadTopRatedTVShows =')
-  );
-
-  assert.match(popularMovie, /params: \{ page: 1 \}/);
-  assert.doesNotMatch(popularMovie, /vote_average|vote_count|sort_by/);
-  assert.match(popularTv, /\{ page: 1 \}/);
-  assert.doesNotMatch(popularTv, /vote_average|vote_count|sort_by/);
+  assert.match(loader, /revalidate: TMDB_REVALIDATE_SECONDS\.list/);
+  assert.match(loader, /revalidate: TMDB_REVALIDATE_SECONDS\.topRated/);
+  assert.match(loader, /revalidate: TMDB_REVALIDATE_SECONDS\.trending/);
 });
 
 test('movie, TV, season, and episode details remain publicly readable', () => {
@@ -265,9 +305,9 @@ test('tracking, watchlist, and rating mutations authenticate before writes and p
   }
 });
 
-test('loading, empty, and per-section API errors retain the four-section structure', () => {
+test('loading, empty, and per-section API errors retain the section structure', () => {
   const home = read('src/lib/pages/home/index.tsx');
-  const loader = read('src/lib/pages/home/load-home-discovery.server.ts');
+  const loader = read('src/lib/pages/media/discovery-rails.server.ts');
 
   assert.match(home, /HOME_SECTION_TITLES\.map\(\(title\) =>/);
   assert.match(home, /MediaRailLoading count=\{HOME_PREVIEW_ITEM_COUNT\}/);
@@ -280,5 +320,5 @@ test('loading, empty, and per-section API errors retain the four-section structu
   assert.match(home, /This section could not be loaded from TMDB\./);
   assert.match(loader, /catch \(error\)/);
   assert.match(loader, /error: getErrorMessage\(error\)/);
-  assert.match(loader, /Promise\.all\(\[/);
+  assert.match(loader, /Promise\.all\(/);
 });

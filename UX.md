@@ -25,33 +25,26 @@ Join a community of TV show and movie lovers.
 
 Create an Account (button)
 
-Popular Movies
+Discovery lists, in this order
 
-* Display 9 movies
-* Include a See All button
-* Desktop: One row with 9 items
-* Mobile: Three columns per row, with three rows
+1. Trending Movies This Week
+2. Trending TV Shows This Week
+3. Popular Movies
+4. Popular TV Shows
+5. Highest-Rated Movies
+6. Highest-Rated TV Shows
 
-Highest-Rated Movies of All Time
+Home and Explore share these lists: a section that appears on both pages carries
+the same name and the same titles in the same order, because both pages read one
+shared, cached definition of every list. Explore adds its featured slideshow, the
+search field and a New & Upcoming Movies list; everything else matches.
 
-* Display 9 movies
-* Include a See All button
-* Desktop: One row with 9 items
-* Mobile: Three columns per row, with three rows
+Each list
 
-Popular TV Shows
-
-* Display 9 TV shows
-* Include a See All button
-* Desktop: One row with 9 items
-* Mobile: Three columns per row, with three rows
-
-Highest-Rated TV Shows of All Time
-
-* Display 9 TV shows
-* Include a See All button
-* Desktop: One row with 9 items
-* Mobile: Three columns per row, with three rows
+* Shows up to the first twenty titles in one horizontally scrolling rail.
+* Includes a See All button on the section title line, which opens the complete
+  list.
+* Shows the titles it has when the list comes back short.
 
 Footer
 
@@ -262,6 +255,15 @@ Functionality
 
 2.3 Search
 
+Explore landing
+
+* The subtitle reads "Discover trending titles, new releases and all-time
+  highlights across movies and TV Shows."
+* The search field is wide enough to read its own placeholder, "Search movies and
+  TV shows", before anything is typed.
+* The discovery lists are the shared lists described in 1.2, plus New & Upcoming
+  Movies.
+
 Results
 
 * Searching shows one list of the movies and TV shows related to the term.
@@ -297,9 +299,13 @@ Sections, in this order
 
 1. Statistics
 2. TV Shows
-3. ❤️ Favourite TV Shows
+3. Favourite TV Shows
 4. Movies
-5. ❤️ Favourite Movies
+5. Favourite Movies
+
+The favourite sections are titled first and marked afterwards: the section name is
+followed by a red heart icon, never preceded by a heart emoji. The same applies to
+the complete favourites lists behind their See All buttons.
 
 Every list section uses the same rail as Home and Explore: up to the first twenty
 titles scroll horizontally, and a See All button sits on the section title line
@@ -346,6 +352,10 @@ Content
 * Change Password
 * Delete Account
 
+The Delete Account button is the only destructive-looking control on the page: a
+black button with a red border and red label, instead of the shared white
+secondary style.
+
 Functionality
 
 * Users can update their profile information.
@@ -367,21 +377,24 @@ Content
 * Runtime
 * Status
 * Genres
-* IMDb rating
+* Rating: the TMDB member score out of 10, labelled TMDB, plus the age
+  certificate from the TMDB release dates. The genuine IMDb score is added only
+  when OMDb returns one; a TMDB score is never presented as an IMDb score.
 * Description
 * Trailer
 * Cast
 * Director
+* Reviews written by TMDB members
 * Streaming availability
 * Similar movies
 
 Layout
 
 * A compact poster sits beside the title, the fact badges, the genres, the
-  director and the IMDb rating; the poster never fills the screen.
+  director and the rating; the poster never fills the screen.
 * The personal actions come immediately after that header, so a movie can be
   added to the library without scrolling.
-* The description, trailer and cast follow, in that order.
+* The description, trailer, cast and reviews follow, in that order.
 
 User Actions
 
@@ -397,6 +410,8 @@ Functionality
 * Users can submit or update their personal rating.
 * Users can play the trailer without leaving the page.
 * Users can select cast members or similar movies to view more information.
+* Users can read reviews other people published on TMDB, expanding a long review
+  in place or opening it on TMDB.
 
 2.7 Individual TV Show Details Page
 
@@ -409,30 +424,38 @@ Content
 * Number of episodes
 * Current status
 * Genres
-* IMDb rating
+* Rating: the TMDB member score out of 10, labelled TMDB, plus the age
+  certificate from the TMDB content ratings. The genuine IMDb score is added
+  only when OMDb returns one; a TMDB score is never presented as an IMDb score.
 * Description
 * Trailer
 * Cast
+* Reviews written by TMDB members
 * Streaming availability
 * Similar TV shows
 
 Layout
 
 * A compact poster sits beside the name, the fact badges, the genres and the
-  IMDb rating; the poster never fills the screen.
-* The personal actions come immediately after that header, followed by the
-  seasons, so a show can be added to the library and its episodes marked without
-  scrolling to the bottom of the page.
-* The description, trailer and cast follow, in that order.
+  rating; the poster never fills the screen.
+* The episodes come immediately after that header: the episode slider first,
+  then the season list.
+* The personal actions follow, and the description, trailer, cast and reviews
+  close the page, in that order.
 
-Seasons
+Episodes
 
-* Display all available seasons.
-* Each season displays its number, poster, release year and watched progress.
-* Watched progress is a bar that fills in yellow and turns green when the season
-  is complete.
-* Users can expand a season in place to see its episodes and mark single
-  episodes as watched, or open the season page for the full episode detail.
+* The episode slider shows the season the user is watching — the first season
+  with an unseen episode, or the last season once the show is finished — as
+  cards that scroll from left to right, opened on the next unseen episode.
+* Each card shows the episode still, its season and episode number, its name,
+  its air date and a single button that marks it seen or unseen.
+* Above the slider sit the season name, the overall "seen" count, and a progress
+  bar that fills in yellow and turns green when the show is complete.
+* Below the slider, every season is a dropdown showing its own seen count and
+  progress bar. Opening one lists that season's episode titles, each with the
+  same seen toggle, plus a control that marks the whole season seen or unseen
+  and a link to the season page.
 
 User Actions
 
@@ -441,8 +464,8 @@ User Actions
 * Remove from Library
 * Mark as Favourite
 * Rate the TV show
-* Mark an entire season as watched or unwatched
-* Mark a single episode as watched from the expanded season
+* Mark an entire season as seen or unseen
+* Mark a single episode as seen from the slider or from the open season
 
 Functionality
 
@@ -451,6 +474,8 @@ Functionality
 * Users can update the TV show’s tracking status.
 * Users can submit or update their personal rating.
 * Users can play the trailer without leaving the page.
+* Users can read reviews other people published on TMDB, expanding a long review
+  in place or opening it on TMDB.
 
 2.8 TV Show Season Page
 

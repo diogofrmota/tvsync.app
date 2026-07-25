@@ -15,11 +15,11 @@ export const metadata: Metadata = {
 const favoriteSections = {
   movies: {
     mediaType: MediaType.Movie,
-    title: '❤️ Favourite Movies',
+    title: 'Favourite Movies',
   },
   'tv-shows': {
     mediaType: MediaType.Tv,
-    title: '❤️ Favourite TV Shows',
+    title: 'Favourite TV Shows',
   },
 } as const;
 

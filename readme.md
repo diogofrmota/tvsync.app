@@ -86,7 +86,7 @@ TMDB access is split by runtime:
 - Endpoint response contracts live beside each endpoint in `types.ts`.
 - Endpoint normalizers live beside each endpoint in `utils.ts` and defensively normalize missing posters, backdrops, dates, overviews, credits, seasons, and episodes.
 
-Current typed TMDB helpers cover movie lists, true similar movies, movie videos, regional movie watch providers, trending movies, trending TV shows, movie details, movie credits, TV show details, TV show credits, TV season details, TV episode details, movie images, person details, and TV search. The `/explore` route consumes its client helpers through `/api/tmdb`; movie details consume server-only helpers and never expose the TMDB key.
+Current typed TMDB helpers cover movie lists, true similar movies, movie videos, regional movie watch providers, trending movies, trending TV shows, movie details, movie credits, movie release dates, movie reviews, TV show details, TV show credits, TV content ratings, TV reviews, TV season details, TV episode details, movie images, person details, and TV search. The `/explore` route consumes its client helpers through `/api/tmdb`; movie details consume server-only helpers and never expose the TMDB key.
 
 Do not pass `TMDB_API_KEY` into client components or `NEXT_PUBLIC_*` variables. Add new TMDB endpoints by creating typed server/client helpers under `src/lib/services/tmdb`, then normalize raw TMDB JSON at that boundary before route-level UI consumes it.
 
@@ -121,11 +121,11 @@ The protected `/watchlist` route loads saved rows from Neon, hydrates each item 
 
 Signed-in users can classify movies as planned or watched from movie detail pages and the watchlist. TV shows can be planned, watching, completed, dropped, or paused from TV detail pages and the watchlist. Status mutations go through `src/lib/features/tracking` Server Actions and are persisted to Neon through `src/lib/services/database/tracking.server.ts`. Signed-out users are redirected to login before a status change is saved.
 
-TV episode progress is stored in `episode_progress`. Episode detail pages, season episode lists, and the expandable seasons on the show detail page can mark individual episodes watched or unwatched, and whole seasons can be marked watched or unwatched from the show page or the season page. TV show detail pages summarize watched episode count, total progress percentage, next episode, watched seasons, and last watched date from Neon plus TMDB season data.
+TV episode progress is stored in `episode_progress`. Episode detail pages, season episode lists, and the show detail page's episode tracker can mark individual episodes seen or unseen, and whole seasons can be marked from the show page or the season page. The tracker slides through the season being watched and lists every season as a dropdown, showing the watched count and progress for the show and for each season from Neon plus TMDB season data.
 
 ## Home
 
-The `/` route is the signed-out discovery home: a title/subtitle hero plus trending and popular TMDB discovery shelves. Signed-in users are redirected to `/movies`; there is no separate personalized dashboard. Discovery loading lives in `src/lib/pages/home/load-home-discovery.server.ts` and caches TMDB reads with `unstable_cache` for serverless efficiency.
+The `/` route is the signed-out discovery home: a title/subtitle hero plus the shared discovery rails. Signed-in users are redirected to `/movies`; there is no separate personalized dashboard. Home and `/explore` read one shared set of rails — keys and names in `src/lib/pages/media/discovery-rails.ts`, cached TMDB reads and "See All" targets in `src/lib/pages/media/discovery-rails.server.ts` — so a list both pages show carries the same name and the same titles. Each rail is cached with `unstable_cache` for serverless efficiency.
 
 ## Routes
 
@@ -134,11 +134,11 @@ The `/` route is the signed-out discovery home: a title/subtitle hero plus trend
 - `/movies/popular` - Main movie navigation target with search, Most Popular Movies, Trending Movies, and Highest Rated Movies of All Time sections.
 - `/movies/[section]` - Movie lists such as popular, top rated, upcoming, or now playing.
 - `/movies/genre/[genre]` - Movie discovery by genre.
-- `/movie/[id]` - Movie detail page with poster, backdrop, overview, release data, genres, director, cast, TMDB rating, runtime, recommended movies, watchlist add/remove state, and current-user watch status.
+- `/movie/[id]` - Movie detail page with poster, overview, release data, genres, director, cast, the labelled TMDB score plus age certificate, runtime, TMDB member reviews, library add/remove state, and current-user watch status.
 - `/movie/[id]/images` - Movie image gallery.
 - `/tv/popular` - Main TV show navigation target with search, Most Popular TV Shows, Trending TV Shows, and Highest Rated TV Shows of All Time sections.
 - `/tv/[listType]` - TV show lists.
-- `/tv/show/[id]` - TV show detail page with poster, backdrop, overview, genres, first air date, status, season and episode counts, TMDB rating, cast, linked seasons, watchlist add/remove state, current-user watch status, and TV progress summary.
+- `/tv/show/[id]` - TV show detail page with poster, overview, genres, first air date, status, season and episode counts, the labelled TMDB score plus age certificate, the episode slider and season dropdowns, cast, TMDB member reviews, library add/remove state, current-user watch status, and episode progress.
 - `/tv/show/[id]/season/[seasonNumber]` - TMDB season detail page with season metadata, episodes, per-episode watched/unwatched controls, and season-wide watched/unwatched actions.
 - `/tv/show/[id]/season/[seasonNumber]/episode/[episodeNumber]` - TMDB episode detail page with watched/unwatched progress action.
 - `/login` - Public email-or-username/password and Google login page.

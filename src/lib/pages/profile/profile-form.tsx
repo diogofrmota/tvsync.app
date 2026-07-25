@@ -372,10 +372,18 @@ export const DeleteAccountDialog = ({
       role="alertdialog"
     >
       <Dialog.Trigger asChild>
+        {/* The destructive action is the one button on the page that reads as
+            danger: a black pill with a red outline and red label, instead of
+            the shared white secondary style. */}
         <Button
+          _hover={{
+            background: 'black',
+            borderColor: 'red.300',
+            color: 'red.300',
+          }}
+          background="black"
           borderColor="red.400"
           color="red.400"
-          colorPalette="red"
           variant="outline"
         >
           Delete Account

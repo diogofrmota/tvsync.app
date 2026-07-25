@@ -60,7 +60,7 @@ export const Home = ({
   <PageShell>
     <Hero />
     {discoverySections.map((section) => (
-      <DiscoverySection key={section.title} section={section} />
+      <DiscoverySection key={section.key} section={section} />
     ))}
   </PageShell>
 );

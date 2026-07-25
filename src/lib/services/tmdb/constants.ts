@@ -22,6 +22,8 @@ export const TMDB_REVALIDATE_SECONDS = {
   providers: 43_200, // 12h
   /** Recommendations and "similar" rails. */
   recommendations: 86_400, // 24h
+  /** Member reviews arrive slowly and never change once published. */
+  reviews: 43_200, // 12h
   /** Popular / now-playing / on-the-air / discover style lists. */
   list: 86_400, // 24h
   /** Top-rated ordering barely moves week to week. */

@@ -12,17 +12,28 @@ import type { ComponentProps, ReactNode } from 'react';
 
 export const SectionHeading = ({
   title,
+  titleIcon,
   description,
   seeAllHref,
 }: {
   title: string;
+  /** Rendered after the title, e.g. the red heart on favourite lists. */
+  titleIcon?: ReactNode;
   description?: string;
   seeAllHref?: ComponentProps<typeof Link>['href'];
 }) => (
   <Flex align="end" gap={4} justify="space-between">
     <Stack gap={1} minWidth={0}>
-      <Heading as="h2" fontSize={{ base: 'xl', md: '2xl' }} fontWeight="600">
+      <Heading
+        alignItems="center"
+        as="h2"
+        display="flex"
+        fontSize={{ base: 'xl', md: '2xl' }}
+        fontWeight="600"
+        gap={2}
+      >
         {title}
+        {titleIcon}
       </Heading>
       {description ? (
         <Text color="fg.muted" fontSize="sm">

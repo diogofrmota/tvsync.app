@@ -70,6 +70,9 @@ export type SeasonEpisodeSummary = {
   episodeNumber: number;
   name: string;
   runtime: number;
+  seasonNumber: number;
+  /** Episode still, used by the show page episode slider. */
+  stillPath: string | null;
 };
 
 export type SeasonEpisodesResult = {
@@ -409,6 +412,8 @@ export const getSeasonEpisodes = async ({
         episodeNumber: episode.episode_number,
         name: episode.name || `Episode ${episode.episode_number}`,
         runtime: episode.runtime,
+        seasonNumber,
+        stillPath: episode.still_path,
       })),
       status: 'saved',
     };

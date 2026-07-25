@@ -121,10 +121,15 @@ test('durable caching is centralized and personalized caches stay short-lived', 
   assert.match(constants, /list: 86_400/);
   assert.match(constants, /topRated: 604_800/);
 
-  const home = read('src/lib/pages/home/load-home-discovery.server.ts');
-  assert.equal(home.match(/unstable_cache\(/g)?.length, 4);
-  assert.match(home, /HOME_POPULAR_REVALIDATE_SECONDS = 86_400/);
-  assert.match(home, /HOME_TOP_RATED_REVALIDATE_SECONDS = 604_800/);
+  assert.match(constants, /trending: 43_200/);
+
+  // Home and Explore share one cached rail per list, so the same list is never
+  // fetched twice with two different windows.
+  const discovery = read('src/lib/pages/media/discovery-rails.server.ts');
+  assert.equal(discovery.match(/unstable_cache\(/g)?.length, 7);
+  assert.match(discovery, /revalidate: TMDB_REVALIDATE_SECONDS\.list/);
+  assert.match(discovery, /revalidate: TMDB_REVALIDATE_SECONDS\.topRated/);
+  assert.match(discovery, /revalidate: TMDB_REVALIDATE_SECONDS\.trending/);
 
   // The public profile statistics cache is bounded, not indefinite.
   const stats = read('src/lib/features/profile/profile-statistics.server.ts');
