@@ -1,4 +1,4 @@
-import { Badge, Flex, Icon, Text } from '@chakra-ui/react';
+import { Badge, Box, Flex, Text } from '@chakra-ui/react';
 import type { ImdbRating } from 'lib/services/omdb/types';
 import type { MediaCertification } from 'lib/services/tmdb/certification';
 import { FiStar } from 'react-icons/fi';
@@ -31,7 +31,13 @@ export const MediaRatingPanel = ({
     <Flex align="center" gap={3} wrap="wrap">
       {hasTmdbScore ? (
         <Flex align="center" gap={2}>
-          <Icon aria-hidden as={FiStar} color="gold.400" fill="currentColor" />
+          {/* The icon is a child of a styled span rather than Chakra's icon
+              wrapper: this panel renders inside Server Components, and a
+              component handed to a Chakra client component as a prop cannot be
+              serialized across that boundary. */}
+          <Box aria-hidden as="span" color="gold.400" display="inline-flex">
+            <FiStar fill="currentColor" />
+          </Box>
           <Text fontSize="lg" fontWeight="700">
             {voteAverage.toFixed(1)}
           </Text>

@@ -35,6 +35,7 @@ Guidance for AI agents and contributors working in this repository.
 - Keep shared app domain contracts in `src/lib/types`.
 - Place new feature-specific code under the matching `src/lib/features/*` boundary once the feature is ready for implementation.
 - Prefer existing Chakra UI patterns and the local theme in `src/lib/styles/theme`.
+- Chakra UI 3 ships its components as client components, so a Server Component must never hand one of them a component as a prop (`as={SomeIcon}`, `icon={...}`). React cannot serialize a function across that boundary and the whole route falls back to the error page. Render the icon as a child of a styled element instead — see `src/lib/components/shared/FavoriteHeart.tsx` — or mark the wrapper `'use client'`. `tests/server-component-boundaries.test.ts` guards this.
 - Use the `lib/*` import base configured by `tsconfig.json`.
 - Avoid broad refactors, dependency churn, or unrelated formatting-only edits.
 
