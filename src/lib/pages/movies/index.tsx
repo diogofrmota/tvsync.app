@@ -6,16 +6,12 @@ import PosterCard from 'lib/components/shared/PosterCard';
 import { SectionHeading, StatePanel } from 'lib/components/shared/Section';
 import { groupMovieLibraryItems } from 'lib/features/library/movie-library-state';
 import type { MovieLibraryItem } from 'lib/features/library/types';
-import { MediaType, type MovieWatchStatus, WatchStatus } from 'lib/types';
+import { MediaType, WatchStatus } from 'lib/types';
 import Link from 'next/link';
 
 type MovieSectionKey = 'finished' | 'planned';
 
 const discoverMoviesHref = '/explore?type=movie';
-const statusLabels: Record<MovieWatchStatus, string> = {
-  [WatchStatus.Planned]: 'Planned to Watch',
-  [WatchStatus.Watched]: 'Finished',
-};
 const emptyMessages: Record<MovieSectionKey, string> = {
   finished: 'No finished movies yet.',
   planned: 'Discover movies to add to your watchlist.',
@@ -27,15 +23,20 @@ const DiscoverMoviesButton = () => (
   </Button>
 );
 
+/**
+ * The library already groups movies by status, so the poster stays clean: no
+ * status chip, and a full green bar is the only marker a movie is finished.
+ */
 const MovieLibraryCard = ({ item }: { item: MovieLibraryItem }) => (
   <PosterCard
     id={item.tmdbId}
     imageUrl={item.posterPath}
     layout="grid"
+    libraryBadges={false}
     mediaType={MediaType.Movie}
     name={item.title}
     prefetch={false}
-    status={statusLabels[item.status]}
+    progress={item.status === WatchStatus.Watched ? 100 : 0}
   />
 );
 

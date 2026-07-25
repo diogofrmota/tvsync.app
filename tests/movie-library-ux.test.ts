@@ -93,10 +93,7 @@ test('Movies page has only the required ordered library sections and navigation 
   );
   assert.match(page, /href=\{discoverMoviesHref\}/);
   assert.match(page, /const discoverMoviesHref = '\/explore\?type=movie'/);
-  assert.match(
-    searchState,
-    /value === MediaType\.Tv \? MediaType\.Tv : MediaType\.Movie/
-  );
+  assert.match(searchState, /export const getSearchQuery/);
   assert.match(poster, /movie: '\/movie'/);
   assert.match(poster, /href=\{href\}/);
 
@@ -206,13 +203,25 @@ test('library status changes and remove-from-library controls were moved to the 
 });
 
 test('shared poster cards and responsive grids cover desktop and three-column mobile rendering', async () => {
-  const page = await read('src/lib/pages/movies/index.tsx');
+  const [page, poster] = await Promise.all([
+    read('src/lib/pages/movies/index.tsx'),
+    read('src/lib/components/shared/PosterCard.tsx'),
+  ]);
 
   assert.match(page, /<PosterCard/);
   assert.match(page, /base: 'repeat\(3, minmax\(0, 1fr\)\)'/);
   assert.match(page, /md: 'repeat\(5, minmax\(0, 1fr\)\)'/);
   assert.match(page, /xl: 'repeat\(7, minmax\(0, 1fr\)\)'/);
-  assert.match(page, /statusLabels\[item\.status\]/);
+  // Your own library never repeats the status you already navigated to: no
+  // "Added" chip and no status label, only the finished progress bar.
+  assert.match(page, /libraryBadges=\{false\}/);
+  assert.doesNotMatch(page, /statusLabels/);
+  assert.match(
+    page,
+    /progress=\{item\.status === WatchStatus\.Watched \? 100 : 0\}/
+  );
+  assert.match(poster, /showStatusBadge = libraryBadges && Boolean\(status\)/);
+  assert.match(poster, /showAddedBadge=\{libraryBadges && !status\}/);
 });
 
 test('poster images fall back to the "Poster unavailable" state on a real network/decode failure, not only a missing src', async () => {

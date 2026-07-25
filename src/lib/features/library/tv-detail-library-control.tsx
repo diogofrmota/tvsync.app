@@ -4,8 +4,9 @@ import {
   Badge,
   Button,
   Field,
-  Grid,
+  Flex,
   NativeSelect,
+  Stack,
   Text,
 } from '@chakra-ui/react';
 import {
@@ -151,58 +152,65 @@ export const TvDetailLibraryControl = ({ tmdbId }: { tmdbId: number }) => {
     );
   }
 
+  // The control sits in the show header, so the status select and its primary
+  // action share one row and only wrap on narrow screens.
   return (
-    <Grid gap={3} maxWidth={{ base: '100%', md: '22rem' }}>
-      <Field.Root disabled={isPending}>
-        <Field.Label>Library status</Field.Label>
-        <NativeSelect.Root size="md">
-          <NativeSelect.Field
-            aria-label="TV show library status"
-            onChange={(event) => {
-              const nextStatus = event.target.value as TvLibrarySectionStatus;
-              setSelectedStatus(nextStatus);
+    <Stack gap={2}>
+      <Flex align="flex-end" gap={2} wrap="wrap">
+        <Field.Root disabled={isPending} flex="1 1 12rem" minWidth="10rem">
+          <Field.Label>Library status</Field.Label>
+          <NativeSelect.Root size="sm">
+            <NativeSelect.Field
+              aria-label="TV show library status"
+              onChange={(event) => {
+                const nextStatus = event.target.value as TvLibrarySectionStatus;
+                setSelectedStatus(nextStatus);
 
-              if (status) {
-                saveStatus(nextStatus);
-              }
-            }}
-            value={selectedStatus}
-          >
-            {TV_LIBRARY_STATUSES.map((option) => (
-              <option key={option} value={option}>
-                {statusLabels[option]}
-              </option>
-            ))}
-          </NativeSelect.Field>
-          <NativeSelect.Indicator />
-        </NativeSelect.Root>
-      </Field.Root>
+                if (status) {
+                  saveStatus(nextStatus);
+                }
+              }}
+              value={selectedStatus}
+            >
+              {TV_LIBRARY_STATUSES.map((option) => (
+                <option key={option} value={option}>
+                  {statusLabels[option]}
+                </option>
+              ))}
+            </NativeSelect.Field>
+            <NativeSelect.Indicator />
+          </NativeSelect.Root>
+        </Field.Root>
 
-      {status ? (
-        <>
-          <Badge alignSelf="start" colorPalette="gold" variant="subtle">
-            Current status: {statusLabels[status]}
-          </Badge>
+        {status ? (
           <Button
-            alignSelf="start"
+            flexShrink={0}
             loading={isPending}
             onClick={remove}
+            size="sm"
             type="button"
             variant="outline"
           >
             Remove from Library
           </Button>
-        </>
-      ) : (
-        <Button
-          alignSelf="start"
-          loading={isPending}
-          onClick={() => saveStatus(selectedStatus)}
-          type="button"
-        >
-          Add to Library
-        </Button>
-      )}
+        ) : (
+          <Button
+            flexShrink={0}
+            loading={isPending}
+            onClick={() => saveStatus(selectedStatus)}
+            size="sm"
+            type="button"
+          >
+            Add to Library
+          </Button>
+        )}
+      </Flex>
+
+      {status ? (
+        <Badge alignSelf="start" colorPalette="gold" variant="subtle">
+          Current status: {statusLabels[status]}
+        </Badge>
+      ) : null}
 
       {message ? (
         <Text
@@ -213,6 +221,6 @@ export const TvDetailLibraryControl = ({ tmdbId }: { tmdbId: number }) => {
           {message}
         </Text>
       ) : null}
-    </Grid>
+    </Stack>
   );
 };

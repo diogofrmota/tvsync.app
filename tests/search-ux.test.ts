@@ -6,17 +6,10 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 
 import {
-  filterAndSortTitleResults,
-  getProviderPagePlan,
-  getProviderSort,
-  getSearchGenre,
-  getSearchMediaType,
-  getSearchPage,
-  getSearchSort,
-  getSearchTotalPages,
-  mergeProviderResults,
-  SEARCH_MAX_PAGE,
-  SEARCH_RESULTS_PER_PAGE,
+  getSearchQuery,
+  getSearchResultKey,
+  mergeSearchResultsByPopularity,
+  type SearchResultItem,
 } from '../src/lib/pages/search/search-state';
 import { movieListEndpoint } from '../src/lib/services/tmdb/movie/list/utils';
 import { tvShowListEndpoint } from '../src/lib/services/tmdb/tv/list/utils';
@@ -24,57 +17,96 @@ import { MediaType } from '../src/lib/types';
 
 const read = (path: string) => readFile(join(process.cwd(), path), 'utf8');
 
-test('Search exposes exactly linkable Movies and TV Shows tabs with type-scoped data', async () => {
-  const [page, movies, tvShows, route] = await Promise.all([
-    read('src/lib/pages/search/multi/index.tsx'),
-    read('src/lib/pages/movies/index.tsx'),
-    read('src/lib/pages/tv-shows/index.tsx'),
+const makeResult = (
+  id: number,
+  mediaType: SearchResultItem['mediaType'],
+  popularity: number,
+  title = `Title ${id}`
+): SearchResultItem => ({
+  id,
+  mediaType,
+  popularity,
+  posterPath: null,
+  title,
+});
+
+test('a search shows one plain result list with no tabs, genre filter, or sort control', async () => {
+  const [page, route] = await Promise.all([
+    read('src/lib/pages/search/results/index.tsx'),
     read('src/app/explore/page.tsx'),
   ]);
 
-  assert.match(page, /label: 'Movies'/);
-  assert.match(page, /label: 'TV Shows'/);
-  assert.doesNotMatch(page, /label: 'All'/);
-  assert.match(page, /role="tablist"/);
-  assert.match(page, /role="tab"/);
-  assert.match(page, /role="tabpanel"/);
-  assert.match(page, /selectTab\(tab\.value\)/);
-  assert.equal(getSearchMediaType('movie'), MediaType.Movie);
-  assert.equal(getSearchMediaType('tv'), MediaType.Tv);
-  assert.equal(getSearchMediaType('person'), MediaType.Movie);
-  assert.match(movies, /'\/explore\?type=movie'/);
-  assert.match(tvShows, /'\/explore\?type=tv'/);
-  // Next resolves searchParams asynchronously. /explore awaits it once and
-  // reuses that value, so signed-out visitors keep their browse/search intent
-  // through the login redirect.
+  for (const removedControl of [
+    /role="tablist"/,
+    /role="tab"/,
+    /label: 'Movies'/,
+    /label: 'TV Shows'/,
+    /Filter by genre/,
+    /Sort results/,
+    /Search by title/,
+    /NativeSelect/,
+    /PageNavButtons/,
+  ]) {
+    assert.doesNotMatch(page, removedControl);
+  }
+
+  assert.match(page, /Movies and TV shows related to/);
+  assert.match(page, /most popular first/);
+  assert.match(page, /<PosterCard/);
+  // Only a search term switches Explore from discovery to results; genre,
+  // type, sort, and page intents no longer exist.
   assert.match(route, /const resolvedSearchParams = await searchParams;/);
-  assert.match(route, /getCallbackUrl\(resolvedSearchParams\)/);
-  assert.match(route, /callbackUrl=\$\{encodeURIComponent\(callbackUrl\)\}/);
+  assert.match(route, /getSearchQuery\(firstValue\(searchParams\.query\)\)/);
+  assert.match(route, /if \(!query\) \{\s*return <ExploreDiscover \/>;/);
+  assert.doesNotMatch(route, /genre|sort|SEARCH_INTENT_KEYS/);
 });
 
-test('title submit and termless browsing use the correct TMDB endpoint families', async () => {
-  const [page, hook, movieClient, tvClient] = await Promise.all([
-    read('src/lib/pages/search/multi/index.tsx'),
-    read('src/lib/pages/search/use-search-results.ts'),
-    read('src/lib/services/tmdb/movie/list/index.client.ts'),
-    read('src/lib/services/tmdb/tv/list/index.client.ts'),
+test('results merge movies and TV shows into one popularity-ordered list', () => {
+  const merged = mergeSearchResultsByPopularity([
+    [makeResult(1, MediaType.Movie, 10), makeResult(2, MediaType.Movie, 90)],
+    [makeResult(2, MediaType.Tv, 50), makeResult(3, MediaType.Tv, 70)],
   ]);
 
-  assert.match(page, /<form onSubmit=\{submitSearch\}>/);
-  assert.match(page, /<Field\.Label>Search by title<\/Field\.Label>/);
-  assert.match(page, /query: inputValue\.trim\(\) \|\| null/);
-  assert.match(hook, /query\s*\? \{ query \}/);
-  assert.match(hook, /sort_by: providerSort/);
-  assert.match(hook, /useTVShowSearchResultList/);
-  assert.match(movieClient, /movieListEndpoint/);
-  assert.match(tvClient, /TV_SHOW_SEARCH_RESOURCE_PATH/);
+  assert.deepEqual(
+    merged.map(getSearchResultKey),
+    ['movie:2', 'tv:3', 'tv:2', 'movie:1'],
+    'movies and TV shows share one list ordered by popularity'
+  );
+  // The same TMDB id in both media types is not a duplicate.
+  assert.equal(merged.length, 4);
+
+  const deduplicated = mergeSearchResultsByPopularity([
+    [makeResult(4, MediaType.Movie, 5), makeResult(4, MediaType.Movie, 5)],
+  ]);
+  assert.equal(deduplicated.length, 1);
+
+  const tied = mergeSearchResultsByPopularity([
+    [
+      makeResult(5, MediaType.Movie, 8, 'Zulu'),
+      makeResult(6, MediaType.Movie, 8, 'Alien'),
+    ],
+  ]);
+  assert.deepEqual(
+    tied.map((item) => item.title),
+    ['Alien', 'Zulu'],
+    'equal popularity falls back to a stable title order'
+  );
+});
+
+test('the search term is trimmed and drives the TMDB search endpoints for both media types', async () => {
+  const hook = await read('src/lib/pages/search/use-search-results.ts');
+
+  assert.equal(getSearchQuery('  Alien  '), 'Alien');
+  assert.equal(getSearchQuery(null), '');
+  assert.match(hook, /useMovieList\(\s*'popular',\s*\{ page: 1, query \}/);
+  assert.match(
+    hook,
+    /useTVShowSearchResultList\(\{ page: 1, query \}, isReady\)/
+  );
+  assert.match(hook, /const isReady = query\.length > 0/);
   assert.equal(
     movieListEndpoint({ query: 'Alien', section: 'popular' }),
     '/search/movie'
-  );
-  assert.equal(
-    movieListEndpoint({ section: 'popular', sort_by: 'popularity.desc' }),
-    '/discover/movie'
   );
   assert.equal(
     tvShowListEndpoint({ listType: 'popular', sort_by: 'popularity.desc' }),
@@ -82,153 +114,31 @@ test('title submit and termless browsing use the correct TMDB endpoint families'
   );
 });
 
-test('genre and all three requested sort orders are validated and deterministic', async () => {
-  const [page, hook, genreClient, proxy] = await Promise.all([
-    read('src/lib/pages/search/multi/index.tsx'),
-    read('src/lib/pages/search/use-search-results.ts'),
-    read('src/lib/services/tmdb/genre/index.client.ts'),
-    read('src/app/api/tmdb/[[...path]]/route.ts'),
-  ]);
-  const fixtures = [
-    {
-      date: '2025-01-01',
-      genre_ids: [18],
-      id: 1,
-      popularity: 10,
-      vote_average: 7,
-    },
-    {
-      date: '2026-01-01',
-      genre_ids: [35],
-      id: 2,
-      popularity: 30,
-      vote_average: 6,
-    },
-    {
-      date: '',
-      genre_ids: [18],
-      id: 3,
-      popularity: 20,
-      vote_average: 9,
-    },
-  ];
-
-  assert.match(page, /<Field\.Label>Filter by genre<\/Field\.Label>/);
-  assert.match(page, /<option value="popularity">Popularity<\/option>/);
-  assert.match(page, /<option value="rating">Rating<\/option>/);
-  assert.match(page, /<option value="release">Release date<\/option>/);
-  assert.match(page, /TMDB returns title searches by relevance/);
-  assert.match(hook, /with_genres: genre \|\| undefined/);
-  assert.match(genreClient, /`\/genre\/\$\{mediaType\}\/list`/);
-  assert.match(proxy, /nestedResource === 'list'/);
-  assert.equal(getSearchGenre('18'), '18');
-  assert.equal(getSearchGenre('not-a-genre'), '');
-  assert.equal(getSearchSort('unknown'), 'popularity');
-  assert.equal(
-    getProviderSort(MediaType.Movie, 'release'),
-    'primary_release_date.desc'
-  );
-  assert.equal(getProviderSort(MediaType.Tv, 'release'), 'first_air_date.desc');
-  assert.deepEqual(
-    filterAndSortTitleResults(
-      fixtures,
-      '',
-      'popularity',
-      (item) => item.date
-    ).map((item) => item.id),
-    [2, 3, 1]
-  );
-  assert.deepEqual(
-    filterAndSortTitleResults(
-      fixtures,
-      '18',
-      'rating',
-      (item) => item.date
-    ).map((item) => item.id),
-    [3, 1]
-  );
-  assert.deepEqual(
-    filterAndSortTitleResults(fixtures, '', 'release', (item) => item.date).map(
-      (item) => item.id
-    ),
-    [2, 1, 3]
-  );
-});
-
-test('27-item application pages aggregate TMDB pages without gaps or duplicates', () => {
-  const providerResults = (from: number, to: number) =>
-    Array.from({ length: to - from + 1 }, (_, index) => ({ id: from + index }));
-
-  assert.equal(SEARCH_RESULTS_PER_PAGE, 27);
-  assert.deepEqual(getProviderPagePlan(1), { offset: 0, pages: [1, 2] });
-  assert.deepEqual(getProviderPagePlan(2), { offset: 7, pages: [2, 3] });
-  assert.deepEqual(getProviderPagePlan(3), {
-    offset: 14,
-    pages: [3, 4, 5],
-  });
-  assert.deepEqual(
-    mergeProviderResults(
-      [providerResults(21, 40), providerResults(41, 60)],
-      getProviderPagePlan(2).offset
-    ).map((item) => item.id),
-    providerResults(28, 54).map((item) => item.id)
-  );
-  assert.equal(
-    mergeProviderResults([[{ id: 1 }, { id: 1 }, { id: 2 }]], 0).length,
-    2
-  );
-  assert.equal(getSearchTotalPages(54), 2);
-  assert.equal(getSearchPage('9999'), SEARCH_MAX_PAGE);
-});
-
-test('filter, tab, title, and sort changes reset pagination while history remains URL-driven', async () => {
-  const page = await read('src/lib/pages/search/multi/index.tsx');
-
-  assert.match(page, /useSearchParams\(\)/);
-  assert.match(page, /router\[navigation\]\(href\)/);
-  assert.match(page, /changeParams\(\{ page: '1', query:/);
-  assert.match(page, /genre: event\.target\.value \|\| null,/);
-  assert.match(
-    page,
-    /changeParams\(\{ page: '1', sort: event\.target\.value \}\)/
-  );
-  assert.match(
-    page,
-    /changeParams\(\{ genre: null, page: '1', type: nextMediaType \}\)/
-  );
-  assert.match(page, /page > totalPages/);
-  assert.match(page, /'replace'/);
-});
-
-test('responsive results, poster navigation, pagination, and all required states are present', async () => {
-  const [page, poster, image, pagination] = await Promise.all([
-    read('src/lib/pages/search/multi/index.tsx'),
+test('responsive results, poster navigation, and all required states are present', async () => {
+  const [page, grid, poster, image] = await Promise.all([
+    read('src/lib/pages/search/results/index.tsx'),
+    read('src/lib/components/shared/GridContainer.tsx'),
     read('src/lib/components/shared/PosterCard.tsx'),
     read('src/lib/components/shared/PosterImage.tsx'),
-    read('src/lib/components/shared/list/page-nav-buttons.tsx'),
   ]);
 
-  assert.match(page, /base: 'repeat\(3, minmax\(0, 1fr\)\)'/);
-  assert.match(page, /md: 'repeat\(auto-fill, minmax\(8\.5rem, 1fr\)\)'/);
-  assert.match(page, /SectionLoading count=\{SEARCH_RESULTS_PER_PAGE\}/);
-  assert.match(page, /Loading page \$\{page\}/);
+  assert.match(grid, /base: 'repeat\(3, minmax\(0, 1fr\)\)'/);
+  assert.match(grid, /md: 'repeat\(6, minmax\(0, 1fr\)\)'/);
+  assert.match(page, /SectionLoading count=\{RESULT_SKELETON_COUNT\}/);
+  assert.match(page, /Loading results for \$\{query\}/);
   assert.match(page, /title="No titles found"/);
   assert.match(page, /title="Unable to load results"/);
   assert.match(page, /Try again/);
-  assert.match(page, /<PageNavButtons \{\.\.\.navProps\} \/>/);
-  assert.match(pagination, /onClickNext/);
-  assert.match(pagination, /onClickPrev/);
   assert.match(poster, /movie: '\/movie'/);
   assert.match(poster, /tv: '\/tv\/show'/);
   assert.match(poster, /href=\{href\}/);
   assert.match(image, /Poster unavailable/);
 });
 
-test('quick library actions use batched status input, type-correct options, and duplicate-safe persistence', async () => {
-  const [page, route, action, loader, query, swr] = await Promise.all([
-    read('src/lib/pages/search/multi/index.tsx'),
+test('quick library actions keep working on results and stay batched', async () => {
+  const [page, route, loader, query, swr] = await Promise.all([
+    read('src/lib/pages/search/results/index.tsx'),
     read('src/app/explore/page.tsx'),
-    read('src/lib/features/library/search-library-action.tsx'),
     read('src/lib/pages/search/load-search-library-state.server.ts'),
     read('src/lib/services/database/library-queries.ts'),
     read('src/lib/services/tmdb/utils.client.ts'),
@@ -236,16 +146,11 @@ test('quick library actions use batched status input, type-correct options, and 
 
   assert.match(route, /loadSearchLibraryState\(\)/);
   assert.match(loader, /listOwnMedia\(\)/);
-  assert.doesNotMatch(page, /WatchlistStateButton/);
   assert.match(page, /initialLibraryItems/);
-  assert.match(page, /status=\{getSearchStatusLabel\(status\)\}/);
-  assert.match(action, /Add to library/);
-  assert.match(action, /MOVIE_WATCH_STATUSES/);
-  assert.match(action, /TV_LIBRARY_STATUSES/);
-  assert.doesNotMatch(action, /TV_WATCH_STATUSES/);
-  assert.match(action, /setMediaWatchStatus/);
-  assert.match(action, /Added to your library/);
-  assert.match(action, /Could not add this title/);
+  assert.match(page, /seedLibrary\(initialLibraryItems\)/);
+  // Discovery surfaces keep the "Added" chip; only the user's own library
+  // pages drop it, so the results grid uses the default poster card.
+  assert.doesNotMatch(page, /libraryBadges/);
   assert.match(
     query,
     /on conflict \(user_id, tmdb_id, media_type\) do nothing/
@@ -254,8 +159,24 @@ test('quick library actions use batched status input, type-correct options, and 
     swr,
     /useSWR<ResType, ErrorType>\(isReady \? \[path, params\] : null/
   );
-  assert.doesNotMatch(
-    await read('src/lib/pages/search/use-search-results.ts'),
-    /useEffect/
-  );
+});
+
+test('Explore discovery drops the recommendation rail and the genre browser', async () => {
+  const discover = await read('src/lib/pages/explore/discover.server.tsx');
+
+  assert.doesNotMatch(discover, /Recommended for you/);
+  assert.doesNotMatch(discover, /getMovieRecommendationsServer/);
+  assert.doesNotMatch(discover, /GenreChips|Browse by genre/);
+  // The remaining discovery rails are untouched.
+  for (const rail of [
+    'Trending Movies This Week',
+    'Trending TV Shows This Week',
+    'New & Upcoming Movies',
+    'Most Popular Movies',
+    'Most Popular TV Shows',
+    'Highest Rated Movies of All Time',
+    'Highest Rated TV Shows of All Time',
+  ]) {
+    assert.ok(discover.includes(rail), `Expected the ${rail} rail`);
+  }
 });

@@ -135,7 +135,7 @@ test('TV Shows page has the exact required section names, order, and navigation 
   );
   assert.match(page, /const discoverTvShowsHref = '\/explore\?type=tv'/);
   assert.match(page, /href=\{discoverTvShowsHref\}/);
-  assert.match(searchState, /value === MediaType\.Tv \? MediaType\.Tv/);
+  assert.match(searchState, /export const getSearchQuery/);
   assert.match(poster, /tv: '\/tv\/show'/);
   assert.match(poster, /href=\{href\}/);
   assert.match(route, /redirect\('\/login\?callbackUrl=\/tv-shows'/);
@@ -325,12 +325,40 @@ test('shared poster cards and responsive grids cover detail navigation, mobile, 
 
   assert.match(page, /<PosterCard/);
   assert.match(page, /mediaType=\{MediaType\.Tv\}/);
-  assert.match(page, /progress=\{item\.progressPercent\}/);
   assert.match(page, /base: 'repeat\(3, minmax\(0, 1fr\)\)'/);
   assert.match(page, /md: 'repeat\(5, minmax\(0, 1fr\)\)'/);
   assert.match(page, /xl: 'repeat\(7, minmax\(0, 1fr\)\)'/);
-  assert.match(page, /statusLabels\[item\.status\]/);
-  assert.match(page, /episodes watched/);
+});
+
+test('library posters carry progress as a bar instead of chips and counters', async () => {
+  const [page, poster] = await Promise.all([
+    read('src/lib/pages/tv-shows/index.tsx'),
+    read('src/lib/components/shared/PosterCard.tsx'),
+  ]);
+
+  // Progress lives on the artwork: a yellow bar that fills while watching and
+  // a full-width green bar once the show is finished. Nothing is written out
+  // as a percentage, an episode counter, or a status chip.
+  assert.match(page, /progress=\{getPosterProgress\(item\)\}/);
+  assert.match(page, /item\.status === WatchStatus\.Completed/);
+  assert.match(page, /item\.watchedEpisodeCount === 0/);
+  assert.match(
+    page,
+    /Math\.max\(item\.progressPercent, MINIMUM_VISIBLE_PROGRESS\)/,
+    'a started show must keep a visible bar even when its rounded percentage is 0'
+  );
+  assert.match(page, /libraryBadges=\{false\}/);
+  assert.doesNotMatch(page, /statusLabels/);
+  assert.doesNotMatch(page, /episodes watched/);
+  assert.doesNotMatch(poster, /% watched/);
+  assert.match(
+    poster,
+    /hasProgress = typeof progress === 'number' && progress > 0/
+  );
+  assert.match(poster, /isComplete \? 'green\.400' : 'gold\.400'/);
+  assert.match(poster, /bottom=\{0\}/);
+  assert.match(poster, /showStatusBadge = libraryBadges && Boolean\(status\)/);
+  assert.match(poster, /showAddedBadge=\{libraryBadges && !status\}/);
 });
 
 test('atomic TV state persistence and removal remain owner-scoped', async () => {

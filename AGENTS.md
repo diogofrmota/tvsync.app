@@ -44,7 +44,7 @@ Guidance for AI agents and contributors working in this repository.
 - `src/lib/layout` - Global app shell, header/navigation, and footer.
 - `src/lib/pages` - Route-level UI composed by App Router pages.
 - `src/lib/components` - Shared and domain-specific reusable UI components.
-- `src/lib/features` - Feature modules: `auth`, `contact`, `library`, `lists` (personalized lists), `profile`, `reviews` (personal ratings), `social` (follow graph), `tracking`, and `watchlist`.
+- `src/lib/features` - Feature modules: `auth`, `contact`, `library`, `profile`, `reviews` (personal ratings), `social` (follow graph), `tracking`, and `watchlist`.
 - `src/lib/services/auth` - Server-only Auth.js/NextAuth configuration.
 - `src/lib/pages/auth` - Login/register route UI and client auth actions.
 - `src/lib/services/database` - Server-only Neon Postgres helpers for Server Components, Server Actions, and Route Handlers.
@@ -78,7 +78,7 @@ The initial tracking schema is in `database/migrations/0001_initial_tracking_sch
 
 The authentication lifecycle schema is in `database/migrations/0005_auth_lifecycle.sql`. It adds provider mappings, verified-email/session-version state, one-time verification/reset token digests, and persistent authentication rate-limit counters.
 
-Personalized lists live in `database/migrations/0010_personalized_lists.sql` (`custom_lists` and `custom_list_items`). List names are unique per owner (case-insensitive), list items are unique per `(list_id, tmdb_id, media_type)`, and deleting a list cascades to its items.
+Personalized lists were removed from the product. `database/migrations/0010_personalized_lists.sql` stays in the migration history so applied databases keep matching the recorded migrations, but `custom_lists` and `custom_list_items` are no longer read or written by the app. Do not add UI, routes, or helpers back on top of those tables.
 
 - Apply migrations with `DATABASE_URL_UNPOOLED`; use pooled `DATABASE_URL` only for runtime app queries.
 - Duplicate user/media records are guarded by database unique constraints.
@@ -104,13 +104,14 @@ Primary navigation currently lives in `src/lib/layout/Header.tsx` and is centere
 - Keep the signed-out Home page discovery-focused: title/subtitle hero, trending TV shows, trending movies, and a 16-title weekly popular mix are appropriate. Do not add a quick-search block to the home hero.
 - Signed-in users are redirected from `/` to `/movies`; there is no separate personalized home/dashboard. Keep the root route (`src/lib/pages/home`) as the signed-out discovery experience.
 - Render the `/explore` featured area as the `ExploreHero` slideshow: up to `EXPLORE_HERO_SLIDE_COUNT` (10) trending titles that advance automatically every five seconds and can also be moved with the arrows or slide dots. Every slide shows the poster, the title, a star with the genuine IMDb rating (falling back to the clearly labeled TMDB score), a trailer link built from the trusted YouTube trailer selectors, and a link to the detail page. Slide data is shaped server-side in `src/lib/pages/explore/hero-slides.server.ts`; missing trailers or IMDb ratings degrade to omitted extras instead of blanking the slideshow.
-- Keep the `/explore` page discovery-focused: browse or search one content type at a time (Movies/TV tabs) using TMDB popular lists and title search, with genre and sort filters, linking results to detail pages and sending logged-out users to login before saving library items.
+- Keep the `/explore` page discovery-focused: the featured hero plus the trending, upcoming, popular, and highest-rated rails. There is no "Recommended for you" rail and no genre browser. A `?query=` term replaces the landing with `src/lib/pages/search/results`: one grid of the movies and TV shows related to the term, merged and ordered by TMDB popularity, with no content-type tabs, genre filter, sort control, or pagination. Logged-out visitors are sent to login before saving library items.
 - Render every list preview (signed-out Home, `/explore`, the Movies/TV overviews, and every `/profile` section) with the shared horizontally scrollable rail in `src/lib/components/shared/MediaRail.tsx`. Keep the preview size in `MEDIA_RAIL_ITEM_LIMIT` (20 posters) instead of restating it per page, and do not reintroduce a page-specific poster grid preview. The rail shows posters only: "See All" is the single action on the section title line, never repeated as a tile at the end of the rail. One TMDB page is 20 titles, so a rail is one request per section — a rail that comes back short renders the titles it has instead of spending extra calls against the shared API budget.
-- Keep `/profile` sections in this order: Statistics (only TV Shows Watched and Movies Watched, with "See All" opening `/profile/statistics`), TV Shows, Favourite TV Shows, Movies, Favourite Movies, Personalized Lists. Every section is a `MediaRail` with a "See All" target; the complete lists live at `/tv-shows`, `/movies`, `/profile/favorites/[mediaType]`, and `/profile/lists`.
+- Keep `/profile` sections in this order: Statistics (only TV Shows Watched and Movies Watched, with "See All" opening `/profile/statistics`), TV Shows, Favourite TV Shows, Movies, Favourite Movies. Every section is a `MediaRail` with a "See All" target; the complete lists live at `/tv-shows`, `/movies`, and `/profile/favorites/[mediaType]`.
 - Keep the poster quick actions in `src/lib/features/library/media-quick-actions.tsx` and render them from `PosterCard` only; every movie/TV item shows the yellow plus (add to library), then the "Added" chip plus the heart that turns red for favourites.
+- Library chips are for discovery surfaces only. Pass `libraryBadges={false}` from the user's own library surfaces (`/movies`, `/tv-shows`, `/profile`, and `/profile/favorites/[mediaType]`) so neither the "Added" chip nor a Watching/Planned to Watch/Finished label is repeated on titles the user already knows are saved. `/explore`, the discovery lists, and other users' profiles keep the chips.
+- Show watch progress on the artwork instead of in text: `PosterCard` draws a bar across the bottom of the poster that fills in `gold.400` while a title is in progress and turns `green.400` at full width once it is finished. A title that has not been started renders no bar, and no page prints a watched percentage or an episode counter under a poster.
 - Load the signed-in user's library/favourite snapshot once per page through `MediaLibraryProvider` (`src/lib/features/library/media-library-provider.tsx`). Surfaces that show library state (poster quick actions, search status selects) read and write that context instead of keeping their own copy.
-- Keep personalized lists owner-scoped: parameterized SQL in `src/lib/services/database/custom-list-queries.ts` (every statement filters on `user_id`), server-only helpers in `custom-lists.server.ts`, and Server Actions in `src/lib/features/lists/actions.ts`. List and item caps are enforced in SQL, not only in the UI.
-- Keep the "See All" list routes (`/movies/[section]`, `/movies/genre/[genre]`, `/tv/[listType]`) server-rendered through `src/lib/pages/media/media-list.server.tsx`: one complete list of up to 30 titles in a single grid, with no page navigation. Only `/explore` search results stay paginated.
+- Keep the "See All" list routes (`/movies/[section]`, `/movies/genre/[genre]`, `/tv/[listType]`) server-rendered through `src/lib/pages/media/media-list.server.tsx`: one complete list of up to 30 titles in a single grid, with no page navigation. `/explore` search results are a single unpaginated grid as well.
 
 ## Environment Notes
 
@@ -150,6 +151,12 @@ Client hooks in `src/lib/services/tmdb/**/index.client.ts` must call `/api/tmdb`
 The current service layer includes typed helpers for trending movies, trending TV shows, movie details, movie credits, movie recommendations, TV show details, TV show credits, TV season details, TV episode details, movie images, person details, and TV search.
 
 TV show detail, season detail, and episode detail pages may include current-user progress controls. Keep TMDB reads behind the TMDB service layer and keep progress writes behind server-only tracking actions/helpers.
+
+## Detail Page Layout Notes
+
+Movie and TV show detail pages lead with a compact header: a small poster column (`7.5rem` on mobile, `13rem` from `md`) beside the title, the fact badges, the genres, and the IMDb rating. The "Your movie"/"Your TV show" panel comes next so a title can be added to the library without scrolling, and on TV shows the seasons follow immediately; the description, trailer, and cast close the page.
+
+Seasons on `/tv/show/[id]` expand in place. `getShowSeasonProgress` reads every season's watched episodes in one call, and `getSeasonEpisodes` loads a season's episode list on demand when it is expanded, so episodes can be ticked off from the show page without opening the season route.
 
 ## Deployment Notes
 

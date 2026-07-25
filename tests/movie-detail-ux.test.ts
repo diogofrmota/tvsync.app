@@ -40,6 +40,8 @@ test('movie details remain public and load required sections independently', asy
 test('movie page renders required metadata and focused sections in a clear hierarchy', async () => {
   const page = await read('src/lib/pages/movie/detail/index.tsx');
 
+  // The header carries the poster and every fact, the personal controls come
+  // straight after it, and the longer reading sections close the page.
   assertInOrder(page, [
     'poster`}',
     'as="h1"',
@@ -47,11 +49,11 @@ test('movie page renders required metadata and focused sections in a clear hiera
     'Runtime:',
     'Status:',
     '<GenreList',
+    'Director:',
     '<ImdbRatingPanel',
-    'Description',
     'Your movie',
+    'Description',
     '<MovieTrailer',
-    'Director',
     '<CastsWrapper',
   ]);
   assert.doesNotMatch(
@@ -236,9 +238,11 @@ test('movie detail layout has explicit mobile and desktop compositions', async (
     read('src/lib/pages/movie/detail/components/casts-wrapper.tsx'),
   ]);
 
-  assert.match(page, /base: 'minmax\(0, 1fr\)'/);
-  assert.match(page, /md: '18rem minmax\(0, 1fr\)'/);
-  assert.match(page, /base: '3xl', md: '5xl'/);
+  // The poster is a compact column beside the title on every screen size, so
+  // the library controls stay above the fold instead of below the artwork.
+  assert.match(page, /base: '7\.5rem minmax\(0, 1fr\)'/);
+  assert.match(page, /md: '13rem minmax\(0, 1fr\)'/);
+  assert.match(page, /base: 'xl', md: '3xl'/);
   assert.match(cast, /base: 'repeat\(2, minmax\(0, 1fr\)\)'/);
   assert.match(cast, /md: 'repeat\(4, minmax\(0, 1fr\)\)'/);
   assert.match(cast, /xl: 'repeat\(6, minmax\(0, 1fr\)\)'/);

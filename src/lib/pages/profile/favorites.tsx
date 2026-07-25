@@ -11,12 +11,15 @@ import Link from 'next/link';
 export const ProfileFavoritesPage = ({
   backHref = '/profile',
   items,
+  libraryBadges = true,
   mediaType,
   subtitle = 'Titles you marked as favourites.',
   title,
 }: {
   backHref?: string;
   items: Array<ProfileFavoriteItem>;
+  /** The signed-in user's own favourites hide the library chips. */
+  libraryBadges?: boolean;
   mediaType: MediaType.Movie | MediaType.Tv;
   subtitle?: string;
   title: string;
@@ -32,7 +35,11 @@ export const ProfileFavoritesPage = ({
       title={title}
     />
     {items.length > 0 ? (
-      <MediaGrid items={items} mediaType={mediaType} />
+      <MediaGrid
+        items={items}
+        libraryBadges={libraryBadges}
+        mediaType={mediaType}
+      />
     ) : (
       <StatePanel
         message="Open a movie or TV show and use the heart to add it here."

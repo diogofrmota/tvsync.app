@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, Grid, Heading, Progress, Text } from '@chakra-ui/react';
+import { Box, Flex, Stack, Text } from '@chakra-ui/react';
 import {
   getTvProgressSummary,
   type TvProgressSummaryResult,
@@ -21,6 +21,10 @@ const emptySummary: TvProgressSummaryResult = {
   watchedSeasonCount: 0,
 };
 
+/**
+ * Overall progress as one compact block in the show header: the same yellow bar
+ * the posters use, the watched count, and the next episode to play.
+ */
 export const TvProgressSummary = ({ tmdbShowId }: TvProgressSummaryProps) => {
   const [summary, setSummary] = useState<TvProgressSummaryResult>(emptySummary);
 
@@ -45,37 +49,38 @@ export const TvProgressSummary = ({ tmdbShowId }: TvProgressSummaryProps) => {
   const nextEpisode = summary.nextEpisode
     ? `S${summary.nextEpisode.seasonNumber} E${summary.nextEpisode.episodeNumber} - ${summary.nextEpisode.name}`
     : 'All available episodes watched';
+  const isComplete =
+    summary.totalEpisodeCount > 0 &&
+    summary.watchedEpisodeCount >= summary.totalEpisodeCount;
 
   return (
-    <Box
-      borderColor="whiteAlpha.300"
-      borderRadius={8}
-      borderWidth="1px"
-      padding={4}
-    >
-      <Grid gap={3}>
-        <Heading fontSize="md" fontWeight="500">
+    <Stack gap={2}>
+      <Flex align="baseline" gap={2} justify="space-between" wrap="wrap">
+        <Text fontSize="sm" fontWeight="600">
           Your TV progress
-        </Heading>
-        <Text color="gray.200" fontSize="sm">
+        </Text>
+        <Text color="fg.muted" fontSize="sm">
           Watched: {summary.watchedEpisodeCount} / {summary.totalEpisodeCount}{' '}
-          episodes
+          episodes · Progress: {summary.progressPercent}%
         </Text>
-        <Text color="gray.200" fontSize="sm">
-          Next: {nextEpisode}
-        </Text>
-        <Progress.Root value={summary.progressPercent}>
-          <Progress.Track>
-            <Progress.Range />
-          </Progress.Track>
-        </Progress.Root>
-        <Text color="gray.300" fontSize="sm">
-          Progress: {summary.progressPercent}%
-          {summary.lastWatchedAt
-            ? ` - Last watched ${new Date(summary.lastWatchedAt).toLocaleDateString()}`
-            : ''}
-        </Text>
-      </Grid>
-    </Box>
+      </Flex>
+      <Box background="bg.muted" borderRadius="full" height="6px" width="full">
+        <Box
+          background={isComplete ? 'green.400' : 'gold.400'}
+          borderRadius="full"
+          height="full"
+          transitionDuration="moderate"
+          transitionProperty="width, background"
+          transitionTimingFunction="ease-out"
+          width={`${Math.max(0, Math.min(summary.progressPercent, 100))}%`}
+        />
+      </Box>
+      <Text color="fg.muted" fontSize="sm">
+        Next: {nextEpisode}
+        {summary.lastWatchedAt
+          ? ` · Last watched ${new Date(summary.lastWatchedAt).toLocaleDateString()}`
+          : ''}
+      </Text>
+    </Stack>
   );
 };

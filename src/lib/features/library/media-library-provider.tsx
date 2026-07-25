@@ -81,10 +81,10 @@ const getLoginHref = () => {
 };
 
 /**
- * One library/favourite snapshot for the whole page. Poster quick actions,
- * search status selects, and personalized list controls all read and write this
- * state, so a title added in a rail is immediately reflected everywhere else on
- * screen without re-rendering the server tree.
+ * One library/favourite snapshot for the whole page. Every surface that shows
+ * library state — poster quick actions on rails, grids, and search results —
+ * reads and writes this state, so a title added in a rail is immediately
+ * reflected everywhere else on screen without re-rendering the server tree.
  */
 export const MediaLibraryProvider = ({
   children,

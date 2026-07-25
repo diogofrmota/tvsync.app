@@ -65,6 +65,28 @@ export type SeasonProgressStateResult = {
   watchedEpisodeNumbers: Array<number>;
 };
 
+export type SeasonEpisodeSummary = {
+  airDate: string;
+  episodeNumber: number;
+  name: string;
+  runtime: number;
+};
+
+export type SeasonEpisodesResult = {
+  episodes: Array<SeasonEpisodeSummary>;
+  status: TrackingActionStatus;
+};
+
+export type ShowSeasonProgress = {
+  seasonNumber: number;
+  watchedEpisodeNumbers: Array<number>;
+};
+
+export type ShowSeasonProgressResult = {
+  seasons: Array<ShowSeasonProgress>;
+  status: TrackingActionStatus;
+};
+
 export type TvProgressSummaryResult = {
   lastWatchedAt: string | null;
   nextEpisode: {
@@ -318,6 +340,80 @@ export const setSeasonWatched = async (
     };
   } catch {
     return { status: 'error', watchedEpisodeNumbers: [] };
+  }
+};
+
+/**
+ * Watched episode numbers for every season of one show in a single read, so the
+ * show page can render each season's progress without one round trip per
+ * season.
+ */
+export const getShowSeasonProgress = async (
+  tmdbShowId: number
+): Promise<ShowSeasonProgressResult> => {
+  if (!isPositiveInteger(tmdbShowId)) {
+    return { seasons: [], status: 'error' };
+  }
+
+  if (!(await ensureAuthenticated())) {
+    return { seasons: [], status: 'login_required' };
+  }
+
+  try {
+    const rows = await listOwnEpisodeProgressForShow(tmdbShowId);
+    const watchedBySeason = new Map<number, Array<number>>();
+
+    for (const row of rows.filter((progress) => progress.watched)) {
+      const watchedEpisodeNumbers =
+        watchedBySeason.get(row.season_number) ?? [];
+      watchedEpisodeNumbers.push(row.episode_number);
+      watchedBySeason.set(row.season_number, watchedEpisodeNumbers);
+    }
+
+    return {
+      seasons: [...watchedBySeason].map(
+        ([seasonNumber, watchedEpisodeNumbers]) => ({
+          seasonNumber,
+          watchedEpisodeNumbers,
+        })
+      ),
+      status: 'saved',
+    };
+  } catch {
+    return { seasons: [], status: 'error' };
+  }
+};
+
+/**
+ * The episode list for one season, trimmed to what the show page needs so a
+ * season can be expanded and its episodes ticked off without leaving the page.
+ * Episodes are public, so signed-out visitors still get the list.
+ */
+export const getSeasonEpisodes = async ({
+  seasonNumber,
+  tmdbShowId,
+}: Omit<SeasonProgressInput, 'watched'>): Promise<SeasonEpisodesResult> => {
+  if (!(isPositiveInteger(tmdbShowId) && isNonNegativeInteger(seasonNumber))) {
+    return { episodes: [], status: 'error' };
+  }
+
+  try {
+    const season = await getTVSeasonDetailsServer({
+      seasonNumber,
+      showId: tmdbShowId,
+    });
+
+    return {
+      episodes: season.episodes.map((episode) => ({
+        airDate: episode.air_date,
+        episodeNumber: episode.episode_number,
+        name: episode.name || `Episode ${episode.episode_number}`,
+        runtime: episode.runtime,
+      })),
+      status: 'saved',
+    };
+  } catch {
+    return { episodes: [], status: 'error' };
   }
 };
 

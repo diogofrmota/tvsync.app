@@ -53,50 +53,46 @@ const TvShowDetailPage = ({
 
   return (
     <PageShell>
-      <Stack gap={{ base: 10, md: 14 }} paddingX={{ base: 4, md: 0 }}>
+      <Stack gap={{ base: 8, md: 10 }} paddingX={{ base: 4, md: 0 }}>
+        {/* The header stays compact — a small poster beside the title, the
+            facts, and the personal controls — so the seasons and their
+            episodes are reachable without scrolling the page. */}
         <Grid
           alignItems="start"
-          gap={{ base: 8, md: 12 }}
+          gap={{ base: 4, md: 8 }}
           templateColumns={{
-            base: 'minmax(0, 1fr)',
-            md: '18rem minmax(0, 1fr)',
+            base: '7.5rem minmax(0, 1fr)',
+            md: '13rem minmax(0, 1fr)',
           }}
         >
-          <AspectRatio
-            justifySelf={{ base: 'center', md: 'stretch' }}
-            maxWidth={{ base: '18rem', md: 'none' }}
-            ratio={2 / 3}
-            width="full"
-          >
+          <AspectRatio ratio={2 / 3} width="full">
             <PosterImage alt={`${title} poster`} src={show.poster_path} />
           </AspectRatio>
 
-          <Stack gap={5}>
-            <Box>
-              <Heading as="h1" fontSize={{ base: '3xl', md: '5xl' }}>
-                {title}
-              </Heading>
-              <Flex gap={2} marginTop={3} wrap="wrap">
-                <Badge variant="outline">
-                  Release year: {getReleaseYear(show.first_air_date)}
-                </Badge>
-                <Badge variant="outline">
-                  Seasons:{' '}
-                  {show.number_of_seasons > 0
-                    ? show.number_of_seasons
-                    : 'Unavailable'}
-                </Badge>
-                <Badge variant="outline">
-                  Episodes:{' '}
-                  {show.number_of_episodes > 0
-                    ? show.number_of_episodes
-                    : 'Unavailable'}
-                </Badge>
-                <Badge variant="outline">
-                  Status: {show.status || 'Unavailable'}
-                </Badge>
-              </Flex>
-            </Box>
+          <Stack gap={3}>
+            <Heading as="h1" fontSize={{ base: 'xl', md: '3xl' }}>
+              {title}
+            </Heading>
+            <Flex gap={2} wrap="wrap">
+              <Badge variant="outline">
+                Release year: {getReleaseYear(show.first_air_date)}
+              </Badge>
+              <Badge variant="outline">
+                Seasons:{' '}
+                {show.number_of_seasons > 0
+                  ? show.number_of_seasons
+                  : 'Unavailable'}
+              </Badge>
+              <Badge variant="outline">
+                Episodes:{' '}
+                {show.number_of_episodes > 0
+                  ? show.number_of_episodes
+                  : 'Unavailable'}
+              </Badge>
+              <Badge variant="outline">
+                Status: {show.status || 'Unavailable'}
+              </Badge>
+            </Flex>
 
             {show.genres.length > 0 ? (
               <Flex gap={2} wrap="wrap">
@@ -111,67 +107,78 @@ const TvShowDetailPage = ({
             )}
 
             <ImdbRatingPanel imdbId={imdbId} rating={imdbRating} />
-
-            <Box>
-              <Heading fontSize="xl" marginBottom={2}>
-                Description
-              </Heading>
-              <Text color={show.overview ? undefined : 'fg.muted'}>
-                {show.overview || 'No description is available from TMDB.'}
-              </Text>
-            </Box>
-
-            <Box as="section">
-              <Heading fontSize="xl" marginBottom={3}>
-                Your TV show
-              </Heading>
-              {isAuthenticated ? (
-                <Grid gap={5}>
-                  <TvDetailLibraryControl tmdbId={show.id} />
-                  <TvProgressSummary tmdbShowId={show.id} />
-                  <FavoriteButton mediaType={MediaType.Tv} tmdbId={show.id} />
-                  <RatingInput
-                    showAverage={false}
-                    showReview
-                    target={{ mediaType: MediaType.Tv, tmdbId: show.id }}
-                  />
-                </Grid>
-              ) : (
-                <Stack
-                  alignItems="flex-start"
-                  background="bg.surface"
-                  borderColor="border"
-                  borderRadius="md"
-                  borderWidth="1px"
-                  gap={3}
-                  padding={4}
-                >
-                  <Text>
-                    Log in or register to add this TV show to your library,
-                    choose its status, track episode progress, mark it as a
-                    favourite, or rate it.
-                  </Text>
-                  <Flex gap={3} wrap="wrap">
-                    <Button asChild>
-                      <Link href={`/login?callbackUrl=/tv/show/${show.id}`}>
-                        Login
-                      </Link>
-                    </Button>
-                    <Button asChild variant="outline">
-                      <Link href="/register">Register</Link>
-                    </Button>
-                  </Flex>
-                </Stack>
-              )}
-            </Box>
           </Stack>
         </Grid>
+
+        <Box
+          as="section"
+          borderColor="border"
+          borderRadius="md"
+          borderWidth="1px"
+          padding={{ base: 4, md: 5 }}
+        >
+          <Heading fontSize="lg" marginBottom={3}>
+            Your TV show
+          </Heading>
+          {isAuthenticated ? (
+            <Grid
+              alignItems="start"
+              gap={{ base: 4, md: 6 }}
+              templateColumns={{
+                base: 'minmax(0, 1fr)',
+                md: 'repeat(2, minmax(0, 1fr))',
+              }}
+            >
+              <Stack gap={4}>
+                <TvDetailLibraryControl tmdbId={show.id} />
+                <Stack gap={2}>
+                  <FavoriteButton mediaType={MediaType.Tv} tmdbId={show.id} />
+                </Stack>
+              </Stack>
+              <Stack gap={4}>
+                <TvProgressSummary tmdbShowId={show.id} />
+                <RatingInput
+                  showAverage={false}
+                  showReview
+                  target={{ mediaType: MediaType.Tv, tmdbId: show.id }}
+                />
+              </Stack>
+            </Grid>
+          ) : (
+            <Stack alignItems="flex-start" gap={3}>
+              <Text>
+                Log in or register to add this TV show to your library, choose
+                its status, track episode progress, mark it as a favourite, or
+                rate it.
+              </Text>
+              <Flex gap={3} wrap="wrap">
+                <Button asChild>
+                  <Link href={`/login?callbackUrl=/tv/show/${show.id}`}>
+                    Login
+                  </Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href="/register">Register</Link>
+                </Button>
+              </Flex>
+            </Stack>
+          )}
+        </Box>
+
+        <SeasonsList seasons={show.seasons} showId={show.id} />
+
+        <Box as="section">
+          <Heading fontSize="xl" marginBottom={2}>
+            Description
+          </Heading>
+          <Text color={show.overview ? undefined : 'fg.muted'}>
+            {show.overview || 'No description is available from TMDB.'}
+          </Text>
+        </Box>
 
         <TvTrailer trailer={trailer} />
 
         <TvCastsWrapper credits={credits} />
-
-        <SeasonsList seasons={show.seasons} showId={show.id} />
       </Stack>
     </PageShell>
   );

@@ -4,7 +4,6 @@ import { Stack } from '@chakra-ui/react';
 import { MediaRail } from 'lib/components/shared/MediaRail';
 import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
 import { StatePanel } from 'lib/components/shared/Section';
-import { GenreChips } from 'lib/pages/explore/genre-chips';
 import { ExploreHero } from 'lib/pages/explore/hero';
 import { buildExploreHeroSlides } from 'lib/pages/explore/hero-slides.server';
 import { MediaSearchBar } from 'lib/pages/media/media-search-bar';
@@ -20,10 +19,8 @@ import {
   qualityFilterFromParams,
   takeMediaOverviewItems,
 } from 'lib/pages/media/overview.server';
-import { loadSearchLibraryState } from 'lib/pages/search/load-search-library-state.server';
 import {
   getMovieListServer,
-  getMovieRecommendationsServer,
   getTrendingMoviesServer,
 } from 'lib/services/tmdb/movie/list/index.server';
 import type {
@@ -124,16 +121,6 @@ const buildTVShowHref = (
 ) => buildMediaOverviewHref({ basePath: '/tv', listType, params });
 
 export const ExploreDiscover = async () => {
-  const libraryItems = await loadSearchLibraryState().catch(() => []);
-  const libraryMovieIds = new Set(
-    libraryItems
-      .filter((item) => item.mediaType === MediaType.Movie)
-      .map((item) => item.tmdbId)
-  );
-  const seedMovieId = libraryItems.find(
-    (item) => item.mediaType === MediaType.Movie
-  )?.tmdbId;
-
   const [
     trendingMovies,
     trendingShows,
@@ -142,7 +129,6 @@ export const ExploreDiscover = async () => {
     upcomingMovies,
     topRatedMovies,
     topRatedShows,
-    recommendedMovies,
   ] = await Promise.allSettled([
     getTrendingMoviesServer({ page: 1 }, 'week'),
     getTrendingTVShowsServer({ page: 1 }, 'week'),
@@ -157,9 +143,6 @@ export const ExploreDiscover = async () => {
       section: 'top_rated',
     }),
     getDiscoverTVShowsServer({ page: 1, ...topRatedTVShowParams }),
-    seedMovieId
-      ? getMovieRecommendationsServer(seedMovieId, { page: 1 })
-      : Promise.resolve({ results: [] as Array<MovieListItemType> }),
   ]);
 
   const heroSlides = await buildExploreHeroSlides(
@@ -170,19 +153,7 @@ export const ExploreDiscover = async () => {
     return [];
   });
 
-  const recommendedItems = uniqueMediaOverviewItems(
-    settledResults<MovieListItemType>(recommendedMovies).map(
-      mapMovieOverviewItem
-    )
-  ).filter((item) => item.posterPath && !libraryMovieIds.has(item.id));
-
   const allRails: Array<ExploreRail> = [
-    {
-      items: recommendedItems,
-      mediaType: MediaType.Movie,
-      seeAllHref: buildMovieHref('popular', popularMovieParams),
-      title: 'Recommended for you',
-    },
     {
       items: shapeMovies(
         settledResults<MovieListItemType>(trendingMovies),
@@ -266,7 +237,6 @@ export const ExploreDiscover = async () => {
           title="Explore"
         />
         {heroSlides.length > 0 ? <ExploreHero slides={heroSlides} /> : null}
-        <GenreChips />
       </Stack>
       {rails.length > 0 ? (
         rails.map((rail) => (

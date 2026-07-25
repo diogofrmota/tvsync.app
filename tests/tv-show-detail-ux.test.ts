@@ -41,6 +41,8 @@ test('TV show details remain public and load required sections independently', a
 test('TV show page renders required metadata and focused sections in a clear hierarchy', async () => {
   const page = await read('src/lib/pages/tv/detail/index.tsx');
 
+  // Header first, then the personal controls, then the seasons: episodes are
+  // reachable without scrolling past the trailer, cast, and description.
   assertInOrder(page, [
     'poster`}',
     'as="h1"',
@@ -50,11 +52,11 @@ test('TV show page renders required metadata and focused sections in a clear hie
     'Status:',
     'Genres unavailable',
     '<ImdbRatingPanel',
-    'Description',
     'Your TV show',
+    '<SeasonsList',
+    'Description',
     '<TvTrailer',
     '<TvCastsWrapper',
-    '<SeasonsList',
   ]);
   assert.doesNotMatch(
     page,
@@ -167,9 +169,10 @@ test('seasons list shows number, poster, release year, and watched progress with
     'src/lib/pages/tv/detail/components/seasons-list.tsx'
   );
 
-  assert.match(seasons, /Season \{season\.season_number\}/);
+  assert.match(seasons, /Season \{seasonNumber\}/);
   assert.match(seasons, /getSeasonYear\(season\.air_date\)/);
-  assert.match(seasons, /<SeasonProgressControls/);
+  assert.match(seasons, /<SeasonProgressBar/);
+  assert.match(seasons, /\{watchedCount\} \/ \{episodeCount\} watched/);
   assert.match(
     seasons,
     /season_number > 0[\s\S]*toSorted\(\(left, right\) => left\.season_number - right\.season_number\)/
@@ -186,15 +189,36 @@ test('seasons list shows number, poster, release year, and watched progress with
   );
 });
 
+test('seasons expand in place so episodes can be marked from the show page', async () => {
+  const [seasons, actions] = await Promise.all([
+    read('src/lib/pages/tv/detail/components/seasons-list.tsx'),
+    read('src/lib/features/tracking/actions.ts'),
+  ]);
+
+  // Expanding a season loads its episodes on demand and each episode toggles
+  // its own watched state without leaving the show page.
+  assert.match(
+    seasons,
+    /getSeasonEpisodes\(\{ seasonNumber, tmdbShowId: showId \}\)/
+  );
+  assert.match(seasons, /await setEpisodeWatched\(/);
+  assert.match(seasons, /Hide episodes/);
+  assert.match(seasons, /Mark watched/);
+  assert.match(actions, /export const getSeasonEpisodes/);
+  // One read covers every season's progress instead of one call per season.
+  assert.match(actions, /export const getShowSeasonProgress/);
+  assert.match(actions, /listOwnEpisodeProgressForShow\(tmdbShowId\)/);
+});
+
 test('mark entire season watched and unwatched controls exist and roll back on failure', async () => {
   const controls = await read(
-    'src/lib/features/tracking/season-progress-controls.tsx'
+    'src/lib/pages/tv/detail/components/seasons-list.tsx'
   );
 
   assert.match(controls, /Mark season watched/);
   assert.match(controls, /Mark season unwatched/);
-  assert.match(controls, /await setSeasonWatched/);
-  assert.match(controls, /setWatchedCount\(previousWatchedCount\)/);
+  assert.match(controls, /await setSeasonWatched\(/);
+  assert.match(controls, /setWatchedBySeason\(previous\)/);
 });
 
 test('one unified authenticated library control adds, updates, removes, and rolls back', async () => {
@@ -285,9 +309,11 @@ test('TV show detail layout has explicit mobile and desktop compositions', async
     read('src/lib/pages/tv/detail/components/seasons-list.tsx'),
   ]);
 
-  assert.match(page, /base: 'minmax\(0, 1fr\)'/);
-  assert.match(page, /md: '18rem minmax\(0, 1fr\)'/);
-  assert.match(page, /base: '3xl', md: '5xl'/);
+  // The poster is a compact column beside the title on every screen size, so
+  // the library controls and seasons stay close to the top of the page.
+  assert.match(page, /base: '7\.5rem minmax\(0, 1fr\)'/);
+  assert.match(page, /md: '13rem minmax\(0, 1fr\)'/);
+  assert.match(page, /base: 'xl', md: '3xl'/);
   assert.match(cast, /base: 'repeat\(2, minmax\(0, 1fr\)\)'/);
   assert.match(cast, /md: 'repeat\(4, minmax\(0, 1fr\)\)'/);
   assert.match(cast, /xl: 'repeat\(6, minmax\(0, 1fr\)\)'/);
