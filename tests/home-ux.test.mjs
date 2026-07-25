@@ -101,8 +101,9 @@ test('each successful preview is one shared horizontally scrollable rail of ten 
   assert.doesNotMatch(home, /repeat\(9, minmax\(0, 1fr\)\)/);
 });
 
-test('the Explore featured area is a ten-slide carousel that rotates every five seconds', () => {
+test('the Explore featured area is a ten-slide carousel of poster, name, trailer, and rating', () => {
   const hero = read('src/lib/pages/explore/hero.tsx');
+  const slides = read('src/lib/pages/explore/hero-slides.server.ts');
   const discover = read('src/lib/pages/explore/discover.server.tsx');
 
   assert.match(hero, /^'use client';/);
@@ -112,11 +113,24 @@ test('the Explore featured area is a ten-slide carousel that rotates every five 
   assert.match(hero, /Previous featured title/);
   assert.match(hero, /Next featured title/);
   assert.match(hero, /slice\(0, EXPLORE_HERO_SLIDE_COUNT\)/);
-  assert.match(discover, /<ExploreHero items=\{heroItems\}/);
-  assert.match(
-    discover,
-    /slice\(EXPLORE_HERO_SLIDE_COUNT\)|EXPLORE_HERO_SLIDE_COUNT/
-  );
+
+  // Every slide leads with the poster and the name, then the star rating and
+  // the trailer link.
+  assertInOrder(hero, ['<PosterImage', '<SlideRating', 'Watch trailer']);
+  assert.match(hero, /<Heading[\s\S]{0,400}\{slide\.title\}/);
+  assert.match(hero, /⭐/);
+  assert.match(hero, /\$\{source\} rating/);
+  // The star never relabels a TMDB score as an IMDb one.
+  assert.match(hero, /const source = isImdb \? 'IMDb' : 'TMDB';/);
+
+  // Trailer keys and IMDb scores come from the trusted server helpers only.
+  assert.match(slides, /^import 'server-only';/);
+  assert.match(slides, /selectTrustedMovieTrailer/);
+  assert.match(slides, /selectTrustedTvTrailer/);
+  assert.match(slides, /getImdbRatingServer/);
+  assert.match(slides, /slice\(0, EXPLORE_HERO_SLIDE_COUNT\)/);
+  assert.match(discover, /<ExploreHero slides=\{heroSlides\}/);
+  assert.match(discover, /buildExploreHeroSlides/);
 });
 
 test('See All opens one complete 30-title list with no pagination controls', () => {
