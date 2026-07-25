@@ -140,59 +140,53 @@ export const ProfilePage = ({
   return (
     <PageShell>
       {/* The route title leads the page exactly like Movies and TV Shows, with
-          the account actions on the same horizontal line. */}
-      <PageHeading
-        actions={
-          <Flex gap={3}>
-            <Button asChild size="sm">
-              <Link href="/profile/edit">
-                <FiEdit3 aria-hidden />
-                Edit Profile
-              </Link>
-            </Button>
-            <LogoutButton />
+          the account actions on the same horizontal line at every width. The
+          identity sits directly underneath as plain centred text — no card, no
+          extra padding — so the first list stays close to the top. */}
+      <Stack gap={{ base: 3, md: 4 }}>
+        <PageHeading
+          actions={
+            <Flex gap={2}>
+              <Button asChild size="sm">
+                <Link href="/profile/edit">
+                  <FiEdit3 aria-hidden />
+                  Edit Profile
+                </Link>
+              </Button>
+              <LogoutButton />
+            </Flex>
+          }
+          keepActionsInline
+          title="Profile"
+        />
+
+        <Stack align="center" gap={2} textAlign="center">
+          <Stack align="center" gap={0.5}>
+            <Heading fontSize={{ base: 'lg', md: 'xl' }}>{displayName}</Heading>
+            <Text color="fg.muted" fontSize="sm">
+              @{profile.username}
+            </Text>
+          </Stack>
+
+          <Flex gap={2} justify="center" wrap="wrap">
+            <FollowCountChip
+              href={`${baseProfilePath}/following` as Route}
+              label="Following"
+              value={followCounts.following_count}
+            />
+            <FollowCountChip
+              href={`${baseProfilePath}/followers` as Route}
+              label="Followers"
+              value={followCounts.follower_count}
+            />
           </Flex>
-        }
-        title="Profile"
-      />
 
-      {/* Identity reads as one centred block: no avatar image of any kind, just
-          the name, handle, follow counts, and biography. */}
-      <Stack
-        align="center"
-        borderColor="border"
-        borderRadius="xl"
-        borderWidth="1px"
-        gap={3}
-        paddingX={{ base: 4, md: 6 }}
-        paddingY={{ base: 5, md: 6 }}
-        textAlign="center"
-      >
-        <Stack align="center" gap={1}>
-          <Heading fontSize={{ base: 'xl', md: '2xl' }}>{displayName}</Heading>
-          <Text color="fg.muted" fontSize="sm">
-            @{profile.username}
-          </Text>
+          {profile.bio ? (
+            <Text color="fg.muted" fontSize="sm" maxWidth="42rem">
+              {profile.bio}
+            </Text>
+          ) : null}
         </Stack>
-
-        <Flex gap={2} justify="center" wrap="wrap">
-          <FollowCountChip
-            href={`${baseProfilePath}/following` as Route}
-            label="Following"
-            value={followCounts.following_count}
-          />
-          <FollowCountChip
-            href={`${baseProfilePath}/followers` as Route}
-            label="Followers"
-            value={followCounts.follower_count}
-          />
-        </Flex>
-
-        {profile.bio ? (
-          <Text color="fg.muted" fontSize="sm" maxWidth="42rem">
-            {profile.bio}
-          </Text>
-        ) : null}
       </Stack>
 
       <Stack as="section" gap={5}>
