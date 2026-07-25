@@ -1,11 +1,6 @@
 import { MEDIA_RAIL_ITEM_LIMIT } from 'lib/components/shared/MediaRail';
 import type { MediaCardEntry } from 'lib/components/shared/media-item';
 import { loadOwnLibraryPreview } from 'lib/features/library/library-preview.server';
-import { loadOwnCustomLists } from 'lib/features/lists/custom-lists.server';
-import {
-  type CustomListWithItems,
-  PROFILE_CUSTOM_LIST_PREVIEW_COUNT,
-} from 'lib/features/lists/types';
 import type { ProfileFavoriteItem } from 'lib/features/profile/profile-favorites.server';
 import { getOwnProfileFavorites } from 'lib/features/profile/profile-favorites.server';
 import type { ProfileStatistics } from 'lib/features/profile/profile-statistics';
@@ -114,7 +109,7 @@ export default async function Page() {
   }
 
   const ownProfile = profile;
-  const [statistics, favorites, followState, tvShows, movies, customLists] =
+  const [statistics, favorites, followState, tvShows, movies] =
     await Promise.all([
       withFallback<ProfileStatistics>(
         getOwnProfileStatistics,
@@ -150,17 +145,10 @@ export default async function Page() {
         [],
         'movies'
       ),
-      withFallback<Array<CustomListWithItems>>(
-        () =>
-          loadOwnCustomLists({ listLimit: PROFILE_CUSTOM_LIST_PREVIEW_COUNT }),
-        [],
-        'personalized lists'
-      ),
     ]);
 
   return (
     <ProfilePage
-      customLists={customLists}
       favorites={favorites}
       followCounts={{
         follower_count: followState.follower_count,

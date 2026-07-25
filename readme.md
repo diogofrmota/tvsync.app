@@ -121,7 +121,7 @@ The protected `/watchlist` route loads saved rows from Neon, hydrates each item 
 
 Signed-in users can classify movies as planned or watched from movie detail pages and the watchlist. TV shows can be planned, watching, completed, dropped, or paused from TV detail pages and the watchlist. Status mutations go through `src/lib/features/tracking` Server Actions and are persisted to Neon through `src/lib/services/database/tracking.server.ts`. Signed-out users are redirected to login before a status change is saved.
 
-TV episode progress is stored in `episode_progress`. Episode detail pages and season episode lists can mark individual episodes watched or unwatched, and season pages can mark the entire season watched or unwatched. TV show detail pages summarize watched episode count, total progress percentage, next episode, watched seasons, and last watched date from Neon plus TMDB season data.
+TV episode progress is stored in `episode_progress`. Episode detail pages, season episode lists, and the expandable seasons on the show detail page can mark individual episodes watched or unwatched, and whole seasons can be marked watched or unwatched from the show page or the season page. TV show detail pages summarize watched episode count, total progress percentage, next episode, watched seasons, and last watched date from Neon plus TMDB season data.
 
 ## Home
 
@@ -130,7 +130,7 @@ The `/` route is the signed-out discovery home: a title/subtitle hero plus trend
 ## Routes
 
 - `/` - Signed-out discovery home page (hero plus trending/popular shelves). Signed-in users are redirected to `/movies`.
-- `/explore` - Authenticated search/browse for movies and TV shows (one content type at a time via Movies/TV tabs) using TMDB popular lists and title search, with genre and sort filters, linked results, library save actions, and empty/error states.
+- `/explore` - Authenticated discovery landing (featured hero plus the trending, upcoming, popular, and highest-rated rails). A `?query=` term shows one grid of the movies and TV shows related to the term, ordered by popularity, with library save actions and empty/error states.
 - `/movies/popular` - Main movie navigation target with search, Most Popular Movies, Trending Movies, and Highest Rated Movies of All Time sections.
 - `/movies/[section]` - Movie lists such as popular, top rated, upcoming, or now playing.
 - `/movies/genre/[genre]` - Movie discovery by genre.

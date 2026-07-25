@@ -46,6 +46,7 @@ export default async function Page({
   return (
     <ProfileFavoritesPage
       items={favorites.filter((item) => item.mediaType === section.mediaType)}
+      libraryBadges={false}
       mediaType={section.mediaType}
       title={section.title}
     />

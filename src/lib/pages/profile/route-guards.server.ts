@@ -7,7 +7,7 @@ import type { Route } from 'next';
 import { redirect } from 'next/navigation';
 
 /**
- * Shared guard for the profile sub-routes (statistics, favourites, lists).
+ * Shared guard for the profile sub-routes (statistics and favourites).
  * Signed-out visitors go to login and come back to the page they asked for;
  * anything else that stops the profile from loading falls back to `/profile`,
  * which already renders the friendly access panels.

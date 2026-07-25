@@ -2,7 +2,7 @@ import type { TrackableMediaType, WatchStatus } from 'lib/types';
 
 /**
  * Identity of a trackable title shared by every quick action surface: poster
- * cards, search results, personalized lists, and the profile rails.
+ * cards, search results, and the profile rails.
  */
 export type MediaLibraryRef = {
   mediaType: TrackableMediaType;

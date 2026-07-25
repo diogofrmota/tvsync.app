@@ -20,6 +20,8 @@ type RailHref = ComponentProps<typeof Link>['href'];
 type MediaShelfProps = {
   items: Array<MediaCardItem>;
   itemLimit?: number;
+  /** Own-library rails pass `false` so saved titles stay chip-free. */
+  libraryBadges?: boolean;
   mediaType: MediaType.Movie | MediaType.Tv;
 };
 
@@ -41,6 +43,7 @@ const posterWidth = { base: '7rem', sm: '8rem', md: '9rem' } as const;
 const MediaShelf = ({
   items,
   itemLimit = MEDIA_RAIL_ITEM_LIMIT,
+  libraryBadges,
   mediaType,
 }: MediaShelfProps) => {
   const visibleItems = items.slice(0, itemLimit);
@@ -62,6 +65,7 @@ const MediaShelf = ({
                 id={item.id}
                 imageUrl={item.posterPath}
                 layout="flex"
+                libraryBadges={libraryBadges}
                 mediaType={itemMediaType}
                 name={item.title}
                 prefetch={false}
@@ -83,6 +87,7 @@ export const MediaRail = ({
   fallback,
   items,
   itemLimit,
+  libraryBadges,
   mediaType,
   seeAllHref,
   title,
@@ -94,7 +99,12 @@ export const MediaRail = ({
       title={title}
     />
     {fallback ?? (
-      <MediaShelf itemLimit={itemLimit} items={items} mediaType={mediaType} />
+      <MediaShelf
+        itemLimit={itemLimit}
+        items={items}
+        libraryBadges={libraryBadges}
+        mediaType={mediaType}
+      />
     )}
   </Stack>
 );

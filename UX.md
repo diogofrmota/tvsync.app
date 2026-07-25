@@ -185,8 +185,7 @@ On mobile, use a bottom navigation bar.
 2.0 Movie and TV Show Items
 
 Every movie and TV show item looks and behaves the same wherever it is listed
-(Home, Explore, Movies, TV Shows, Profile, personalized lists, and search
-results).
+(Home, Explore, Movies, TV Shows, Profile, and search results).
 
 * A title that is not in the library shows a small yellow square with a black
   plus in the bottom-right corner of the poster. Selecting it adds the title to
@@ -194,8 +193,16 @@ results).
 * Once the title is in the library, the bottom-right corner shows a small yellow
   "Added" label in black text, and an empty heart appears in the top-right
   corner.
+* The "Added" label and the library status labels (Watching, Planned to Watch,
+  Finished) are only shown where they add information: Explore, the discovery
+  lists, and another user's profile. The user's own Movies, TV Shows, and Profile
+  pages never repeat them.
 * Selecting the heart turns it red and adds the title to the user's favourites.
   Selecting it again removes the favourite.
+* Watch progress is shown as a bar across the bottom of the poster. The bar fills
+  in yellow as the title is watched and turns green across the full width of the
+  poster once it is finished. A title that has not been started shows no bar.
+  Percentages and episode counters are never written under the poster.
 * The badges stay small so the poster art remains visible.
 * Signed-out users who select the plus are sent to the login page and returned to
   the list they came from.
@@ -255,35 +262,17 @@ Functionality
 
 2.3 Search
 
-Tabs
-
-* Movies
-* TV Shows
-
-The selected tab determines the content type being searched.
-
-Filters
-
-* Search by title
-* Filter by genre
-* Sort by popularity
-* Sort by rating
-* Sort by release date
-
 Results
 
-* Results update when the user submits a search or changes a filter.
+* Searching shows one list of the movies and TV shows related to the term.
+* Results are ordered by popularity, most popular first.
+* There are no content-type tabs, no genre filter, and no sort control.
 * Desktop: Responsive grid based on the available screen width.
 * Mobile: Three columns per row.
-* Display up to 27 items initially.
-* Include pagination.
 
 Functionality
 
-* Users can search for movies or TV shows by title.
-* Users can browse content without entering a search term.
-* Users can filter results by genre.
-* Users can sort results.
+* Users can search for movies and TV shows by title from the search field.
 * Users can select a poster to open its details page.
 * Each result includes a quick action for adding the item to the user’s watchlist.
 * Existing library items display their current status.
@@ -311,7 +300,6 @@ Sections, in this order
 3. ❤️ Favourite TV Shows
 4. Movies
 5. ❤️ Favourite Movies
-6. Personalized Lists
 
 Every list section uses the same rail as Home and Explore: up to the first twenty
 titles scroll horizontally, and a See All button sits on the section title line
@@ -335,15 +323,6 @@ See All destinations
 * TV Shows opens the TV Shows library.
 * Movies opens the Movies library.
 * Favourite TV Shows and Favourite Movies open the complete favourites list.
-* Personalized Lists opens the lists page; each list rail opens that list.
-
-Personalized Lists
-
-* Users can create a list with a name and an optional description.
-* List names must be unique per user.
-* Users can rename, describe, and delete their own lists.
-* Users can add titles from their library to a list and remove them again.
-* Lists may mix movies and TV shows.
 
 Functionality
 
@@ -396,6 +375,14 @@ Content
 * Streaming availability
 * Similar movies
 
+Layout
+
+* A compact poster sits beside the title, the fact badges, the genres, the
+  director and the IMDb rating; the poster never fills the screen.
+* The personal actions come immediately after that header, so a movie can be
+  added to the library without scrolling.
+* The description, trailer and cast follow, in that order.
+
 User Actions
 
 * Add to Library (and they can select the status like planned to Watch, finished, etc)
@@ -429,11 +416,23 @@ Content
 * Streaming availability
 * Similar TV shows
 
+Layout
+
+* A compact poster sits beside the name, the fact badges, the genres and the
+  IMDb rating; the poster never fills the screen.
+* The personal actions come immediately after that header, followed by the
+  seasons, so a show can be added to the library and its episodes marked without
+  scrolling to the bottom of the page.
+* The description, trailer and cast follow, in that order.
+
 Seasons
 
 * Display all available seasons.
 * Each season displays its number, poster, release year and watched progress.
-* Users can expand or select a season to view its episodes.
+* Watched progress is a bar that fills in yellow and turns green when the season
+  is complete.
+* Users can expand a season in place to see its episodes and mark single
+  episodes as watched, or open the season page for the full episode detail.
 
 User Actions
 
@@ -443,6 +442,7 @@ User Actions
 * Mark as Favourite
 * Rate the TV show
 * Mark an entire season as watched or unwatched
+* Mark a single episode as watched from the expanded season
 
 Functionality
 

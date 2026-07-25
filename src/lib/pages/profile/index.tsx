@@ -7,11 +7,6 @@ import { MediaRail } from 'lib/components/shared/MediaRail';
 import type { MediaCardItem } from 'lib/components/shared/media-item';
 import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
 import { SectionHeading, StatePanel } from 'lib/components/shared/Section';
-import { CreateCustomListForm } from 'lib/features/lists/create-list-form';
-import {
-  type CustomListWithItems,
-  getCustomListHref,
-} from 'lib/features/lists/types';
 import type { ProfileFavoriteItem } from 'lib/features/profile/profile-favorites.server';
 import type { ProfileStatistics } from 'lib/features/profile/profile-statistics';
 import { LogoutButton } from 'lib/pages/auth/client-actions';
@@ -43,7 +38,8 @@ export const ProfileAccessIssue = ({ issue }: { issue: AuthSessionIssue }) => (
 /**
  * Every profile list is the same horizontally scrollable rail used by Home and
  * Explore: the first titles, a trailing "See All" tile, and a "See All" action
- * aligned with the section title.
+ * aligned with the section title. Everything on your own profile is already in
+ * your library, so the library chips are dropped here.
  */
 const ProfileRail = ({
   emptyMessage,
@@ -61,6 +57,7 @@ const ProfileRail = ({
   <MediaRail
     fallback={items.length === 0 ? <StatePanel message={emptyMessage} /> : null}
     items={items}
+    libraryBadges={false}
     mediaType={mediaType}
     seeAllHref={seeAllHref}
     title={title}
@@ -106,7 +103,6 @@ const FollowCountChip = ({
 );
 
 export const ProfilePage = ({
-  customLists,
   favorites,
   followCounts,
   movies,
@@ -114,7 +110,6 @@ export const ProfilePage = ({
   statistics,
   tvShows,
 }: {
-  customLists: Array<CustomListWithItems>;
   favorites: Array<ProfileFavoriteItem>;
   followCounts: FollowCountsRow;
   movies: Array<MediaCardItem>;
@@ -221,28 +216,6 @@ export const ProfilePage = ({
         seeAllHref={'/profile/favorites/movies' as Route}
         title="❤️ Favourite Movies"
       />
-
-      <Stack as="section" gap={5}>
-        <SectionHeading
-          seeAllHref={'/profile/lists' as Route}
-          title="Personalized Lists"
-        />
-        <CreateCustomListForm />
-        {customLists.length > 0 ? (
-          customLists.map((list) => (
-            <ProfileRail
-              emptyMessage="This list is empty. Open it to add titles from your library."
-              items={list.items}
-              key={list.id}
-              mediaType={MediaType.Movie}
-              seeAllHref={getCustomListHref(list.id) as Route}
-              title={list.name}
-            />
-          ))
-        ) : (
-          <StatePanel message="You have not created a personalized list yet. Name one above to get started." />
-        )}
-      </Stack>
     </PageShell>
   );
 };

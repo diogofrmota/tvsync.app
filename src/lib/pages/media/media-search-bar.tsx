@@ -124,8 +124,6 @@ export const MediaSearchBar = ({
               type="search"
               value={query}
             />
-            <input name="page" type="hidden" value="1" />
-            <input name="type" type="hidden" value={mediaType} />
             <Button aria-label="Search" borderRadius={24} type="submit">
               <FiSearch />
             </Button>

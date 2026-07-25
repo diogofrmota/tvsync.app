@@ -5,10 +5,7 @@ import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
 import PosterCard from 'lib/components/shared/PosterCard';
 import { SectionHeading, StatePanel } from 'lib/components/shared/Section';
 import { groupTvLibraryItems } from 'lib/features/library/tv-library-state';
-import type {
-  TvLibraryItem,
-  TvLibrarySectionStatus,
-} from 'lib/features/library/types';
+import type { TvLibraryItem } from 'lib/features/library/types';
 import { MediaType, WatchStatus } from 'lib/types';
 import Link from 'next/link';
 
@@ -16,11 +13,6 @@ type TvSectionKey = 'completed' | 'planned' | 'watching';
 
 const discoverTvShowsHref = '/explore?type=tv';
 
-const statusLabels: Record<TvLibrarySectionStatus, string> = {
-  [WatchStatus.Completed]: 'Finished',
-  [WatchStatus.Planned]: 'Planned to Watch',
-  [WatchStatus.Watching]: 'Watching',
-};
 const emptyMessages: Record<TvSectionKey, string> = {
   completed: 'No finished TV shows yet.',
   planned: 'Discover TV shows to add to your watchlist.',
@@ -33,21 +25,39 @@ const DiscoverTvShowsButton = ({ label = 'Discover TV Shows' }) => (
   </Button>
 );
 
+/**
+ * A started show always shows a visible sliver of bar, even when its rounded
+ * percentage is still zero on a very long series.
+ */
+const MINIMUM_VISIBLE_PROGRESS = 2;
+
+const getPosterProgress = (item: TvLibraryItem) => {
+  if (item.status === WatchStatus.Completed) {
+    return 100;
+  }
+
+  if (item.watchedEpisodeCount === 0) {
+    return 0;
+  }
+
+  return Math.max(item.progressPercent, MINIMUM_VISIBLE_PROGRESS);
+};
+
+/**
+ * The library already groups shows by status, so the poster carries progress
+ * on its own: the bar fills while the show is in progress and turns green
+ * across the full width once every available episode is watched.
+ */
 const TvLibraryCard = ({ item }: { item: TvLibraryItem }) => (
   <PosterCard
-    actions={
-      <Text fontSize="xs">
-        {item.watchedEpisodeCount} / {item.totalEpisodeCount} episodes watched
-      </Text>
-    }
     id={item.tmdbId}
     imageUrl={item.posterPath}
     layout="grid"
+    libraryBadges={false}
     mediaType={MediaType.Tv}
     name={item.title}
     prefetch={false}
-    progress={item.progressPercent}
-    status={statusLabels[item.status]}
+    progress={getPosterProgress(item)}
   />
 );
 
