@@ -35,16 +35,9 @@ const discoveryFallback = (section: HomeDiscoverySection): ReactNode => {
     );
   }
 
-  if (section.items.length !== HOME_PREVIEW_ITEM_COUNT) {
-    return (
-      <StatePanel
-        message="TMDB returned an incomplete preview. Please use See All to browse the complete list."
-        title={`Unable to show all ${HOME_PREVIEW_ITEM_COUNT} titles`}
-        tone="error"
-      />
-    );
-  }
-
+  // A section that came back a title or two short still previews fine; the
+  // complete list is one click away behind "See All". Only a failed or empty
+  // section replaces the rail.
   return null;
 };
 

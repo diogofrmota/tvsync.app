@@ -47,16 +47,25 @@ const read = (path: string) => readFile(join(process.cwd(), path), 'utf8');
 
 const assertProfileHeaderOrder = (profile: string) => {
   const headingIndex = profile.indexOf('<PageHeading');
+  const bioIndex = profile.indexOf('{profile.bio}');
   const editIndex = profile.indexOf('Edit Profile');
   const logoutIndex = profile.indexOf('<LogoutButton');
-  const titleIndex = profile.indexOf('title="Profile"');
 
   assert.ok(headingIndex !== -1, 'Profile renders the shared PageHeading');
+  assert.ok(bioIndex !== -1, 'Profile renders the biography');
   assert.ok(
-    headingIndex < editIndex && editIndex < logoutIndex,
-    'Edit Profile then Log out sit inside the page heading row'
+    headingIndex < bioIndex,
+    'The route title leads the page, above the identity block'
   );
-  assert.ok(logoutIndex < titleIndex, 'Actions are the heading actions prop');
+  assert.ok(
+    bioIndex < editIndex && editIndex < logoutIndex,
+    'Edit Profile then Log out sit below the biography'
+  );
+  // The account actions close the centred identity block.
+  assert.match(
+    profile.slice(bioIndex),
+    /<Flex[^>]*justify="center"[\s\S]*Edit Profile/
+  );
 };
 
 const runMigration = async (db: PGliteInterface, name: string) => {
@@ -297,8 +306,8 @@ test('Profile and Edit Profile include explicit mobile and desktop layouts', asy
   ]);
 
   assert.match(profile, /fontSize=\{\{ base: 'xl', md: '2xl' \}\}/);
-  // Profile leads with the shared route title, with Edit Profile and Log out on
-  // that same line, followed by a centred name/handle/biography block.
+  // Profile leads with the shared route title, followed by a centred
+  // name/handle/biography block that closes with Edit Profile and Log out.
   assertProfileHeaderOrder(profile);
   assert.match(profile, /<FollowCountChip/);
   assert.match(profile, /textAlign="center"/);

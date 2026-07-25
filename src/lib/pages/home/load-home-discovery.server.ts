@@ -45,6 +45,12 @@ const buildHref = (path: string, params: Record<string, string> = {}) => {
   return `${path}?${searchParams.toString()}` as Route;
 };
 
+/**
+ * One TMDB page is one rail: the API serves 20 titles per page and the rail
+ * shows at most 20, so each section costs exactly one request. De-duplication
+ * can leave a section a title or two short — the rail simply renders what came
+ * back rather than spending another call to top it up.
+ */
 const shapePreviewItems = (items: Array<MediaOverviewItem>) =>
   uniqueMediaOverviewItems(items).slice(0, HOME_PREVIEW_ITEM_COUNT);
 

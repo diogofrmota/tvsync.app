@@ -139,26 +139,12 @@ export const ProfilePage = ({
 
   return (
     <PageShell>
-      {/* The route title leads the page exactly like Movies and TV Shows, with
-          the account actions on the same horizontal line at every width. The
+      {/* The route title leads the page exactly like Movies and TV Shows. The
           identity sits directly underneath as plain centred text — no card, no
-          extra padding — so the first list stays close to the top. */}
+          extra padding — so the first list stays close to the top, and the
+          account actions close the block centred under the biography. */}
       <Stack gap={{ base: 3, md: 4 }}>
-        <PageHeading
-          actions={
-            <Flex gap={2}>
-              <Button asChild size="sm">
-                <Link href="/profile/edit">
-                  <FiEdit3 aria-hidden />
-                  Edit Profile
-                </Link>
-              </Button>
-              <LogoutButton />
-            </Flex>
-          }
-          keepActionsInline
-          title="Profile"
-        />
+        <PageHeading title="Profile" />
 
         <Stack align="center" gap={2} textAlign="center">
           <Stack align="center" gap={0.5}>
@@ -186,6 +172,16 @@ export const ProfilePage = ({
               {profile.bio}
             </Text>
           ) : null}
+
+          <Flex gap={2} justify="center" paddingTop={1} wrap="wrap">
+            <Button asChild size="sm">
+              <Link href="/profile/edit">
+                <FiEdit3 aria-hidden />
+                Edit Profile
+              </Link>
+            </Button>
+            <LogoutButton />
+          </Flex>
         </Stack>
       </Stack>
 

@@ -74,17 +74,23 @@ test('public shell and Home content follow UX 1.1 and 1.2 order exactly', () => 
   );
 });
 
-test('each successful preview is one shared horizontally scrollable rail of ten posters', () => {
+test('each successful preview is one shared horizontally scrollable rail of twenty posters', () => {
   const home = read('src/lib/pages/home/index.tsx');
   const config = read('src/lib/pages/home/config.ts');
   const rail = read('src/lib/components/shared/MediaRail.tsx');
   const explore = read('src/lib/pages/explore/discover.server.tsx');
   const overview = read('src/lib/pages/media/overview.tsx');
   const profile = read('src/lib/pages/profile/index.tsx');
+  const loader = read('src/lib/pages/home/load-home-discovery.server.ts');
 
-  assert.match(rail, /MEDIA_RAIL_ITEM_LIMIT = 10/);
+  assert.match(rail, /MEDIA_RAIL_ITEM_LIMIT = 20/);
+  assert.match(rail, /items\.slice\(0, itemLimit\)/);
   assert.match(config, /HOME_PREVIEW_ITEM_COUNT = MEDIA_RAIL_ITEM_LIMIT/);
-  assert.match(home, /section\.items\.length !== HOME_PREVIEW_ITEM_COUNT/);
+  assert.match(loader, /slice\(0, HOME_PREVIEW_ITEM_COUNT\)/);
+  // A TMDB page holds exactly one rail, so every section costs one request and
+  // a short section previews as-is instead of erroring.
+  assert.doesNotMatch(loader, /page: 2|HOME_PAGE_NUMBERS/);
+  assert.doesNotMatch(home, /items\.length !== HOME_PREVIEW_ITEM_COUNT/);
 
   // Home, Explore, the Movies/TV overviews, and Profile share one rail.
   for (const source of [home, explore, overview, profile]) {
@@ -92,9 +98,10 @@ test('each successful preview is one shared horizontally scrollable rail of ten 
     assert.match(source, /<MediaRail\b/);
   }
 
-  // The trailing rail tile matches the section action wording.
-  assert.match(rail, /See All/);
-  assert.doesNotMatch(rail, /Browse All/);
+  // "See All" is the section action only; the rail never repeats it as a
+  // trailing tile after the posters.
+  assert.doesNotMatch(rail, /SeeAllTile|Browse All|See all titles/);
+  assert.doesNotMatch(rail, /<Link\b/);
   assert.match(rail, /overflowX="auto"/);
   assert.match(rail, /scrollSnapType="x proximity"/);
   assert.match(rail, /layout="flex"/);
@@ -258,7 +265,7 @@ test('tracking, watchlist, and rating mutations authenticate before writes and p
   }
 });
 
-test('loading, empty, incomplete, and per-section API errors retain the four-section structure', () => {
+test('loading, empty, and per-section API errors retain the four-section structure', () => {
   const home = read('src/lib/pages/home/index.tsx');
   const loader = read('src/lib/pages/home/load-home-discovery.server.ts');
 
@@ -266,7 +273,9 @@ test('loading, empty, incomplete, and per-section API errors retain the four-sec
   assert.match(home, /MediaRailLoading count=\{HOME_PREVIEW_ITEM_COUNT\}/);
   assert.match(home, /section\.items\.length === 0/);
   assert.match(home, /There are no titles available in this list right now\./);
-  assert.match(home, /TMDB returned an incomplete preview\./);
+  // Only failed and empty sections replace the rail; a short section previews
+  // the titles it has.
+  assert.doesNotMatch(home, /incomplete preview/);
   assert.match(home, /if \(section\.error\)/);
   assert.match(home, /This section could not be loaded from TMDB\./);
   assert.match(loader, /catch \(error\)/);
