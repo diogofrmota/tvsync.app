@@ -45,6 +45,20 @@ const migrationNames = [
 
 const read = (path: string) => readFile(join(process.cwd(), path), 'utf8');
 
+const assertProfileHeaderOrder = (profile: string) => {
+  const headingIndex = profile.indexOf('<PageHeading');
+  const editIndex = profile.indexOf('Edit Profile');
+  const logoutIndex = profile.indexOf('<LogoutButton');
+  const titleIndex = profile.indexOf('title="Profile"');
+
+  assert.ok(headingIndex !== -1, 'Profile renders the shared PageHeading');
+  assert.ok(
+    headingIndex < editIndex && editIndex < logoutIndex,
+    'Edit Profile then Log out sit inside the page heading row'
+  );
+  assert.ok(logoutIndex < titleIndex, 'Actions are the heading actions prop');
+};
+
 const runMigration = async (db: PGliteInterface, name: string) => {
   await db.exec(
     await read(join('database', 'migrations', name).replaceAll('\\', '/'))
@@ -178,10 +192,9 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
   assert.match(favoriteButton, /aria-pressed=\{favorite\}/);
   assert.doesNotMatch(page, /Favorite genres|Achievements|Streaks/);
   assert.doesNotMatch(page, /Profile Information|Social Information/);
-  // The profile avatar is generated from the display name and nothing else:
-  // no image source, no upload control, no stored avatar column.
-  assert.match(page, /<Avatar\.Fallback name=\{displayName\} \/>/);
-  assert.doesNotMatch(page, /Avatar\.Image|type="file"|avatar_url|avatarUrl/);
+  // The own-profile page shows no avatar at all, so there is no image source,
+  // upload control, or stored avatar column to expose.
+  assert.doesNotMatch(page, /Avatar|type="file"|avatar_url|avatarUrl/);
   assert.match(page, /LogoutButton/);
 });
 
@@ -263,14 +276,11 @@ test('Profile and Edit Profile include explicit mobile and desktop layouts', asy
   ]);
 
   assert.match(profile, /fontSize=\{\{ base: 'xl', md: '2xl' \}\}/);
-  // The identity block is the page header itself: one compact row that keeps
-  // the name, handle, follow counts, biography, and account actions together
-  // instead of a separate route title plus a tall centred profile card.
-  assert.doesNotMatch(profile, /PageHeading/);
-  assert.doesNotMatch(profile, /maxWidth="26rem"/);
-  assert.match(profile, /<Heading as="h1"/);
+  // Profile leads with the shared route title, with Edit Profile and Log out on
+  // that same line, followed by a centred name/handle/biography block.
+  assertProfileHeaderOrder(profile);
   assert.match(profile, /<FollowCountChip/);
-  assert.match(profile, /direction=\{\{ base: 'column', md: 'row' \}\}/);
+  assert.match(profile, /textAlign="center"/);
   assert.match(edit, /padding=\{\{ base: 5, md: 6 \}\}/);
   assert.match(form, /maxLength=\{BIO_MAX_LENGTH\}/);
   assert.match(form, /autoComplete="current-password"/);

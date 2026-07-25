@@ -49,7 +49,7 @@ test('TV show page renders required metadata and focused sections in a clear hie
     'Episodes:',
     'Status:',
     'Genres unavailable',
-    'IMDb rating',
+    '<ImdbRatingPanel',
     'Description',
     'Your TV show',
     '<TvTrailer',
@@ -64,10 +64,11 @@ test('TV show page renders required metadata and focused sections in a clear hie
 });
 
 test('missing TV show metadata is represented honestly and IMDb is never backed by TMDB votes', async () => {
-  const [page, trailer, seasons] = await Promise.all([
+  const [page, trailer, seasons, imdbPanel] = await Promise.all([
     read('src/lib/pages/tv/detail/index.tsx'),
     read('src/lib/pages/tv/detail/components/trailer.tsx'),
     read('src/lib/pages/tv/detail/components/seasons-list.tsx'),
+    read('src/lib/components/shared/ImdbRating.tsx'),
   ]);
   const renderedDetailSources = `${page}\n${trailer}\n${seasons}`;
 
@@ -85,9 +86,13 @@ test('missing TV show metadata is represented honestly and IMDb is never backed 
     );
   }
 
-  assert.match(page, /IMDb rating[\s\S]*Unavailable/);
-  assert.match(page, /not\s+a\s+genuine IMDb rating value/);
+  // The IMDb value comes from OMDb, so an absent rating stays unavailable and
+  // TMDB vote data is never shown in its place.
+  assert.match(imdbPanel, /IMDb rating[\s\S]*Unavailable/);
+  assert.match(imdbPanel, /rating\.rating\.toFixed\(1\)/);
+  assert.doesNotMatch(imdbPanel, /vote_average|TMDB rating/);
   assert.doesNotMatch(page, /vote_average|TMDB rating/);
+  assert.match(page, /<ImdbRatingPanel imdbId=\{imdbId\}/);
 });
 
 test('trailer playback accepts only normalized YouTube trailer identifiers', async () => {

@@ -1,5 +1,6 @@
 import { MovieDetailPage } from 'lib/pages/movie/detail';
 import { isMovieDetailViewerAuthenticated } from 'lib/pages/movie/detail/load-viewer.server';
+import { getImdbRatingServer } from 'lib/services/omdb/index.server';
 import { getMovieCreditsServer } from 'lib/services/tmdb/movie/credits/index.server';
 import { getMovieDetailServer } from 'lib/services/tmdb/movie/detail/index.server';
 import { getMovieVideosServer } from 'lib/services/tmdb/movie/videos/index.server';
@@ -77,7 +78,7 @@ export default async function Page({
     }
 
     const detailData = await getMovieDetailServer(movieId);
-    const [creditsData, videosData, session] = await Promise.all([
+    const [creditsData, videosData, imdbRating, session] = await Promise.all([
       getMovieCreditsServer(movieId).catch(() => ({
         cast: [],
         crew: [],
@@ -87,6 +88,7 @@ export default async function Page({
         id: movieId,
         results: [],
       })),
+      getImdbRatingServer(detailData.imdb_id),
       isMovieDetailViewerAuthenticated(),
     ]);
 
@@ -94,6 +96,7 @@ export default async function Page({
       <MovieDetailPage
         creditsData={creditsData}
         detailData={detailData}
+        imdbRating={imdbRating}
         isAuthenticated={session}
         trailer={selectTrustedMovieTrailer(videosData)}
       />

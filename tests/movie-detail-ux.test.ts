@@ -47,7 +47,7 @@ test('movie page renders required metadata and focused sections in a clear hiera
     'Runtime:',
     'Status:',
     '<GenreList',
-    'IMDb rating',
+    '<ImdbRatingPanel',
     'Description',
     'Your movie',
     '<MovieTrailer',
@@ -62,10 +62,11 @@ test('movie page renders required metadata and focused sections in a clear hiera
 });
 
 test('missing movie metadata is represented honestly and IMDb is never backed by TMDB votes', async () => {
-  const [page, trailer, detailUtils] = await Promise.all([
+  const [page, trailer, detailUtils, imdbPanel] = await Promise.all([
     read('src/lib/pages/movie/detail/index.tsx'),
     read('src/lib/pages/movie/detail/components/trailer.tsx'),
     read('src/lib/services/tmdb/movie/detail/utils.ts'),
+    read('src/lib/components/shared/ImdbRating.tsx'),
   ]);
   const renderedDetailSources = `${page}\n${trailer}`;
 
@@ -82,9 +83,13 @@ test('missing movie metadata is represented honestly and IMDb is never backed by
     );
   }
 
-  assert.match(page, /IMDb rating[\s\S]*Unavailable/);
-  assert.match(page, /not\s+a\s+genuine IMDb rating value/);
+  // The IMDb value comes from OMDb, so an absent rating stays unavailable and
+  // TMDB vote data is never shown in its place.
+  assert.match(imdbPanel, /IMDb rating[\s\S]*Unavailable/);
+  assert.match(imdbPanel, /rating\.rating\.toFixed\(1\)/);
+  assert.doesNotMatch(imdbPanel, /vote_average|TMDB rating/);
   assert.doesNotMatch(page, /vote_average|TMDB rating/);
+  assert.match(page, /<ImdbRatingPanel[\s\S]{0,80}movie\.imdb_id/);
   assert.doesNotMatch(
     detailUtils,
     /status: response\?\.status \?\? 'Released'/
