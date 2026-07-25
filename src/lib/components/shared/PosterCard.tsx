@@ -9,7 +9,8 @@ import {
   Text,
 } from '@chakra-ui/react';
 import PosterImage from 'lib/components/shared/PosterImage';
-import type { MediaType } from 'lib/types';
+import { MediaQuickActions } from 'lib/features/library/media-quick-actions';
+import { MediaType } from 'lib/types';
 import { trackEvent } from 'lib/utils/track-event';
 import type { Route } from 'next';
 import Link from 'next/link';
@@ -44,6 +45,8 @@ const PosterCard = ({
 }: PosterCardProps) => {
   const label = name?.trim() || 'Untitled title';
   const href = `${pathMap[mediaType]}/${id}` as Route;
+  const isTrackable =
+    mediaType === MediaType.Movie || mediaType === MediaType.Tv;
 
   return (
     <Stack
@@ -94,6 +97,16 @@ const PosterCard = ({
           >
             {status}
           </Badge>
+        ) : null}
+        {/* Library and favourite quick actions live on the artwork itself, so
+            every movie and TV item behaves the same wherever it is listed. */}
+        {isTrackable ? (
+          <MediaQuickActions
+            mediaType={mediaType}
+            showAddedBadge={!status}
+            title={label}
+            tmdbId={id}
+          />
         ) : null}
       </Box>
       <Text

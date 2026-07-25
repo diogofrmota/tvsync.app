@@ -3,20 +3,25 @@ import {
   type ProfileStatCard,
   ProfileStatRail,
 } from 'lib/components/profile/ProfileStatRail';
+import { MediaRail } from 'lib/components/shared/MediaRail';
+import type { MediaCardItem } from 'lib/components/shared/media-item';
 import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
-import PosterCard from 'lib/components/shared/PosterCard';
 import { SectionHeading, StatePanel } from 'lib/components/shared/Section';
-import type { ProfileFavoriteItem } from 'lib/features/profile/profile-favorites.server';
+import { CreateCustomListForm } from 'lib/features/lists/create-list-form';
 import {
-  formatWatchTime,
-  type ProfileStatistics,
-} from 'lib/features/profile/profile-statistics';
+  type CustomListWithItems,
+  getCustomListHref,
+} from 'lib/features/lists/types';
+import type { ProfileFavoriteItem } from 'lib/features/profile/profile-favorites.server';
+import type { ProfileStatistics } from 'lib/features/profile/profile-statistics';
 import { LogoutButton } from 'lib/pages/auth/client-actions';
 import type { AuthSessionIssue } from 'lib/services/auth/session-error.server';
 import type { FollowCountsRow } from 'lib/services/database/social.server';
 import type { OwnProfile } from 'lib/services/database/tracking.server';
+import { MediaType } from 'lib/types';
 import type { Route } from 'next';
 import Link from 'next/link';
+import type { ComponentProps } from 'react';
 import { FiEdit3 } from 'react-icons/fi';
 
 export const ProfileAccessIssue = ({ issue }: { issue: AuthSessionIssue }) => (
@@ -35,52 +40,31 @@ export const ProfileAccessIssue = ({ issue }: { issue: AuthSessionIssue }) => (
   </PageShell>
 );
 
-const runtimeDetail = (missingCount: number) => {
-  if (missingCount === 0) {
-    return undefined;
-  }
-
-  return `Partial total: ${missingCount} ${
-    missingCount === 1 ? 'runtime is' : 'runtimes are'
-  } unavailable.`;
-};
-
-const FavoriteSection = ({
+/**
+ * Every profile list is the same horizontally scrollable rail used by Home and
+ * Explore: the first titles, a trailing "See All" tile, and a "See All" action
+ * aligned with the section title.
+ */
+const ProfileRail = ({
   emptyMessage,
   items,
+  mediaType,
+  seeAllHref,
   title,
 }: {
   emptyMessage: string;
-  items: Array<ProfileFavoriteItem>;
+  items: Array<MediaCardItem>;
+  mediaType: MediaType.Movie | MediaType.Tv;
+  seeAllHref: ComponentProps<typeof Link>['href'];
   title: string;
 }) => (
-  <Stack gap={4}>
-    <SectionHeading title={title} />
-    {items.length > 0 ? (
-      <Flex
-        aria-label={title}
-        gap={4}
-        overflowX="auto"
-        paddingBottom={3}
-        role="list"
-      >
-        {items.map((item, index) => (
-          <Box key={`${item.mediaType}-${item.id}`} role="listitem">
-            <PosterCard
-              id={item.id}
-              imageUrl={item.posterPath}
-              isLastItem={index === items.length - 1}
-              layout="flex"
-              mediaType={item.mediaType}
-              name={item.name}
-            />
-          </Box>
-        ))}
-      </Flex>
-    ) : (
-      <StatePanel message={emptyMessage} />
-    )}
-  </Stack>
+  <MediaRail
+    fallback={items.length === 0 ? <StatePanel message={emptyMessage} /> : null}
+    items={items}
+    mediaType={mediaType}
+    seeAllHref={seeAllHref}
+    title={title}
+  />
 );
 
 // Follow counts read as compact, obviously tappable chips so the identity
@@ -122,36 +106,36 @@ const FollowCountChip = ({
 );
 
 export const ProfilePage = ({
+  customLists,
   favorites,
   followCounts,
+  movies,
   profile,
   statistics,
+  tvShows,
 }: {
+  customLists: Array<CustomListWithItems>;
   favorites: Array<ProfileFavoriteItem>;
   followCounts: FollowCountsRow;
+  movies: Array<MediaCardItem>;
   profile: OwnProfile;
   statistics: ProfileStatistics;
+  tvShows: Array<MediaCardItem>;
 }) => {
   const displayName = profile.display_name || profile.name || profile.username;
   const baseProfilePath = `/profile/${profile.username}`;
+  // The profile keeps the two headline counters; every other statistic lives
+  // behind "See All" on the dedicated statistics page.
   const statCards: Array<ProfileStatCard> = [
-    { label: 'Movies Watched', value: statistics.moviesWatched },
-    {
-      detail: runtimeDetail(statistics.missingMovieRuntimeCount),
-      label: 'Time in Movies',
-      value: formatWatchTime(statistics.movieMinutesWatched),
-    },
     { label: 'TV Shows Watched', value: statistics.tvShowsWatched },
-    {
-      detail: runtimeDetail(statistics.missingTvRuntimeCount),
-      label: 'Time in TV Shows',
-      value: formatWatchTime(statistics.tvMinutesWatched),
-    },
-    { label: 'Episodes Watched', value: statistics.episodesWatched },
-    { label: 'Number of Reviews', value: statistics.reviewsWritten },
+    { label: 'Movies Watched', value: statistics.moviesWatched },
   ];
-  const favoriteMovies = favorites.filter((item) => item.mediaType === 'movie');
-  const favoriteTvShows = favorites.filter((item) => item.mediaType === 'tv');
+  const favoriteMovies = favorites.filter(
+    (item) => item.mediaType === MediaType.Movie
+  );
+  const favoriteTvShows = favorites.filter(
+    (item) => item.mediaType === MediaType.Tv
+  );
 
   return (
     <PageShell>
@@ -211,27 +195,63 @@ export const ProfilePage = ({
         ) : null}
       </Stack>
 
-      <FavoriteSection
-        emptyMessage="You have not added any favourite movies."
-        items={favoriteMovies}
-        title="Favourite Movies"
+      <Stack as="section" gap={5}>
+        <SectionHeading
+          seeAllHref={'/profile/statistics' as Route}
+          title="Statistics"
+        />
+        <ProfileStatRail cards={statCards} />
+      </Stack>
+
+      <ProfileRail
+        emptyMessage="You have not added any TV shows to your library yet."
+        items={tvShows}
+        mediaType={MediaType.Tv}
+        seeAllHref={'/tv-shows' as Route}
+        title="TV Shows"
       />
-      <FavoriteSection
+      <ProfileRail
         emptyMessage="You have not added any favourite TV shows."
         items={favoriteTvShows}
-        title="Favourite TV Shows"
+        mediaType={MediaType.Tv}
+        seeAllHref={'/profile/favorites/tv-shows' as Route}
+        title="❤️ Favourite TV Shows"
+      />
+      <ProfileRail
+        emptyMessage="You have not added any movies to your library yet."
+        items={movies}
+        mediaType={MediaType.Movie}
+        seeAllHref={'/movies' as Route}
+        title="Movies"
+      />
+      <ProfileRail
+        emptyMessage="You have not added any favourite movies."
+        items={favoriteMovies}
+        mediaType={MediaType.Movie}
+        seeAllHref={'/profile/favorites/movies' as Route}
+        title="❤️ Favourite Movies"
       />
 
-      <Stack gap={4}>
-        <SectionHeading title="Statistics" />
-        <ProfileStatRail cards={statCards} />
-        <Button alignSelf="center" asChild size="sm" variant="outline">
-          <Link
-            href={`${baseProfilePath}/following?compare=statistics` as Route}
-          >
-            Compare with Following
-          </Link>
-        </Button>
+      <Stack as="section" gap={5}>
+        <SectionHeading
+          seeAllHref={'/profile/lists' as Route}
+          title="Personalized Lists"
+        />
+        <CreateCustomListForm />
+        {customLists.length > 0 ? (
+          customLists.map((list) => (
+            <ProfileRail
+              emptyMessage="This list is empty. Open it to add titles from your library."
+              items={list.items}
+              key={list.id}
+              mediaType={MediaType.Movie}
+              seeAllHref={getCustomListHref(list.id) as Route}
+              title={list.name}
+            />
+          ))
+        ) : (
+          <StatePanel message="You have not created a personalized list yet. Name one above to get started." />
+        )}
       </Stack>
     </PageShell>
   );

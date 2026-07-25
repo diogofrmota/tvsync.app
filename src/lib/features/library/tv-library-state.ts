@@ -41,6 +41,16 @@ export const getTvEpisodeKey = ({
 }: TvAvailableEpisode) => `${seasonNumber}:${episodeNumber}`;
 
 /**
+ * The TV library is a three-value projection (Watching/Planned/Finished), so
+ * legacy Dropped/Paused rows collapse to Planned wherever a stored status is
+ * shown back to the user.
+ */
+export const normalizeTvLibraryStatus = (status: WatchStatus): WatchStatus =>
+  status === WatchStatus.Dropped || status === WatchStatus.Paused
+    ? WatchStatus.Planned
+    : status;
+
+/**
  * Overall TV progress intentionally excludes season zero/specials. This keeps
  * library progress aligned with the existing detail progress rule while still
  * allowing specials to be tracked independently on their own pages.

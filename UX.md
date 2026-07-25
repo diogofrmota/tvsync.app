@@ -182,6 +182,24 @@ Header
 
 On mobile, use a bottom navigation bar.
 
+2.0 Movie and TV Show Items
+
+Every movie and TV show item looks and behaves the same wherever it is listed
+(Home, Explore, Movies, TV Shows, Profile, personalized lists, and search
+results).
+
+* A title that is not in the library shows a small yellow square with a black
+  plus in the bottom-right corner of the poster. Selecting it adds the title to
+  the user's library.
+* Once the title is in the library, the bottom-right corner shows a small yellow
+  "Added" label in black text, and an empty heart appears in the top-right
+  corner.
+* Selecting the heart turns it red and adds the title to the user's favourites.
+  Selecting it again removes the favourite.
+* The badges stay small so the poster art remains visible.
+* Signed-out users who select the plus are sent to the login page and returned to
+  the list they came from.
+
 2.1 Movies
 
 Sections
@@ -285,20 +303,44 @@ Social Information
 
 Selecting either value opens the corresponding user list.
 
+Sections, in this order
+
+1. Statistics
+2. TV Shows
+3. ❤️ Favourite TV Shows
+4. Movies
+5. ❤️ Favourite Movies
+6. Personalized Lists
+
+Every list section uses the same rail as Home and Explore: the first ten titles
+scroll horizontally, a See All tile closes the rail, and a See All button sits on
+the section title line and opens the complete list.
+
 Statistics
 
-Display the statistics as horizontally scrollable cards.
+Only two cards are shown on the profile:
 
-* Movies Watched
-* Time Spent Watching Movies
 * TV Shows Watched
-* Time Spent Watching TV Shows
-* Episodes Watched
+* Movies Watched
 
-Additional Sections
+Selecting See All opens the Statistics page with every statistic (TV Shows
+Watched, Movies Watched, Episodes Watched, Time in TV Shows, Time in Movies,
+Number of Reviews) and a Compare with Following button at the bottom.
 
-* Favourite Movies
-* Favourite TV Shows
+See All destinations
+
+* TV Shows opens the TV Shows library.
+* Movies opens the Movies library.
+* Favourite TV Shows and Favourite Movies open the complete favourites list.
+* Personalized Lists opens the lists page; each list rail opens that list.
+
+Personalized Lists
+
+* Users can create a list with a name and an optional description.
+* List names must be unique per user.
+* Users can rename, describe, and delete their own lists.
+* Users can add titles from their library to a list and remove them again.
+* Lists may mix movies and TV shows.
 
 Functionality
 
