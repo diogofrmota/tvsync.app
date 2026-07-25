@@ -31,7 +31,7 @@ export const SectionHeading = ({
       ) : null}
     </Stack>
     {seeAllHref ? (
-      <Button asChild flexShrink={0} size="sm" variant="outline">
+      <Button asChild flexShrink={0} size="sm" variant="solid">
         <Link href={seeAllHref}>See All</Link>
       </Button>
     ) : null}
