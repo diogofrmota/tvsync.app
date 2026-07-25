@@ -74,19 +74,20 @@ test('public shell and Home content follow UX 1.1 and 1.2 order exactly', () => 
   );
 });
 
-test('each successful preview is one shared horizontally scrollable rail of fifteen posters', () => {
+test('each successful preview is one shared horizontally scrollable rail of ten posters', () => {
   const home = read('src/lib/pages/home/index.tsx');
   const config = read('src/lib/pages/home/config.ts');
   const rail = read('src/lib/components/shared/MediaRail.tsx');
   const explore = read('src/lib/pages/explore/discover.server.tsx');
   const overview = read('src/lib/pages/media/overview.tsx');
+  const profile = read('src/lib/pages/profile/index.tsx');
 
-  assert.match(rail, /MEDIA_RAIL_ITEM_LIMIT = 15/);
+  assert.match(rail, /MEDIA_RAIL_ITEM_LIMIT = 10/);
   assert.match(config, /HOME_PREVIEW_ITEM_COUNT = MEDIA_RAIL_ITEM_LIMIT/);
   assert.match(home, /section\.items\.length !== HOME_PREVIEW_ITEM_COUNT/);
 
-  // Home, Explore, and the Movies/TV overviews share one rail implementation.
-  for (const source of [home, explore, overview]) {
+  // Home, Explore, the Movies/TV overviews, and Profile share one rail.
+  for (const source of [home, explore, overview, profile]) {
     assert.match(source, /from 'lib\/components\/shared\/MediaRail'/);
     assert.match(source, /<MediaRail\b/);
   }

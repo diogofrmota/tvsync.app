@@ -144,36 +144,57 @@ test('recent authentication has a fixed window that refresh callbacks cannot ext
 });
 
 test('Profile renders exact information, social navigation, non-scrolling stats, and favourites', async () => {
-  const [page, profileRoute, rail, movieDetail, tvDetail, favoriteButton] =
-    await Promise.all([
-      read('src/lib/pages/profile/index.tsx'),
-      read('src/app/profile/page.tsx'),
-      read('src/lib/components/profile/ProfileStatRail.tsx'),
-      read('src/lib/pages/movie/detail/index.tsx'),
-      read('src/lib/pages/tv/detail/index.tsx'),
-      read('src/lib/features/profile/favorite-button.tsx'),
-    ]);
+  const [
+    page,
+    profileRoute,
+    rail,
+    movieDetail,
+    tvDetail,
+    favoriteButton,
+    statisticsPage,
+  ] = await Promise.all([
+    read('src/lib/pages/profile/index.tsx'),
+    read('src/app/profile/page.tsx'),
+    read('src/lib/components/profile/ProfileStatRail.tsx'),
+    read('src/lib/pages/movie/detail/index.tsx'),
+    read('src/lib/pages/tv/detail/index.tsx'),
+    read('src/lib/features/profile/favorite-button.tsx'),
+    read('src/lib/pages/profile/statistics.tsx'),
+  ]);
 
   for (const label of [
     'Edit Profile',
     'Following',
     'Followers',
-    'Movies Watched',
-    'Time in Movies',
     'TV Shows Watched',
-    'Time in TV Shows',
-    'Episodes Watched',
-    'Number of Reviews',
+    'Movies Watched',
     'Favourite Movies',
     'Favourite TV Shows',
   ]) {
     assert.match(page, new RegExp(label));
   }
 
+  // Only the two headline counters stay on the profile; the rest of the
+  // statistics live behind "See All" on their own page.
+  assert.doesNotMatch(page, /Time in Movies|Episodes Watched/);
+
+  for (const label of [
+    'Movies Watched',
+    'Time in Movies',
+    'TV Shows Watched',
+    'Time in TV Shows',
+    'Episodes Watched',
+    'Number of Reviews',
+  ]) {
+    assert.match(statisticsPage, new RegExp(label));
+  }
+
   assert.match(page, /href="\/profile\/edit"/);
   assert.match(page, /\/following/);
   assert.match(page, /\/followers/);
-  assert.match(page, /Compare with Following/);
+  assert.match(page, /seeAllHref=\{'\/profile\/statistics' as Route\}/);
+  assert.match(statisticsPage, /Compare with Following/);
+  assert.match(statisticsPage, /compare=statistics/);
   assert.doesNotMatch(page, /You have not added a biography yet\./);
   // ProfileStatRail renders react-icons via the Chakra <Icon as={...}> prop.
   // Chakra's Icon is a client component, so the rail must also be a client

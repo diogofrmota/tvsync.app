@@ -44,7 +44,7 @@ Guidance for AI agents and contributors working in this repository.
 - `src/lib/layout` - Global app shell, header/navigation, and footer.
 - `src/lib/pages` - Route-level UI composed by App Router pages.
 - `src/lib/components` - Shared and domain-specific reusable UI components.
-- `src/lib/features` - Feature modules: `auth`, `contact`, `library`, `profile`, `reviews` (personal ratings), `social` (follow graph), `tracking`, and `watchlist`.
+- `src/lib/features` - Feature modules: `auth`, `contact`, `library`, `lists` (personalized lists), `profile`, `reviews` (personal ratings), `social` (follow graph), `tracking`, and `watchlist`.
 - `src/lib/services/auth` - Server-only Auth.js/NextAuth configuration.
 - `src/lib/pages/auth` - Login/register route UI and client auth actions.
 - `src/lib/services/database` - Server-only Neon Postgres helpers for Server Components, Server Actions, and Route Handlers.
@@ -78,6 +78,8 @@ The initial tracking schema is in `database/migrations/0001_initial_tracking_sch
 
 The authentication lifecycle schema is in `database/migrations/0005_auth_lifecycle.sql`. It adds provider mappings, verified-email/session-version state, one-time verification/reset token digests, and persistent authentication rate-limit counters.
 
+Personalized lists live in `database/migrations/0010_personalized_lists.sql` (`custom_lists` and `custom_list_items`). List names are unique per owner (case-insensitive), list items are unique per `(list_id, tmdb_id, media_type)`, and deleting a list cascades to its items.
+
 - Apply migrations with `DATABASE_URL_UNPOOLED`; use pooled `DATABASE_URL` only for runtime app queries.
 - Duplicate user/media records are guarded by database unique constraints.
 - Common owner, media, status, public-read, and date ordering lookups should have matching indexes before related UI or API work ships.
@@ -103,7 +105,11 @@ Primary navigation currently lives in `src/lib/layout/Header.tsx` and is centere
 - Signed-in users are redirected from `/` to `/movies`; there is no separate personalized home/dashboard. Keep the root route (`src/lib/pages/home`) as the signed-out discovery experience.
 - Render the `/explore` featured area as the `ExploreHero` slideshow: up to `EXPLORE_HERO_SLIDE_COUNT` (10) trending titles that advance automatically every five seconds and can also be moved with the arrows or slide dots.
 - Keep the `/explore` page discovery-focused: browse or search one content type at a time (Movies/TV tabs) using TMDB popular lists and title search, with genre and sort filters, linking results to detail pages and sending logged-out users to login before saving library items.
-- Render every discovery list (signed-out Home, `/explore`, and the Movies/TV overviews) with the shared horizontally scrollable rail in `src/lib/components/shared/MediaRail.tsx`. Keep the preview size in `MEDIA_RAIL_ITEM_LIMIT` instead of restating it per page, and do not reintroduce a page-specific poster grid preview.
+- Render every list preview (signed-out Home, `/explore`, the Movies/TV overviews, and every `/profile` section) with the shared horizontally scrollable rail in `src/lib/components/shared/MediaRail.tsx`. Keep the preview size in `MEDIA_RAIL_ITEM_LIMIT` instead of restating it per page, and do not reintroduce a page-specific poster grid preview.
+- Keep `/profile` sections in this order: Statistics (only TV Shows Watched and Movies Watched, with "See All" opening `/profile/statistics`), TV Shows, Favourite TV Shows, Movies, Favourite Movies, Personalized Lists. Every section is a `MediaRail` with a "See All" target; the complete lists live at `/tv-shows`, `/movies`, `/profile/favorites/[mediaType]`, and `/profile/lists`.
+- Keep the poster quick actions in `src/lib/features/library/media-quick-actions.tsx` and render them from `PosterCard` only; every movie/TV item shows the yellow plus (add to library), then the "Added" chip plus the heart that turns red for favourites.
+- Load the signed-in user's library/favourite snapshot once per page through `MediaLibraryProvider` (`src/lib/features/library/media-library-provider.tsx`). Surfaces that show library state (poster quick actions, search status selects) read and write that context instead of keeping their own copy.
+- Keep personalized lists owner-scoped: parameterized SQL in `src/lib/services/database/custom-list-queries.ts` (every statement filters on `user_id`), server-only helpers in `custom-lists.server.ts`, and Server Actions in `src/lib/features/lists/actions.ts`. List and item caps are enforced in SQL, not only in the UI.
 - Keep the "See All" list routes (`/movies/[section]`, `/movies/genre/[genre]`, `/tv/[listType]`) server-rendered through `src/lib/pages/media/media-list.server.tsx`: one complete list of up to 30 titles in a single grid, with no page navigation. Only `/explore` search results stay paginated. The rail's trailing tile is labeled "See All" to match the section action.
 
 ## Environment Notes

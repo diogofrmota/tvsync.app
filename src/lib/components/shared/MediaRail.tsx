@@ -14,11 +14,12 @@ import Link from 'next/link';
 import type { ComponentProps, ReactNode } from 'react';
 
 /**
- * Every discovery list (signed-out Home, Explore, and the Movies/TV overviews)
- * previews the same number of titles in the same horizontally scrollable rail,
- * so the shelf size lives here instead of being restated per page.
+ * Every list (signed-out Home, Explore, the Movies/TV overviews, and every
+ * Profile section) previews the same number of titles in the same horizontally
+ * scrollable rail, so the shelf size lives here instead of being restated per
+ * page.
  */
-export const MEDIA_RAIL_ITEM_LIMIT = 15;
+export const MEDIA_RAIL_ITEM_LIMIT = 10;
 
 type RailHref = ComponentProps<typeof Link>['href'];
 
@@ -47,11 +48,6 @@ const railSkeletonKeys = [
   'rail-h',
   'rail-i',
   'rail-j',
-  'rail-k',
-  'rail-l',
-  'rail-m',
-  'rail-n',
-  'rail-o',
 ];
 
 const posterWidth = { base: '7rem', sm: '8rem', md: '9rem' } as const;
@@ -117,18 +113,22 @@ const MediaShelf = ({
       scrollSnapType="x proximity"
     >
       <Flex alignItems="flex-start" flexWrap="nowrap" gap={{ base: 4, md: 5 }}>
-        {visibleItems.map((item) => (
-          <Box key={`${mediaType}-${item.id}`} scrollSnapAlign="start">
-            <PosterCard
-              id={item.id}
-              imageUrl={item.posterPath}
-              layout="flex"
-              mediaType={mediaType}
-              name={item.title}
-              prefetch={false}
-            />
-          </Box>
-        ))}
+        {visibleItems.map((item) => {
+          const itemMediaType = item.mediaType ?? mediaType;
+
+          return (
+            <Box key={`${itemMediaType}-${item.id}`} scrollSnapAlign="start">
+              <PosterCard
+                id={item.id}
+                imageUrl={item.posterPath}
+                layout="flex"
+                mediaType={itemMediaType}
+                name={item.title}
+                prefetch={false}
+              />
+            </Box>
+          );
+        })}
         <SeeAllTile href={seeAllHref} />
       </Flex>
     </Flex>

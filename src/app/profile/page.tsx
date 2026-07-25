@@ -1,3 +1,11 @@
+import { MEDIA_RAIL_ITEM_LIMIT } from 'lib/components/shared/MediaRail';
+import type { MediaCardEntry } from 'lib/components/shared/media-item';
+import { loadOwnLibraryPreview } from 'lib/features/library/library-preview.server';
+import { loadOwnCustomLists } from 'lib/features/lists/custom-lists.server';
+import {
+  type CustomListWithItems,
+  PROFILE_CUSTOM_LIST_PREVIEW_COUNT,
+} from 'lib/features/lists/types';
 import type { ProfileFavoriteItem } from 'lib/features/profile/profile-favorites.server';
 import { getOwnProfileFavorites } from 'lib/features/profile/profile-favorites.server';
 import type { ProfileStatistics } from 'lib/features/profile/profile-statistics';
@@ -14,6 +22,7 @@ import type { FollowState } from 'lib/services/database/social.server';
 import { getFollowStateForProfile } from 'lib/services/database/social.server';
 import type { OwnProfile } from 'lib/services/database/tracking.server';
 import { getOwnProfile } from 'lib/services/database/tracking.server';
+import { MediaType } from 'lib/types';
 import type { Metadata, Route } from 'next';
 import { redirect } from 'next/navigation';
 import type { Session } from 'next-auth';
@@ -105,33 +114,62 @@ export default async function Page() {
   }
 
   const ownProfile = profile;
-  const [statistics, favorites, followState] = await Promise.all([
-    withFallback<ProfileStatistics>(
-      getOwnProfileStatistics,
-      EMPTY_STATISTICS,
-      'statistics'
-    ),
-    withFallback<Array<ProfileFavoriteItem>>(
-      getOwnProfileFavorites,
-      [],
-      'favourites'
-    ),
-    withFallback<FollowState>(
-      () => getFollowStateForProfile(ownProfile.user_id),
-      EMPTY_FOLLOW_STATE,
-      'follow counts'
-    ),
-  ]);
+  const [statistics, favorites, followState, tvShows, movies, customLists] =
+    await Promise.all([
+      withFallback<ProfileStatistics>(
+        getOwnProfileStatistics,
+        EMPTY_STATISTICS,
+        'statistics'
+      ),
+      withFallback<Array<ProfileFavoriteItem>>(
+        getOwnProfileFavorites,
+        [],
+        'favourites'
+      ),
+      withFallback<FollowState>(
+        () => getFollowStateForProfile(ownProfile.user_id),
+        EMPTY_FOLLOW_STATE,
+        'follow counts'
+      ),
+      // Only the titles the rails actually preview are hydrated from TMDB.
+      withFallback<Array<MediaCardEntry>>(
+        () =>
+          loadOwnLibraryPreview({
+            limit: MEDIA_RAIL_ITEM_LIMIT,
+            mediaType: MediaType.Tv,
+          }),
+        [],
+        'TV shows'
+      ),
+      withFallback<Array<MediaCardEntry>>(
+        () =>
+          loadOwnLibraryPreview({
+            limit: MEDIA_RAIL_ITEM_LIMIT,
+            mediaType: MediaType.Movie,
+          }),
+        [],
+        'movies'
+      ),
+      withFallback<Array<CustomListWithItems>>(
+        () =>
+          loadOwnCustomLists({ listLimit: PROFILE_CUSTOM_LIST_PREVIEW_COUNT }),
+        [],
+        'personalized lists'
+      ),
+    ]);
 
   return (
     <ProfilePage
+      customLists={customLists}
       favorites={favorites}
       followCounts={{
         follower_count: followState.follower_count,
         following_count: followState.following_count,
       }}
+      movies={movies}
       profile={profile}
       statistics={statistics}
+      tvShows={tvShows}
     />
   );
 }

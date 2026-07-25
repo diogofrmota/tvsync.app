@@ -16,6 +16,7 @@ import PageNavButtons, {
 import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
 import PosterCard from 'lib/components/shared/PosterCard';
 import { SectionLoading, StatePanel } from 'lib/components/shared/Section';
+import { useRequiredMediaLibrary } from 'lib/features/library/media-library-provider';
 import {
   getSearchStatusLabel,
   SearchLibraryAction,
@@ -30,7 +31,7 @@ import {
 } from 'lib/pages/search/search-state';
 import { useSearchResults } from 'lib/pages/search/use-search-results';
 import { useGenreList } from 'lib/services/tmdb/genre/index.client';
-import { MediaType, type WatchStatus } from 'lib/types';
+import { MediaType } from 'lib/types';
 import type { Route } from 'next';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -67,18 +68,16 @@ export const MultiSearchPage = ({
   const mediaType = getSearchMediaType(searchParams.get('type'));
   const sort = getSearchSort(searchParams.get('sort'));
   const [inputValue, setInputValue] = useState(query);
-  const [libraryStatuses, setLibraryStatuses] = useState<
-    Record<string, WatchStatus>
-  >(() =>
-    Object.fromEntries(
-      initialLibraryItems.map((item) => [
-        getLibraryKey(item.mediaType, item.tmdbId),
-        item.status,
-      ])
-    )
-  );
+  // Library membership is shared with the poster quick actions, so a title
+  // added with the yellow plus immediately shows its status select here too.
+  const { getStatus, seedLibrary, setStatus } = useRequiredMediaLibrary();
 
   useEffect(() => setInputValue(query), [query]);
+
+  useEffect(
+    () => seedLibrary(initialLibraryItems),
+    [initialLibraryItems, seedLibrary]
+  );
 
   const changeParams = useCallback(
     (
@@ -203,7 +202,10 @@ export const MultiSearchPage = ({
         >
           {items.map((item) => {
             const libraryKey = getLibraryKey(item.mediaType, item.id);
-            const status = libraryStatuses[libraryKey] ?? null;
+            const status = getStatus({
+              mediaType: item.mediaType,
+              tmdbId: item.id,
+            });
 
             return (
               <PosterCard
@@ -211,10 +213,10 @@ export const MultiSearchPage = ({
                   <SearchLibraryAction
                     mediaType={item.mediaType}
                     onStatusChange={(nextStatus) =>
-                      setLibraryStatuses((current) => ({
-                        ...current,
-                        [libraryKey]: nextStatus,
-                      }))
+                      setStatus(
+                        { mediaType: item.mediaType, tmdbId: item.id },
+                        nextStatus
+                      )
                     }
                     status={status}
                     title={item.title}

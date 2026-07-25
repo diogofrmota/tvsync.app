@@ -61,13 +61,15 @@ const insertProfile = async (
 };
 
 test('public profile renders only the UX 3.1 public contract', async () => {
-  const [page, feature, tracking, statistics, favorites] = await Promise.all([
-    read('src/lib/pages/profile/public-profile.tsx'),
-    read('src/lib/features/profile/index.ts'),
-    read('src/lib/services/database/tracking.server.ts'),
-    read('src/lib/services/database/profile.server.ts'),
-    read('src/lib/features/profile/profile-favorites.server.ts'),
-  ]);
+  const [page, feature, tracking, statistics, favorites, statCards] =
+    await Promise.all([
+      read('src/lib/pages/profile/public-profile.tsx'),
+      read('src/lib/features/profile/index.ts'),
+      read('src/lib/services/database/tracking.server.ts'),
+      read('src/lib/services/database/profile.server.ts'),
+      read('src/lib/features/profile/profile-favorites.server.ts'),
+      read('src/lib/pages/profile/statistics.tsx'),
+    ]);
 
   for (const required of [
     'profile.display_name',
@@ -76,16 +78,25 @@ test('public profile renders only the UX 3.1 public contract', async () => {
     'FollowButton',
     'following_count',
     'follower_count',
+    'Favourite Movies',
+    'Favourite TV Shows',
+  ]) {
+    assert.match(page, new RegExp(required.replace('.', '\\.')));
+  }
+
+  // Own and public profiles read the same statistics cards, so the labels are
+  // asserted once against the shared definition.
+  assert.match(page, /getProfileStatCards\(data\.statistics\)/);
+
+  for (const label of [
     'Movies Watched',
     'Time in Movies',
     'TV Shows Watched',
     'Time in TV Shows',
     'Episodes Watched',
     'Number of Reviews',
-    'Favourite Movies',
-    'Favourite TV Shows',
   ]) {
-    assert.match(page, new RegExp(required.replace('.', '\\.')));
+    assert.match(statCards, new RegExp(label));
   }
 
   assert.match(feature, /getPublicProfileByUsername/);
