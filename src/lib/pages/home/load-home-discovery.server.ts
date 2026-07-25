@@ -25,6 +25,13 @@ import { unstable_cache } from 'next/cache';
 const HOME_POPULAR_REVALIDATE_SECONDS = 86_400; // 24h
 const HOME_TOP_RATED_REVALIDATE_SECONDS = 604_800; // 7d
 
+/**
+ * TMDB serves 20 titles per page, exactly the size of a rail, so a second page
+ * is fetched to leave headroom for de-duplication. A page that fails is simply
+ * dropped; the section only errors when every page fails.
+ */
+const HOME_PAGE_NUMBERS = [1, 2] as const;
+
 const topRatedMovieParams = {
   include_adult: 'false',
   sort_by: 'vote_average.desc',
@@ -47,6 +54,27 @@ const buildHref = (path: string, params: Record<string, string> = {}) => {
 
 const shapePreviewItems = (items: Array<MediaOverviewItem>) =>
   uniqueMediaOverviewItems(items).slice(0, HOME_PREVIEW_ITEM_COUNT);
+
+const loadPreviewPages = async <Item>(
+  loadPage: (page: number) => Promise<{ results: Array<Item> }>,
+  mapItem: (item: Item) => MediaOverviewItem
+): Promise<Array<MediaOverviewItem>> => {
+  const responses = await Promise.allSettled(
+    HOME_PAGE_NUMBERS.map((page) => loadPage(page))
+  );
+  const rejected = responses.filter(
+    (response): response is PromiseRejectedResult =>
+      response.status === 'rejected'
+  );
+
+  if (rejected.length === responses.length) {
+    throw rejected[0]?.reason ?? new Error('Unable to load TMDB data.');
+  }
+
+  return responses.flatMap((response) =>
+    response.status === 'fulfilled' ? response.value.results.map(mapItem) : []
+  );
+};
 
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : 'Unable to load TMDB data.';
@@ -71,28 +99,33 @@ const loadSection = async (
 
 const loadPopularMovies = unstable_cache(
   () =>
-    getMovieListServer({
-      params: { page: 1 },
-      section: 'popular',
-    }).then((response) => response.results.map(mapMovieOverviewItem)),
+    loadPreviewPages(
+      (page) => getMovieListServer({ params: { page }, section: 'popular' }),
+      mapMovieOverviewItem
+    ),
   ['home-popular-movies'],
   { revalidate: HOME_POPULAR_REVALIDATE_SECONDS }
 );
 
 const loadTopRatedMovies = unstable_cache(
   () =>
-    getMovieListServer({
-      params: { page: 1, ...topRatedMovieParams },
-      section: 'top_rated',
-    }).then((response) => response.results.map(mapMovieOverviewItem)),
+    loadPreviewPages(
+      (page) =>
+        getMovieListServer({
+          params: { page, ...topRatedMovieParams },
+          section: 'top_rated',
+        }),
+      mapMovieOverviewItem
+    ),
   ['home-top-rated-movies'],
   { revalidate: HOME_TOP_RATED_REVALIDATE_SECONDS }
 );
 
 const loadPopularTVShows = unstable_cache(
   () =>
-    getTVShowByListType('popular', { page: 1 }).then((response) =>
-      response.results.map(mapTVShowOverviewItem)
+    loadPreviewPages(
+      (page) => getTVShowByListType('popular', { page }),
+      mapTVShowOverviewItem
     ),
   ['home-popular-tv-shows'],
   { revalidate: HOME_POPULAR_REVALIDATE_SECONDS }
@@ -100,10 +133,10 @@ const loadPopularTVShows = unstable_cache(
 
 const loadTopRatedTVShows = unstable_cache(
   () =>
-    getTVShowByListType('top_rated', {
-      page: 1,
-      ...topRatedTVParams,
-    }).then((response) => response.results.map(mapTVShowOverviewItem)),
+    loadPreviewPages(
+      (page) => getTVShowByListType('top_rated', { page, ...topRatedTVParams }),
+      mapTVShowOverviewItem
+    ),
   ['home-top-rated-tv-shows'],
   { revalidate: HOME_TOP_RATED_REVALIDATE_SECONDS }
 );

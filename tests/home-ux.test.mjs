@@ -74,17 +74,22 @@ test('public shell and Home content follow UX 1.1 and 1.2 order exactly', () => 
   );
 });
 
-test('each successful preview is one shared horizontally scrollable rail of ten posters', () => {
+test('each successful preview is one shared horizontally scrollable rail of twenty posters', () => {
   const home = read('src/lib/pages/home/index.tsx');
   const config = read('src/lib/pages/home/config.ts');
   const rail = read('src/lib/components/shared/MediaRail.tsx');
   const explore = read('src/lib/pages/explore/discover.server.tsx');
   const overview = read('src/lib/pages/media/overview.tsx');
   const profile = read('src/lib/pages/profile/index.tsx');
+  const loader = read('src/lib/pages/home/load-home-discovery.server.ts');
 
-  assert.match(rail, /MEDIA_RAIL_ITEM_LIMIT = 10/);
+  assert.match(rail, /MEDIA_RAIL_ITEM_LIMIT = 20/);
+  assert.match(rail, /items\.slice\(0, itemLimit\)/);
   assert.match(config, /HOME_PREVIEW_ITEM_COUNT = MEDIA_RAIL_ITEM_LIMIT/);
   assert.match(home, /section\.items\.length !== HOME_PREVIEW_ITEM_COUNT/);
+  // A TMDB page holds exactly one rail, so Home reads two for de-duplication
+  // headroom.
+  assert.match(loader, /HOME_PAGE_NUMBERS = \[1, 2\]/);
 
   // Home, Explore, the Movies/TV overviews, and Profile share one rail.
   for (const source of [home, explore, overview, profile]) {
@@ -92,9 +97,10 @@ test('each successful preview is one shared horizontally scrollable rail of ten 
     assert.match(source, /<MediaRail\b/);
   }
 
-  // The trailing rail tile matches the section action wording.
-  assert.match(rail, /See All/);
-  assert.doesNotMatch(rail, /Browse All/);
+  // "See All" is the section action only; the rail never repeats it as a
+  // trailing tile after the posters.
+  assert.doesNotMatch(rail, /SeeAllTile|Browse All|See all titles/);
+  assert.doesNotMatch(rail, /<Link\b/);
   assert.match(rail, /overflowX="auto"/);
   assert.match(rail, /scrollSnapType="x proximity"/);
   assert.match(rail, /layout="flex"/);
@@ -196,9 +202,9 @@ test('popular and highest-rated queries have distinct intent and cached top-rate
     loader.indexOf('const loadTopRatedTVShows =')
   );
 
-  assert.match(popularMovie, /params: \{ page: 1 \}/);
+  assert.match(popularMovie, /params: \{ page \}/);
   assert.doesNotMatch(popularMovie, /vote_average|vote_count|sort_by/);
-  assert.match(popularTv, /\{ page: 1 \}/);
+  assert.match(popularTv, /\{ page \}/);
   assert.doesNotMatch(popularTv, /vote_average|vote_count|sort_by/);
 });
 

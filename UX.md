@@ -294,7 +294,8 @@ Profile Information
 
 * Display name
 * Username
-* Edit Profile button
+* Biography
+* Edit Profile and Log out buttons, centred below the biography
 
 Social Information
 
@@ -312,9 +313,10 @@ Sections, in this order
 5. ❤️ Favourite Movies
 6. Personalized Lists
 
-Every list section uses the same rail as Home and Explore: the first ten titles
-scroll horizontally, a See All tile closes the rail, and a See All button sits on
-the section title line and opens the complete list.
+Every list section uses the same rail as Home and Explore: up to the first twenty
+titles scroll horizontally, and a See All button sits on the section title line
+and opens the complete list. The rail ends with the last poster; See All is never
+repeated as a tile inside the rail.
 
 Statistics
 

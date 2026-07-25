@@ -1,25 +1,19 @@
-import {
-  AspectRatio,
-  Box,
-  Flex,
-  Skeleton,
-  Stack,
-  Text,
-} from '@chakra-ui/react';
+import { Box, Flex, Skeleton, Stack } from '@chakra-ui/react';
 import type { MediaCardItem } from 'lib/components/shared/media-item';
 import PosterCard from 'lib/components/shared/PosterCard';
 import { SectionHeading } from 'lib/components/shared/Section';
 import type { MediaType } from 'lib/types';
-import Link from 'next/link';
+import type Link from 'next/link';
 import type { ComponentProps, ReactNode } from 'react';
 
 /**
  * Every list (signed-out Home, Explore, the Movies/TV overviews, and every
  * Profile section) previews the same number of titles in the same horizontally
  * scrollable rail, so the shelf size lives here instead of being restated per
- * page.
+ * page. The rail stops at this many posters; the complete list is one click
+ * away behind the "See All" action next to the section title.
  */
-export const MEDIA_RAIL_ITEM_LIMIT = 10;
+export const MEDIA_RAIL_ITEM_LIMIT = 20;
 
 type RailHref = ComponentProps<typeof Link>['href'];
 
@@ -27,81 +21,27 @@ type MediaShelfProps = {
   items: Array<MediaCardItem>;
   itemLimit?: number;
   mediaType: MediaType.Movie | MediaType.Tv;
-  seeAllHref: RailHref;
 };
 
 type MediaRailProps = MediaShelfProps & {
   description?: string;
   /** Rendered instead of the shelf for empty, incomplete, or errored lists. */
   fallback?: ReactNode;
+  seeAllHref: RailHref;
   title: string;
 };
 
-const railSkeletonKeys = [
-  'rail-a',
-  'rail-b',
-  'rail-c',
-  'rail-d',
-  'rail-e',
-  'rail-f',
-  'rail-g',
-  'rail-h',
-  'rail-i',
-  'rail-j',
-];
+const railSkeletonKeys = Array.from(
+  { length: MEDIA_RAIL_ITEM_LIMIT },
+  (_, index) => `rail-${index}`
+);
 
 const posterWidth = { base: '7rem', sm: '8rem', md: '9rem' } as const;
-
-const SeeAllTile = ({ href }: { href: RailHref }) => (
-  <Stack
-    flex="0 0 auto"
-    gap={2}
-    minWidth={0}
-    textAlign="center"
-    width={posterWidth}
-  >
-    <AspectRatio ratio={2 / 3}>
-      <Box
-        _hover={{
-          background: 'gold.400',
-          borderColor: 'gold.400',
-          color: 'gray.900',
-          transform: 'translateY(-3px)',
-        }}
-        alignItems="center"
-        asChild
-        background="bg.surface"
-        borderColor="border"
-        borderRadius="md"
-        borderWidth={1}
-        color="gold.300"
-        display="flex"
-        justifyContent="center"
-        transitionDuration="fast"
-        transitionProperty="background, border-color, color, transform"
-        transitionTimingFunction="ease-out"
-      >
-        <Link aria-label="See all titles" href={href}>
-          <Text fontSize={{ base: 'sm', md: 'md' }} fontWeight="700">
-            See All
-          </Text>
-        </Link>
-      </Box>
-    </AspectRatio>
-    <Text
-      fontSize={{ base: 'xs', md: 'sm' }}
-      minHeight={{ base: '2rem', md: '2.5rem' }}
-    >
-      &nbsp;
-    </Text>
-  </Stack>
-);
 
 const MediaShelf = ({
   items,
   itemLimit = MEDIA_RAIL_ITEM_LIMIT,
   mediaType,
-  seeAllHref,
 }: MediaShelfProps) => {
   const visibleItems = items.slice(0, itemLimit);
 
@@ -129,7 +69,6 @@ const MediaShelf = ({
             </Box>
           );
         })}
-        <SeeAllTile href={seeAllHref} />
       </Flex>
     </Flex>
   );
@@ -155,12 +94,7 @@ export const MediaRail = ({
       title={title}
     />
     {fallback ?? (
-      <MediaShelf
-        itemLimit={itemLimit}
-        items={items}
-        mediaType={mediaType}
-        seeAllHref={seeAllHref}
-      />
+      <MediaShelf itemLimit={itemLimit} items={items} mediaType={mediaType} />
     )}
   </Stack>
 );
