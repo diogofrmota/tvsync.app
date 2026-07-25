@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  AspectRatio,
   Badge,
   Box,
   Button,
@@ -9,139 +10,228 @@ import {
   Heading,
   HStack,
   IconButton,
+  Stack,
   Text,
 } from '@chakra-ui/react';
+import PosterImage from 'lib/components/shared/PosterImage';
+import { IMAGE_URL_ORIGINAL } from 'lib/components/shared/tmdb-image-urls';
 import { MediaType } from 'lib/types';
 import type { Route } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useState } from 'react';
-import { FiChevronLeft, FiChevronRight, FiPlay, FiStar } from 'react-icons/fi';
-
-const BACKDROP_IMAGE_URL = 'https://image.tmdb.org/t/p/w1280';
+import { FiChevronLeft, FiChevronRight, FiPlay } from 'react-icons/fi';
 
 /** The featured area is a slideshow, so the loader shapes this many titles. */
 export const EXPLORE_HERO_SLIDE_COUNT = 10;
 const AUTO_ADVANCE_MS = 5000;
 
-export type ExploreHeroItem = {
-  backdropPath: string;
+export type ExploreHeroSlide = {
+  backdropPath: string | null;
   id: number;
+  /** IMDb title id, present whenever the title can be opened on IMDb. */
+  imdbId: string | null;
+  /** Genuine IMDb score out of 10, or null when OMDb has none for the title. */
+  imdbRating: number | null;
   mediaType: MediaType.Movie | MediaType.Tv;
   overview: string;
+  posterPath: string | null;
   title: string;
+  trailerUrl: string | null;
   voteAverage: number;
   year: string;
 };
 
-const heroMinHeight = { base: '22rem', md: '28rem' } as const;
+const heroMinHeight = { base: '26rem', md: '24rem' } as const;
 
-const detailHref = (item: ExploreHeroItem): Route =>
-  (item.mediaType === MediaType.Movie
-    ? `/movie/${item.id}`
-    : `/tv/show/${item.id}`) as Route;
+const detailHref = (slide: ExploreHeroSlide): Route =>
+  (slide.mediaType === MediaType.Movie
+    ? `/movie/${slide.id}`
+    : `/tv/show/${slide.id}`) as Route;
+
+/**
+ * The star always sits next to the genuine IMDb score when OMDb has one. TMDB's
+ * own score is the labeled fallback, never relabeled as IMDb.
+ */
+const SlideRating = ({ slide }: { slide: ExploreHeroSlide }) => {
+  const isImdb = slide.imdbRating !== null;
+  const value = isImdb ? slide.imdbRating : slide.voteAverage;
+
+  if (value === null || value <= 0) {
+    return null;
+  }
+
+  const source = isImdb ? 'IMDb' : 'TMDB';
+  const rating = (
+    <HStack
+      aria-label={`${source} rating ${value.toFixed(1)} out of 10`}
+      gap={1.5}
+    >
+      <Text aria-hidden fontSize="lg">
+        ⭐
+      </Text>
+      <Text color="white" fontSize="lg" fontWeight="700">
+        {value.toFixed(1)}
+      </Text>
+      <Text color="gray.300" fontSize="sm">
+        {`${source} rating`}
+      </Text>
+    </HStack>
+  );
+
+  return isImdb && slide.imdbId ? (
+    <Box
+      _hover={{ color: 'gold.300' }}
+      asChild
+      transitionDuration="fast"
+      transitionProperty="color"
+      transitionTimingFunction="ease-out"
+      width="fit-content"
+    >
+      <a
+        href={`https://www.imdb.com/title/${slide.imdbId}`}
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        {rating}
+      </a>
+    </Box>
+  ) : (
+    rating
+  );
+};
 
 const HeroSlide = ({
   isActive,
-  item,
+  slide,
 }: {
   isActive: boolean;
-  item: ExploreHeroItem;
+  slide: ExploreHeroSlide;
 }) => {
-  const mediaLabel = item.mediaType === MediaType.Movie ? 'Movie' : 'TV Show';
+  const mediaLabel = slide.mediaType === MediaType.Movie ? 'Movie' : 'TV Show';
+  const inactiveTabIndex = isActive ? undefined : -1;
 
   return (
     <Box
       aria-hidden={isActive ? undefined : true}
-      aria-label={item.title}
+      aria-label={slide.title}
       aria-roledescription="slide"
       flex="0 0 100%"
       minWidth="100%"
-      pointerEvents={isActive ? undefined : 'none'}
       position="relative"
       role="group"
     >
+      {slide.backdropPath ? (
+        <Box
+          backgroundImage={`url(${IMAGE_URL_ORIGINAL}${slide.backdropPath})`}
+          backgroundPosition="center 20%"
+          backgroundSize="cover"
+          inset={0}
+          position="absolute"
+        />
+      ) : null}
       <Box
-        backgroundImage={`url(${BACKDROP_IMAGE_URL}${item.backdropPath})`}
-        backgroundPosition="center 20%"
-        backgroundSize="cover"
+        background="linear-gradient(to top, rgba(9,9,11,0.96) 10%, rgba(9,9,11,0.82) 55%, rgba(9,9,11,0.55) 100%)"
         inset={0}
         position="absolute"
       />
-      <Box
-        background="linear-gradient(to top, rgba(9,9,11,0.94) 6%, rgba(9,9,11,0.7) 42%, rgba(9,9,11,0.25) 100%)"
-        inset={0}
-        position="absolute"
-      />
+
       <Flex
-        direction="column"
-        gap={4}
-        justify="flex-end"
+        align={{ base: 'flex-start', sm: 'center' }}
+        gap={{ base: 4, md: 7 }}
         minHeight={heroMinHeight}
         padding={{ base: 5, md: 8 }}
-        paddingBottom={{ base: 12, md: 8 }}
+        paddingBottom={{ base: 14, md: 8 }}
         position="relative"
       >
-        <HStack color="gray.100" gap={3} wrap="wrap">
-          <Badge
-            background="gold.400"
-            color="gray.900"
-            fontWeight="700"
-            textTransform="uppercase"
-          >
-            {mediaLabel}
-          </Badge>
-          {item.voteAverage > 0 ? (
-            <HStack color="gold.300" gap={1}>
-              <FiStar aria-hidden fill="currentColor" />
-              <Text color="gray.100" fontSize="sm" fontWeight="600">
-                {item.voteAverage.toFixed(1)}
+        <AspectRatio
+          flexShrink={0}
+          ratio={2 / 3}
+          width={{ base: '6.5rem', sm: '9rem', md: '11rem' }}
+        >
+          <PosterImage
+            alt={`${slide.title} poster`}
+            src={slide.posterPath}
+            tabIndex={inactiveTabIndex}
+          />
+        </AspectRatio>
+
+        <Stack gap={{ base: 3, md: 4 }} minWidth={0}>
+          <HStack color="gray.100" gap={3} wrap="wrap">
+            <Badge
+              background="gold.400"
+              color="gray.900"
+              fontWeight="700"
+              textTransform="uppercase"
+            >
+              {mediaLabel}
+            </Badge>
+            {slide.year ? (
+              <Text color="gray.300" fontSize="sm">
+                {slide.year}
               </Text>
-            </HStack>
-          ) : null}
-          {item.year ? (
-            <Text color="gray.300" fontSize="sm">
-              {item.year}
+            ) : null}
+          </HStack>
+
+          <Heading
+            as="h2"
+            color="white"
+            fontSize={{ base: '2xl', md: '4xl' }}
+            fontWeight="700"
+            lineHeight="1.1"
+            maxWidth="40rem"
+          >
+            {slide.title}
+          </Heading>
+
+          <SlideRating slide={slide} />
+
+          {slide.overview ? (
+            <Text
+              color="gray.200"
+              display={{ base: 'none', sm: 'block' }}
+              fontSize={{ base: 'sm', md: 'md' }}
+              lineClamp={3}
+              maxWidth="38rem"
+            >
+              {slide.overview}
             </Text>
           ) : null}
-        </HStack>
 
-        <Heading
-          as="h2"
-          color="white"
-          fontSize={{ base: '3xl', md: '5xl' }}
-          fontWeight="700"
-          lineHeight="1.05"
-          maxWidth="40rem"
-        >
-          {item.title}
-        </Heading>
-
-        {item.overview ? (
-          <Text
-            color="gray.200"
-            fontSize={{ base: 'sm', md: 'md' }}
-            lineClamp={3}
-            maxWidth="38rem"
-          >
-            {item.overview}
-          </Text>
-        ) : null}
-
-        <Button
-          alignSelf="flex-start"
-          asChild
-          background="white"
-          color="gray.900"
-          fontWeight="700"
-          size={{ base: 'md', md: 'lg' }}
-          tabIndex={isActive ? undefined : -1}
-        >
-          <Link href={detailHref(item)}>
-            <FiPlay aria-hidden fill="currentColor" />
-            View details
-          </Link>
-        </Button>
+          <Flex gap={3} wrap="wrap">
+            <Button
+              asChild
+              background="white"
+              color="gray.900"
+              fontWeight="700"
+              size={{ base: 'sm', md: 'md' }}
+            >
+              <Link href={detailHref(slide)} tabIndex={inactiveTabIndex}>
+                View details
+              </Link>
+            </Button>
+            {slide.trailerUrl ? (
+              <Button
+                asChild
+                borderColor="whiteAlpha.500"
+                color="white"
+                fontWeight="700"
+                size={{ base: 'sm', md: 'md' }}
+                variant="outline"
+              >
+                <a
+                  href={slide.trailerUrl}
+                  rel="noopener noreferrer"
+                  tabIndex={inactiveTabIndex}
+                  target="_blank"
+                >
+                  <FiPlay aria-hidden fill="currentColor" />
+                  Watch trailer
+                </a>
+              </Button>
+            ) : null}
+          </Flex>
+        </Stack>
       </Flex>
     </Box>
   );
@@ -177,8 +267,12 @@ const HeroControl = ({
  * the arrows or the slide dots. Manual navigation restarts the timer so a
  * chosen slide is never cut short.
  */
-export const ExploreHero = ({ items }: { items: Array<ExploreHeroItem> }) => {
-  const slides = items.slice(0, EXPLORE_HERO_SLIDE_COUNT);
+export const ExploreHero = ({
+  slides: allSlides,
+}: {
+  slides: Array<ExploreHeroSlide>;
+}) => {
+  const slides = allSlides.slice(0, EXPLORE_HERO_SLIDE_COUNT);
   const slideCount = slides.length;
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -224,11 +318,11 @@ export const ExploreHero = ({ items }: { items: Array<ExploreHeroItem> }) => {
         transitionProperty="transform"
         transitionTimingFunction="ease-out"
       >
-        {slides.map((item, index) => (
+        {slides.map((slide, index) => (
           <HeroSlide
             isActive={index === activeIndex}
-            item={item}
-            key={`${item.mediaType}-${item.id}`}
+            key={`${slide.mediaType}-${slide.id}`}
+            slide={slide}
           />
         ))}
       </Flex>
@@ -245,16 +339,16 @@ export const ExploreHero = ({ items }: { items: Array<ExploreHeroItem> }) => {
           width="full"
         >
           <Flex gap={1.5} marginRight={2}>
-            {slides.map((item, index) => (
+            {slides.map((slide, index) => (
               <chakra.button
                 aria-current={index === activeIndex}
-                aria-label={`Show featured title ${index + 1}: ${item.title}`}
+                aria-label={`Show featured title ${index + 1}: ${slide.title}`}
                 background={
                   index === activeIndex ? 'gold.400' : 'whiteAlpha.500'
                 }
                 borderRadius="full"
                 height="0.5rem"
-                key={`dot-${item.mediaType}-${item.id}`}
+                key={`dot-${slide.mediaType}-${slide.id}`}
                 onClick={() => goTo(index)}
                 transitionDuration="fast"
                 transitionProperty="background, width"

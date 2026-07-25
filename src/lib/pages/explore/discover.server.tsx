@@ -5,11 +5,8 @@ import { MediaRail } from 'lib/components/shared/MediaRail';
 import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
 import { StatePanel } from 'lib/components/shared/Section';
 import { GenreChips } from 'lib/pages/explore/genre-chips';
-import {
-  EXPLORE_HERO_SLIDE_COUNT,
-  ExploreHero,
-  type ExploreHeroItem,
-} from 'lib/pages/explore/hero';
+import { ExploreHero } from 'lib/pages/explore/hero';
+import { buildExploreHeroSlides } from 'lib/pages/explore/hero-slides.server';
 import { MediaSearchBar } from 'lib/pages/media/media-search-bar';
 import {
   type MediaOverviewItem,
@@ -116,45 +113,6 @@ const shapeShows = (shows: Array<TVShowItem>, filter: MediaQualityFilter) =>
     uniqueMediaOverviewItems
   );
 
-const yearFromDate = (date: string | null | undefined) =>
-  date ? date.slice(0, 4) : '';
-
-// The featured slideshow mixes the most popular trending movies and shows, most
-// popular first, and only keeps titles with the artwork and copy a slide needs.
-const buildHeroItems = (
-  movies: Array<MovieListItemType>,
-  shows: Array<TVShowItem>
-): Array<ExploreHeroItem> => {
-  const movieCandidates = movies
-    .filter((movie) => movie.backdrop_path && movie.overview)
-    .map((movie) => ({
-      backdropPath: movie.backdrop_path as string,
-      id: movie.id,
-      mediaType: MediaType.Movie as const,
-      overview: movie.overview,
-      popularity: movie.popularity,
-      title: movie.title,
-      voteAverage: movie.vote_average,
-      year: yearFromDate(movie.release_date),
-    }));
-  const showCandidates = shows
-    .filter((show) => show.backdrop_path && show.overview)
-    .map((show) => ({
-      backdropPath: show.backdrop_path as string,
-      id: show.id,
-      mediaType: MediaType.Tv as const,
-      overview: show.overview,
-      popularity: show.popularity,
-      title: show.name,
-      voteAverage: show.vote_average,
-      year: yearFromDate(show.first_air_date),
-    }));
-  return [...movieCandidates, ...showCandidates]
-    .sort((left, right) => right.popularity - left.popularity)
-    .slice(0, EXPLORE_HERO_SLIDE_COUNT)
-    .map(({ popularity: _popularity, ...heroItem }) => heroItem);
-};
-
 const buildMovieHref = (
   section: 'popular' | 'top_rated' | 'trending_week' | 'upcoming',
   params: Record<string, number | string> = {}
@@ -204,10 +162,13 @@ export const ExploreDiscover = async () => {
       : Promise.resolve({ results: [] as Array<MovieListItemType> }),
   ]);
 
-  const heroItems = buildHeroItems(
+  const heroSlides = await buildExploreHeroSlides(
     settledResults<MovieListItemType>(trendingMovies),
     settledResults<TVShowItem>(trendingShows)
-  );
+  ).catch((error) => {
+    console.error('Failed to build the featured slideshow:', error);
+    return [];
+  });
 
   const recommendedItems = uniqueMediaOverviewItems(
     settledResults<MovieListItemType>(recommendedMovies).map(
@@ -304,7 +265,7 @@ export const ExploreDiscover = async () => {
           subtitle="Discover trending titles, new releases, and all-time highlights across movies and TV — all in one place."
           title="Explore"
         />
-        {heroItems.length > 0 ? <ExploreHero items={heroItems} /> : null}
+        {heroSlides.length > 0 ? <ExploreHero slides={heroSlides} /> : null}
         <GenreChips />
       </Stack>
       {rails.length > 0 ? (
