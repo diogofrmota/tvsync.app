@@ -20,6 +20,7 @@
     "turbo": "turbo",
     "build": "next build",
     "build:turbo": "pnpm turbo build",
+    "analyze": "cross-env ANALYZE=true next build --webpack",
     "db:migrate": "node database/migrate.mjs",
     "db:migrate:record-existing": "node database/migrate.mjs --record-existing",
     "postbuild": "next-sitemap --config next-sitemap.config.js",
@@ -58,6 +59,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.4.4",
     "@electric-sql/pglite": "0.5.4",
+    "@next/bundle-analyzer": "^16.2.11",
     "@playwright/test": "^1.56.0",
     "@types/node": "^25.9.1",
     "@types/react": "^19.2.15",

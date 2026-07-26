@@ -1,3 +1,4 @@
+import withBundleAnalyzer from '@next/bundle-analyzer';
 import type { NextConfig } from 'next';
 
 const getOrigin = (url?: string) => {
@@ -107,4 +108,8 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+const analyzeBundle = withBundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+});
+
+export default analyzeBundle(nextConfig);
