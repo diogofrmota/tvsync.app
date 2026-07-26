@@ -3,8 +3,12 @@ import 'server-only';
 import { MEDIA_RAIL_ITEM_LIMIT } from 'lib/components/shared/MediaRail';
 import {
   DISCOVERY_RAIL_TITLES,
+  type DiscoveryListSetting,
   type DiscoveryRail,
   type DiscoveryRailKey,
+  type DiscoverySurface,
+  discoveryListCacheTag,
+  selectDiscoveryListSettings,
 } from 'lib/pages/media/discovery-rails';
 import {
   type MediaOverviewItem,
@@ -18,7 +22,8 @@ import {
   qualityFilterFromParams,
   takeMediaOverviewItems,
 } from 'lib/pages/media/overview.server';
-import { TMDB_REVALIDATE_SECONDS } from 'lib/services/tmdb/constants';
+import { loadDiscoveryListSettings } from 'lib/services/database/discovery-lists.server';
+import type { TmdbCacheOptions } from 'lib/services/tmdb/constants';
 import {
   getMovieListServer,
   getTrendingMoviesServer,
@@ -41,8 +46,13 @@ import { unstable_cache } from 'next/cache';
 /**
  * One TMDB page is one rail: the API serves 20 titles per page and a rail shows
  * at most 20, so every section costs exactly one request. The responses are
- * cached per rail rather than per page, which is what keeps Home and Explore
+ * cached per list rather than per page, which is what keeps Home and Explore
  * showing the same lists instead of two independently ranked snapshots.
+ *
+ * Every list is identical for every visitor, so the cache is what makes the app
+ * affordable at scale: one TMDB request per list per refresh window serves the
+ * whole audience. That window, and the manual "fetch now", come from the
+ * admin-managed rows in `discovery_list_settings`.
  */
 const popularMovieParams = {
   include_adult: 'false',
@@ -82,15 +92,77 @@ const trendingTVShowQuality: MediaQualityFilter = {
   minVoteCount: 150,
 };
 
-const buildMovieHref = (
-  section: 'popular' | 'top_rated' | 'trending_week' | 'upcoming',
-  params: Record<string, number | string> = {}
-) => buildMediaOverviewHref({ basePath: '/movies', listType: section, params });
+const HOUR_IN_SECONDS = 3600;
 
-const buildTVShowHref = (
-  listType: 'popular' | 'top_rated' | 'trending_week',
-  params: Record<string, number | string> = {}
-) => buildMediaOverviewHref({ basePath: '/tv', listType, params });
+/**
+ * Tagging the underlying TMDB reads is what makes "fetch now" immediate: the
+ * dashboard purges the tag, which drops the cached response at the fetch layer
+ * as well as the list layer instead of waiting the window out.
+ */
+export const discoveryListCacheOptions = (input: {
+  key: DiscoveryRailKey;
+  revalidateSeconds: number;
+}): TmdbCacheOptions => ({
+  revalidateSeconds: input.revalidateSeconds,
+  tags: [discoveryListCacheTag(input.key)],
+});
+
+type RailCache = {
+  epoch: number;
+  key: DiscoveryRailKey;
+  revalidateSeconds: number;
+};
+
+const railCacheFromSetting = (setting: DiscoveryListSetting): RailCache => ({
+  epoch: setting.cacheEpoch,
+  key: setting.key,
+  revalidateSeconds: setting.refreshIntervalHours * HOUR_IN_SECONDS,
+});
+
+/**
+ * Caches one list's raw TMDB response. The cache epoch and the refresh window
+ * are both part of the key, so forcing a refetch or shortening the cadence
+ * applies on the next read instead of whenever the previous entry happened to
+ * expire.
+ */
+const cachedListResults = <Item>(
+  cache: RailCache,
+  name: string,
+  load: (options: TmdbCacheOptions) => Promise<Array<Item>>
+) =>
+  unstable_cache(
+    () =>
+      load(
+        discoveryListCacheOptions({
+          key: cache.key,
+          revalidateSeconds: cache.revalidateSeconds,
+        })
+      ),
+    [name, String(cache.epoch), String(cache.revalidateSeconds)],
+    {
+      revalidate: cache.revalidateSeconds,
+      tags: [discoveryListCacheTag(cache.key)],
+    }
+  )();
+
+/**
+ * Trending is cached raw because Explore also builds its featured slideshow
+ * from it; sharing the cached response keeps the hero and the trending rails on
+ * the same snapshot for one request.
+ */
+const loadTrendingMovieResults = (cache: RailCache) =>
+  cachedListResults(cache, 'discovery-trending-movies', (options) =>
+    getTrendingMoviesServer({ page: 1 }, 'week', options).then(
+      (response) => response.results
+    )
+  );
+
+const loadTrendingTVShowResults = (cache: RailCache) =>
+  cachedListResults(cache, 'discovery-trending-tv-shows', (options) =>
+    getTrendingTVShowsServer({ page: 1 }, 'week', options).then(
+      (response) => response.results
+    )
+  );
 
 const shapeMovies = (
   movies: Array<MovieListItemType>,
@@ -115,88 +187,34 @@ const shapeShows = (shows: Array<TVShowItem>, filter: MediaQualityFilter) =>
     uniqueMediaOverviewItems
   );
 
-/**
- * Trending is read raw because Explore also builds its featured slideshow from
- * it; sharing the cached response keeps the hero and the trending rails on the
- * same snapshot for one request.
- */
-const loadTrendingMovieResults = unstable_cache(
-  () =>
-    getTrendingMoviesServer({ page: 1 }, 'week').then(
-      (response) => response.results
-    ),
-  ['discovery-trending-movies'],
-  { revalidate: TMDB_REVALIDATE_SECONDS.trending }
-);
+const buildMovieHref = (
+  section: 'popular' | 'top_rated' | 'trending_week' | 'upcoming',
+  params: Record<string, number | string> = {}
+) => buildMediaOverviewHref({ basePath: '/movies', listType: section, params });
 
-const loadTrendingTVShowResults = unstable_cache(
-  () =>
-    getTrendingTVShowsServer({ page: 1 }, 'week').then(
-      (response) => response.results
-    ),
-  ['discovery-trending-tv-shows'],
-  { revalidate: TMDB_REVALIDATE_SECONDS.trending }
-);
-
-const loadPopularMovieResults = unstable_cache(
-  () =>
-    getMovieListServer({
-      params: { page: 1, ...popularMovieParams },
-      section: 'popular',
-    }).then((response) => response.results),
-  ['discovery-popular-movies'],
-  { revalidate: TMDB_REVALIDATE_SECONDS.list }
-);
-
-const loadTopRatedMovieResults = unstable_cache(
-  () =>
-    getMovieListServer({
-      params: { page: 1, ...topRatedMovieParams },
-      section: 'top_rated',
-    }).then((response) => response.results),
-  ['discovery-top-rated-movies'],
-  { revalidate: TMDB_REVALIDATE_SECONDS.topRated }
-);
-
-const loadUpcomingMovieResults = unstable_cache(
-  () =>
-    getMovieListServer({ params: { page: 1 }, section: 'upcoming' }).then(
-      (response) => response.results
-    ),
-  ['discovery-upcoming-movies'],
-  { revalidate: TMDB_REVALIDATE_SECONDS.list }
-);
-
-const loadPopularTVShowResults = unstable_cache(
-  () =>
-    getDiscoverTVShowsServer({ page: 1, ...popularTVShowParams }).then(
-      (response) => response.results
-    ),
-  ['discovery-popular-tv-shows'],
-  { revalidate: TMDB_REVALIDATE_SECONDS.list }
-);
-
-const loadTopRatedTVShowResults = unstable_cache(
-  () =>
-    getDiscoverTVShowsServer({ page: 1, ...topRatedTVShowParams }).then(
-      (response) => response.results
-    ),
-  ['discovery-top-rated-tv-shows'],
-  { revalidate: TMDB_REVALIDATE_SECONDS.topRated }
-);
+const buildTVShowHref = (
+  listType: 'popular' | 'top_rated' | 'trending_week',
+  params: Record<string, number | string> = {}
+) => buildMediaOverviewHref({ basePath: '/tv', listType, params });
 
 type DiscoveryRailDefinition = Omit<
   DiscoveryRail,
-  'error' | 'items' | 'key'
+  'error' | 'itemLimit' | 'items' | 'key'
 > & {
-  load: () => Promise<Array<MediaOverviewItem>>;
+  load: (cache: RailCache) => Promise<Array<MediaOverviewItem>>;
 };
 
 const railDefinitions: Record<DiscoveryRailKey, DiscoveryRailDefinition> = {
   popular_movies: {
-    load: async () =>
+    load: async (cache) =>
       shapeMovies(
-        await loadPopularMovieResults(),
+        await cachedListResults(cache, 'discovery-popular-movies', (options) =>
+          getMovieListServer({
+            cache: options,
+            params: { page: 1, ...popularMovieParams },
+            section: 'popular',
+          }).then((response) => response.results)
+        ),
         qualityFilterFromParams(popularMovieParams)
       ),
     mediaType: MediaType.Movie,
@@ -204,9 +222,17 @@ const railDefinitions: Record<DiscoveryRailKey, DiscoveryRailDefinition> = {
     title: DISCOVERY_RAIL_TITLES.popular_movies,
   },
   popular_tv_shows: {
-    load: async () =>
+    load: async (cache) =>
       shapeShows(
-        await loadPopularTVShowResults(),
+        await cachedListResults(
+          cache,
+          'discovery-popular-tv-shows',
+          (options) =>
+            getDiscoverTVShowsServer(
+              { page: 1, ...popularTVShowParams },
+              options
+            ).then((response) => response.results)
+        ),
         qualityFilterFromParams(popularTVShowParams)
       ),
     mediaType: MediaType.Tv,
@@ -214,9 +240,18 @@ const railDefinitions: Record<DiscoveryRailKey, DiscoveryRailDefinition> = {
     title: DISCOVERY_RAIL_TITLES.popular_tv_shows,
   },
   top_rated_movies: {
-    load: async () =>
+    load: async (cache) =>
       shapeMovies(
-        await loadTopRatedMovieResults(),
+        await cachedListResults(
+          cache,
+          'discovery-top-rated-movies',
+          (options) =>
+            getMovieListServer({
+              cache: options,
+              params: { page: 1, ...topRatedMovieParams },
+              section: 'top_rated',
+            }).then((response) => response.results)
+        ),
         qualityFilterFromParams(topRatedMovieParams)
       ),
     mediaType: MediaType.Movie,
@@ -224,9 +259,17 @@ const railDefinitions: Record<DiscoveryRailKey, DiscoveryRailDefinition> = {
     title: DISCOVERY_RAIL_TITLES.top_rated_movies,
   },
   top_rated_tv_shows: {
-    load: async () =>
+    load: async (cache) =>
       shapeShows(
-        await loadTopRatedTVShowResults(),
+        await cachedListResults(
+          cache,
+          'discovery-top-rated-tv-shows',
+          (options) =>
+            getDiscoverTVShowsServer(
+              { page: 1, ...topRatedTVShowParams },
+              options
+            ).then((response) => response.results)
+        ),
         qualityFilterFromParams(topRatedTVShowParams)
       ),
     mediaType: MediaType.Tv,
@@ -234,8 +277,8 @@ const railDefinitions: Record<DiscoveryRailKey, DiscoveryRailDefinition> = {
     title: DISCOVERY_RAIL_TITLES.top_rated_tv_shows,
   },
   trending_movies: {
-    load: async () =>
-      shapeMovies(await loadTrendingMovieResults(), trendingMovieQuality),
+    load: async (cache) =>
+      shapeMovies(await loadTrendingMovieResults(cache), trendingMovieQuality),
     mediaType: MediaType.Movie,
     seeAllHref: buildMovieHref('trending_week', {
       'vote_average.gte': trendingMovieQuality.minVoteAverage,
@@ -244,8 +287,8 @@ const railDefinitions: Record<DiscoveryRailKey, DiscoveryRailDefinition> = {
     title: DISCOVERY_RAIL_TITLES.trending_movies,
   },
   trending_tv_shows: {
-    load: async () =>
-      shapeShows(await loadTrendingTVShowResults(), trendingTVShowQuality),
+    load: async (cache) =>
+      shapeShows(await loadTrendingTVShowResults(cache), trendingTVShowQuality),
     mediaType: MediaType.Tv,
     seeAllHref: buildTVShowHref('trending_week', {
       'vote_average.gte': trendingTVShowQuality.minVoteAverage,
@@ -254,7 +297,16 @@ const railDefinitions: Record<DiscoveryRailKey, DiscoveryRailDefinition> = {
     title: DISCOVERY_RAIL_TITLES.trending_tv_shows,
   },
   upcoming_movies: {
-    load: async () => shapeMovies(await loadUpcomingMovieResults()),
+    load: async (cache) =>
+      shapeMovies(
+        await cachedListResults(cache, 'discovery-upcoming-movies', (options) =>
+          getMovieListServer({
+            cache: options,
+            params: { page: 1 },
+            section: 'upcoming',
+          }).then((response) => response.results)
+        )
+      ),
     mediaType: MediaType.Movie,
     seeAllHref: buildMovieHref('upcoming'),
     title: DISCOVERY_RAIL_TITLES.upcoming_movies,
@@ -264,29 +316,48 @@ const railDefinitions: Record<DiscoveryRailKey, DiscoveryRailDefinition> = {
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : 'Unable to load TMDB data.';
 
-/**
- * Resolves the requested rails. A section that came back short still previews
- * fine — the complete list is one click behind "See All" — so only a failed
- * list carries an error and no rail is topped up with an extra request.
- */
-export const loadDiscoveryRails = (
-  keys: ReadonlyArray<DiscoveryRailKey>
-): Promise<Array<DiscoveryRail>> =>
-  Promise.all(
-    keys.map(async (key): Promise<DiscoveryRail> => {
-      const { load, ...definition } = railDefinitions[key];
+const loadRail = async (
+  setting: DiscoveryListSetting
+): Promise<DiscoveryRail> => {
+  const { load, ...definition } = railDefinitions[setting.key];
+  // A rail previews at most the shared shelf size, and never more titles than
+  // its "See All" page carries.
+  const itemLimit = Math.min(setting.itemLimit, MEDIA_RAIL_ITEM_LIMIT);
 
-      try {
-        return {
-          ...definition,
-          items: (await load()).slice(0, MEDIA_RAIL_ITEM_LIMIT),
-          key,
-        };
-      } catch (error) {
-        return { ...definition, error: getErrorMessage(error), items: [], key };
-      }
-    })
+  try {
+    return {
+      ...definition,
+      itemLimit,
+      items: (await load(railCacheFromSetting(setting))).slice(0, itemLimit),
+      key: setting.key,
+    };
+  } catch (error) {
+    return {
+      ...definition,
+      error: getErrorMessage(error),
+      itemLimit,
+      items: [],
+      key: setting.key,
+    };
+  }
+};
+
+/**
+ * Resolves the lists one surface shows, in the admin-configured order. A
+ * section that came back short still previews fine — the complete list is one
+ * click behind "See All" — so only a failed list carries an error and no rail
+ * is topped up with an extra request.
+ */
+export const loadDiscoveryRails = async (
+  surface: DiscoverySurface
+): Promise<Array<DiscoveryRail>> => {
+  const settings = selectDiscoveryListSettings(
+    await loadDiscoveryListSettings(),
+    surface
   );
+
+  return Promise.all(settings.map(loadRail));
+};
 
 /**
  * The raw trending responses behind the Explore featured slideshow. They are
@@ -297,13 +368,39 @@ export const loadTrendingDiscoveryResults = async (): Promise<{
   movies: Array<MovieListItemType>;
   shows: Array<TVShowItem>;
 }> => {
+  const settings = await loadDiscoveryListSettings();
+  const settingByKey = new Map(
+    settings.map((setting) => [setting.key, setting])
+  );
+  const movieSetting = settingByKey.get('trending_movies');
+  const showSetting = settingByKey.get('trending_tv_shows');
   const [movies, shows] = await Promise.allSettled([
-    loadTrendingMovieResults(),
-    loadTrendingTVShowResults(),
+    movieSetting
+      ? loadTrendingMovieResults(railCacheFromSetting(movieSetting))
+      : Promise.resolve<Array<MovieListItemType>>([]),
+    showSetting
+      ? loadTrendingTVShowResults(railCacheFromSetting(showSetting))
+      : Promise.resolve<Array<TVShowItem>>([]),
   ]);
 
   return {
     movies: movies.status === 'fulfilled' ? movies.value : [],
     shows: shows.status === 'fulfilled' ? shows.value : [],
   };
+};
+
+/**
+ * The configured size and cache window for a managed list, read by its "See
+ * All" page so the complete list matches the rail that links to it.
+ */
+export const loadDiscoveryListConfig = async (key: DiscoveryRailKey) => {
+  const settings = await loadDiscoveryListSettings();
+  const setting = settings.find((candidate) => candidate.key === key);
+
+  return setting
+    ? {
+        itemLimit: setting.itemLimit,
+        revalidateSeconds: setting.refreshIntervalHours * HOUR_IN_SECONDS,
+      }
+    : null;
 };

@@ -10,6 +10,7 @@ export const FIND_CREDENTIAL_ACCOUNT_QUERY = `
     p.email,
     p.email_verified_at,
     p.session_version,
+    p.banned_at,
     a.password_hash
   from profiles p
   join auth_accounts a
@@ -139,10 +140,16 @@ export const RESET_PASSWORD_WITH_TOKEN_QUERY = `
   select user_id from session_rotated
 `;
 
+/**
+ * A banned profile deliberately has no session version to match. The JWT
+ * callback treats a missing version as a revoked session, so a ban signs every
+ * existing device out on its next request through the same path a password
+ * reset uses.
+ */
 export const GET_SESSION_VERSION_QUERY = `
   select session_version
   from profiles
-  where user_id = $1
+  where user_id = $1 and banned_at is null
   limit 1
 `;
 

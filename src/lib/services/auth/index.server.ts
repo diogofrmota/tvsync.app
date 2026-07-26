@@ -1,7 +1,10 @@
 import 'server-only';
 
 import { getSafeAuthRedirectUrl } from 'lib/services/auth/callback-url';
-import { EMAIL_UNVERIFIED_ERROR } from 'lib/services/auth/constants';
+import {
+  ACCOUNT_BANNED_ERROR,
+  EMAIL_UNVERIFIED_ERROR,
+} from 'lib/services/auth/constants';
 import { verifyPassword } from 'lib/services/auth/password.server';
 import {
   checkAuthRateLimit,
@@ -67,6 +70,12 @@ const providers: NextAuthOptions['providers'] = [
 
       if (!(withinLimit && account && passwordMatches)) {
         return null;
+      }
+
+      // Only a caller who already proved the password learns that the account
+      // is suspended; a wrong password still fails as a plain login failure.
+      if (account.banned_at) {
+        throw new Error(ACCOUNT_BANNED_ERROR);
       }
 
       if (!account.email_verified_at) {
@@ -137,9 +146,15 @@ export const authOptions: NextAuthOptions = {
         });
         const sessionVersion = await getSessionVersion(userId);
 
+        // A banned profile has no readable session version, so a Google sign-in
+        // is refused the same way a banned credentials login is.
+        if (sessionVersion === null) {
+          return '/login?error=AccessDenied';
+        }
+
         user.id = userId;
         (user as User).authenticatedAt = Date.now();
-        (user as User).sessionVersion = sessionVersion ?? 0;
+        (user as User).sessionVersion = sessionVersion;
         return true;
       } catch (error) {
         return error instanceof AuthAccountConflictError

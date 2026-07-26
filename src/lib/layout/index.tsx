@@ -7,7 +7,10 @@ import { useSession } from 'next-auth/react';
 import Footer from './Footer';
 import Header from './Header';
 
+// Routes rendered without the app shell: the credential pages and the admin
+// dashboard, which is not part of the signed-in user experience at all.
 const authRoutes = new Set([
+  '/admin',
   '/forgot-password',
   '/login',
   '/register',

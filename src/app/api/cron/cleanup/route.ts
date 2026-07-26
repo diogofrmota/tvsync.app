@@ -1,3 +1,4 @@
+import { purgeExpiredAdminAuditEntries } from 'lib/services/database/admin.server';
 import { purgeExpiredAuthRecords } from 'lib/services/database/auth.server';
 import { NextResponse } from 'next/server';
 
@@ -22,8 +23,14 @@ export async function GET(request: Request) {
 
   try {
     const purged = await purgeExpiredAuthRecords();
+    // The admin trail is append-only and only ever read for the recent past, so
+    // the same nightly pass keeps it from growing without bound.
+    const adminAuditEntries = await purgeExpiredAdminAuditEntries();
 
-    return NextResponse.json({ ok: true, purged }, { headers: noStore });
+    return NextResponse.json(
+      { ok: true, purged: { ...purged, adminAuditEntries } },
+      { headers: noStore }
+    );
   } catch (error) {
     console.error('Auth cleanup cron failed:', error);
 

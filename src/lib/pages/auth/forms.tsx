@@ -18,7 +18,10 @@ import {
   resendVerificationEmail,
   resetPassword,
 } from 'lib/features/auth/actions';
-import { EMAIL_UNVERIFIED_ERROR } from 'lib/services/auth/constants';
+import {
+  ACCOUNT_BANNED_ERROR,
+  EMAIL_UNVERIFIED_ERROR,
+} from 'lib/services/auth/constants';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
@@ -305,7 +308,11 @@ export const LoginForm = ({
         return;
       }
 
-      if (result?.error?.includes(EMAIL_UNVERIFIED_ERROR)) {
+      if (result?.error?.includes(ACCOUNT_BANNED_ERROR)) {
+        setLoginError(
+          'This account has been suspended. Contact support if you believe this is a mistake.'
+        );
+      } else if (result?.error?.includes(EMAIL_UNVERIFIED_ERROR)) {
         setUnverified(true);
         setLoginError('Verify your email before logging in.');
       } else {

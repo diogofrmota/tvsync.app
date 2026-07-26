@@ -6,7 +6,6 @@ import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
 import { StatePanel } from 'lib/components/shared/Section';
 import { ExploreHero } from 'lib/pages/explore/hero';
 import { buildExploreHeroSlides } from 'lib/pages/explore/hero-slides.server';
-import { EXPLORE_DISCOVERY_RAIL_KEYS } from 'lib/pages/media/discovery-rails';
 import {
   loadDiscoveryRails,
   loadTrendingDiscoveryResults,
@@ -18,7 +17,7 @@ export const ExploreDiscover = async () => {
   // Explore and Home resolve their lists from the same shared rails, so the
   // sections both pages carry show identical titles under identical names.
   const [rails, trending] = await Promise.all([
-    loadDiscoveryRails(EXPLORE_DISCOVERY_RAIL_KEYS),
+    loadDiscoveryRails('explore'),
     loadTrendingDiscoveryResults(),
   ]);
 
@@ -49,6 +48,7 @@ export const ExploreDiscover = async () => {
       {populatedRails.length > 0 ? (
         populatedRails.map((rail) => (
           <MediaRail
+            itemLimit={rail.itemLimit}
             items={rail.items}
             key={rail.key}
             mediaType={rail.mediaType}

@@ -35,6 +35,7 @@ type GoogleIdentityInput = {
 };
 
 type CredentialAccountRow = {
+  banned_at: Date | string | null;
   email: string;
   email_verified_at: Date | string | null;
   name: string;

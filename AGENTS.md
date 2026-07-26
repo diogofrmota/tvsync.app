@@ -46,6 +46,8 @@ Guidance for AI agents and contributors working in this repository.
 - `src/lib/pages` - Route-level UI composed by App Router pages.
 - `src/lib/components` - Shared and domain-specific reusable UI components.
 - `src/lib/features` - Feature modules: `auth`, `contact`, `library`, `profile`, `reviews` (personal ratings), `social` (follow graph), `tracking`, and `watchlist`.
+- `src/lib/services/admin` - Server-only admin session helpers plus the pure signing/verification primitives behind them.
+- `src/lib/pages/admin` - The single `/admin` dashboard page and its client sections.
 - `src/lib/services/auth` - Server-only Auth.js/NextAuth configuration.
 - `src/lib/pages/auth` - Login/register route UI and client auth actions.
 - `src/lib/services/database` - Server-only Neon Postgres helpers for Server Components, Server Actions, and Route Handlers.
@@ -81,6 +83,8 @@ The authentication lifecycle schema is in `database/migrations/0005_auth_lifecyc
 
 Personalized lists were removed from the product. `database/migrations/0010_personalized_lists.sql` stays in the migration history so applied databases keep matching the recorded migrations, but `custom_lists` and `custom_list_items` are no longer read or written by the app. Do not add UI, routes, or helpers back on top of those tables.
 
+The admin schema is in `database/migrations/0011_admin_dashboard.sql`. It adds the `profiles` moderation columns (`banned_at`, `ban_reason`), the global `discovery_list_settings` rows behind Home and Explore, and the append-only `admin_audit_log`.
+
 - Apply migrations with `DATABASE_URL_UNPOOLED`; use pooled `DATABASE_URL` only for runtime app queries.
 - Duplicate user/media records are guarded by database unique constraints.
 - Common owner, media, status, public-read, and date ordering lookups should have matching indexes before related UI or API work ships.
@@ -91,6 +95,17 @@ Personalized lists were removed from the product. `database/migrations/0010_pers
 - Users may only modify their own personal tracking rows. Public profile reads must honor `privacy_setting = 'public'` where practical.
 - If RLS is added later, document exactly how the app sets transaction-local Neon context, such as `set_config('app.current_user_id', userId, true)`, and keep server-side query authorization checks as defense in depth.
 - The public Contact form reuses the existing scope-keyed `auth_rate_limits` table (via `consumeAuthRateLimit` in `src/lib/services/database/auth.server.ts`) for both submission throttling and short-window duplicate-submission detection instead of adding a new table.
+
+## Admin Dashboard Notes
+
+`/admin` is one credential-gated page, separate from user authentication. It is not linked from any navigation, renders outside the app shell, and is excluded from the sitemap and robots.txt.
+
+- Access is `ADMIN_USER` + `ADMIN_PASSWORD` compared in constant time, then a stateless signed cookie (`src/lib/services/admin/security.ts`). The signing key is derived from `AUTH_SECRET` and a digest of the credentials, so rotating the password or the secret invalidates every issued admin cookie with no server-side session store. Sessions last eight hours; the cookie is `httpOnly`, `sameSite=strict`, `secure` in production, and scoped to `/admin`.
+- Sign-in attempts are throttled through the existing scope-keyed `auth_rate_limits` table (`adminLogin` rule). Every mutation in `src/lib/features/admin/actions.ts` re-verifies the session with `requireAdminSession()` before touching data; a rendered dashboard is never treated as authorization.
+- Privileged actions are appended to `admin_audit_log` with the actor, target, and an `AUTH_SECRET`-keyed digest of the request IP — never a raw address. The nightly cleanup cron purges entries older than 90 days.
+- Moderation sets `profiles.banned_at`/`ban_reason` and rotates `session_version`. A banned profile stops answering the session-version read, so live sessions fail their next request, credentials logins raise `ACCOUNT_BANNED_ERROR`, and Google sign-in is refused.
+- Account counters are exact; the high-volume activity tables (`user_media`, `episode_progress`, `ratings`, `watchlist_items`) are sized from planner statistics so the dashboard never scans them. The overview is cached for 60 seconds with an explicit recalculate control.
+- Home/Explore list management lives in `discovery_list_settings`: active, per-surface placement, order, `item_limit` (the "See All" size), `refresh_interval_hours`, and `cache_epoch`. Reads go through `loadDiscoveryListSettings` (cached app-wide for five minutes, tag-busted on save) and fall back to `DEFAULT_DISCOVERY_LIST_SETTINGS` whenever Neon is unreachable, so discovery survives a database outage. "Fetch now" bumps the cache epoch and purges the list's cache tag, which drops the cached TMDB response at both the list and fetch layers.
 
 ## Navigation Notes
 
@@ -120,6 +135,7 @@ Primary navigation currently lives in `src/lib/layout/Header.tsx` and is centere
 Required:
 
 - `TMDB_API_KEY`
+- `ADMIN_USER` and `ADMIN_PASSWORD` before the `/admin` dashboard opens. Both, plus `AUTH_SECRET`, are required; with any of them missing the route renders a "not configured" panel instead of a login form.
 - `DATABASE_URL` before using Neon-backed features.
 - `AUTH_SECRET` before production auth sessions are enabled.
 - `RESEND_API_KEY` and `AUTH_EMAIL_FROM` before credential registration, verification, or password-reset email delivery is enabled.

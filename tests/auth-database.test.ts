@@ -32,6 +32,9 @@ const migrationNames = [
   '0004_social_activity_recommendations.sql',
   '0005_auth_lifecycle.sql',
   '0006_unify_library_membership.sql',
+  // Moderation columns take part in the credential lookup and the session
+  // version read, so the auth queries are exercised against them here too.
+  '0011_admin_dashboard.sql',
 ] as const;
 const emailUniqueConstraintPattern = /profiles_email_normalized_unique/;
 const usernameUniqueConstraintPattern = /profiles_username_normalized_unique/;
@@ -102,6 +105,7 @@ test('PostgreSQL auth lifecycle enforces identity, token, reset, and throttle gu
     );
     await runMigration(db, migrationNames[4]);
     await runMigration(db, migrationNames[5]);
+    await runMigration(db, migrationNames[6]);
 
     await t.test(
       'migration backfills legacy Google identities safely',

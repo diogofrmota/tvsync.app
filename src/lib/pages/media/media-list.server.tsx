@@ -4,12 +4,18 @@ import { MediaGrid } from 'lib/components/shared/MediaGrid';
 import type { MediaCardItem } from 'lib/components/shared/media-item';
 import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
 import { StatePanel } from 'lib/components/shared/Section';
+import { discoveryRailKeyForList } from 'lib/pages/media/discovery-rails';
+import {
+  discoveryListCacheOptions,
+  loadDiscoveryListConfig,
+} from 'lib/pages/media/discovery-rails.server';
 import {
   mapMovieOverviewItem,
   mapTVShowOverviewItem,
   uniqueMediaOverviewItems,
 } from 'lib/pages/media/overview';
 import type { MediaListSearchParams } from 'lib/pages/media/overview.server';
+import type { TmdbCacheOptions } from 'lib/services/tmdb/constants';
 import { getMovieListServer } from 'lib/services/tmdb/movie/list/index.server';
 import type {
   ListType,
@@ -23,16 +29,69 @@ import type {
 import { MediaType } from 'lib/types';
 
 /**
- * "See All" shows one complete list instead of a pager. TMDB serves 20 titles
- * per page, so four pages leave enough headroom for quality filtering (trending
- * endpoints ignore the vote parameters) to still fill the full list of 30.
+ * "See All" shows one complete list instead of a pager. How long that list is
+ * comes from the admin-managed configuration for the list being opened, so the
+ * complete list is exactly as long as the rail that linked to it promised; a
+ * route with no managed list behind it keeps the shipped default.
  */
 const MEDIA_LIST_ITEM_LIMIT = 30;
-const MEDIA_LIST_PAGE_NUMBERS = [1, 2, 3, 4] as const;
+const TMDB_PAGE_SIZE = 20;
+const MEDIA_LIST_MAX_PAGES = 6;
+
+/**
+ * TMDB serves 20 titles per page, and the curated endpoints ignore the vote
+ * parameters, so two extra pages leave headroom for quality filtering to still
+ * fill the requested list. A smaller list therefore also costs fewer requests.
+ */
+const pageNumbersForLimit = (limit: number) =>
+  Array.from(
+    {
+      length: Math.min(
+        MEDIA_LIST_MAX_PAGES,
+        Math.ceil(limit / TMDB_PAGE_SIZE) + 2
+      ),
+    },
+    (_, index) => index + 1
+  );
 
 type MediaListResult = {
   failed: boolean;
   items: Array<MediaCardItem>;
+};
+
+type ManagedListConfig = {
+  cache?: TmdbCacheOptions;
+  itemLimit: number;
+};
+
+/**
+ * Resolves the managed list a "See All" route belongs to. Genre lists are not
+ * managed from the dashboard, so they keep the default size and cache window.
+ */
+const resolveManagedList = async (input: {
+  isGenreList?: boolean;
+  isMovie: boolean;
+  listType: string;
+}): Promise<ManagedListConfig> => {
+  const key = input.isGenreList
+    ? null
+    : discoveryRailKeyForList({
+        isMovie: input.isMovie,
+        listType: input.listType,
+      });
+  const config = key ? await loadDiscoveryListConfig(key) : null;
+
+  if (!(key && config)) {
+    return { itemLimit: MEDIA_LIST_ITEM_LIMIT };
+  }
+
+  return {
+    cache: discoveryListCacheOptions({
+      key,
+      revalidateSeconds: config.revalidateSeconds,
+    }),
+    itemLimit: config.itemLimit,
+  };
 };
 
 type QualityScoredMedia = {
@@ -85,15 +144,21 @@ const passesQuality = (
 };
 
 const loadMovieListItems = async ({
+  managed,
   params,
   section,
 }: {
+  managed: ManagedListConfig;
   params: MediaListSearchParams;
   section: ListType;
 }): Promise<MediaListResult> => {
   const responses = await Promise.allSettled(
-    MEDIA_LIST_PAGE_NUMBERS.map((page) =>
-      getMovieListServer({ params: listParamsForPage(params, page), section })
+    pageNumbersForLimit(managed.itemLimit).map((page) =>
+      getMovieListServer({
+        cache: managed.cache,
+        params: listParamsForPage(params, page),
+        section,
+      })
     )
   );
   const movies = resultsFromSettled<MovieListItemType>(responses).filter(
@@ -106,21 +171,27 @@ const loadMovieListItems = async ({
     failed: responses.every((response) => response.status === 'rejected'),
     items: uniqueMediaOverviewItems(movies.map(mapMovieOverviewItem)).slice(
       0,
-      MEDIA_LIST_ITEM_LIMIT
+      managed.itemLimit
     ),
   };
 };
 
 const loadTVShowListItems = async ({
   listType,
+  managed,
   params,
 }: {
   listType: TVShowListType;
+  managed: ManagedListConfig;
   params: MediaListSearchParams;
 }): Promise<MediaListResult> => {
   const responses = await Promise.allSettled(
-    MEDIA_LIST_PAGE_NUMBERS.map((page) =>
-      getTVShowByListType(listType, listParamsForPage(params, page))
+    pageNumbersForLimit(managed.itemLimit).map((page) =>
+      getTVShowByListType(
+        listType,
+        listParamsForPage(params, page),
+        managed.cache
+      )
     )
   );
   const shows = resultsFromSettled<TVShowItem>(responses).filter((show) =>
@@ -131,7 +202,7 @@ const loadTVShowListItems = async ({
     failed: responses.every((response) => response.status === 'rejected'),
     items: uniqueMediaOverviewItems(shows.map(mapTVShowOverviewItem)).slice(
       0,
-      MEDIA_LIST_ITEM_LIMIT
+      managed.itemLimit
     ),
   };
 };
@@ -175,7 +246,16 @@ export const MovieListPage = async ({
   section: ListType;
 }) => {
   const params = genre ? { ...searchParams, with_genres: genre } : searchParams;
-  const { failed, items } = await loadMovieListItems({ params, section });
+  const managed = await resolveManagedList({
+    isGenreList: Boolean(genre),
+    isMovie: true,
+    listType: section,
+  });
+  const { failed, items } = await loadMovieListItems({
+    managed,
+    params,
+    section,
+  });
 
   return (
     <MediaListView
@@ -197,6 +277,7 @@ export const TVShowListPage = async ({
 }) => {
   const { failed, items } = await loadTVShowListItems({
     listType,
+    managed: await resolveManagedList({ isMovie: false, listType }),
     params: searchParams,
   });
 

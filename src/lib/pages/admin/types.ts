@@ -1,0 +1,35 @@
+import type { DiscoveryListSetting } from 'lib/pages/media/discovery-rails';
+import type {
+  AdminAuditEntry,
+  AdminBanRecord,
+  AdminLoadResult,
+  AdminOverviewStats,
+  AdminSignupRecord,
+} from 'lib/services/database/admin.server';
+
+/**
+ * Presence of the integrations the app depends on, derived from the server
+ * environment. Only whether a value is configured is ever sent to the browser —
+ * never the value itself.
+ */
+export type AdminHealth = {
+  cronSecretConfigured: boolean;
+  databaseConfigured: boolean;
+  environment: string;
+  generatedAt: string;
+  googleOAuthConfigured: boolean;
+  omdbConfigured: boolean;
+  resendConfigured: boolean;
+  siteUrl: string;
+  tmdbConfigured: boolean;
+};
+
+export type AdminDashboardData = {
+  actor: string;
+  auditLog: AdminLoadResult<Array<AdminAuditEntry>>;
+  health: AdminHealth;
+  lists: Array<DiscoveryListSetting>;
+  recentBans: AdminLoadResult<Array<AdminBanRecord>>;
+  recentSignups: AdminLoadResult<Array<AdminSignupRecord>>;
+  stats: AdminLoadResult<AdminOverviewStats>;
+};
