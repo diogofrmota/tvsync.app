@@ -1,15 +1,9 @@
 'use client';
 
-import { Button, Checkbox, Stack, Text } from '@chakra-ui/react';
-import { useActionState, useState } from 'react';
+import { Button, Stack, Text } from '@chakra-ui/react';
+import { useState } from 'react';
 
-import {
-  exportOwnPersonalDataFile,
-  type PrivacyChoicesFormState,
-  updateOwnPrivacyChoices,
-} from './actions';
-
-const initialState: PrivacyChoicesFormState = {};
+import { exportOwnPersonalDataFile } from './actions';
 
 const Feedback = ({ error, success }: { error?: string; success?: string }) => (
   <>
@@ -25,62 +19,6 @@ const Feedback = ({ error, success }: { error?: string; success?: string }) => (
     ) : null}
   </>
 );
-
-/**
- * The account's own privacy switch. TvSync has one optional use of personal
- * data — anonymous product analytics — so the GDPR right to object and the CCPA
- * right to opt out of sale/sharing are served by this single choice, saved
- * against the account rather than a cookie so it follows the user to every
- * device they sign in on.
- */
-export const PrivacyChoicesForm = ({
-  initialAnalyticsOptOut,
-}: {
-  initialAnalyticsOptOut: boolean;
-}) => {
-  const [state, formAction, isPending] = useActionState<
-    PrivacyChoicesFormState,
-    FormData
-  >(updateOwnPrivacyChoices, initialState);
-  const [analyticsOptOut, setAnalyticsOptOut] = useState(
-    initialAnalyticsOptOut
-  );
-
-  return (
-    <form action={formAction}>
-      <fieldset
-        disabled={isPending}
-        style={{ border: 0, margin: 0, padding: 0 }}
-      >
-        <Stack gap={5}>
-          <Feedback error={state.error} success={state.success} />
-          <Checkbox.Root
-            checked={analyticsOptOut}
-            name="analyticsOptOut"
-            onCheckedChange={(details) =>
-              setAnalyticsOptOut(details.checked === true)
-            }
-          >
-            <Checkbox.HiddenInput />
-            <Checkbox.Control />
-            <Checkbox.Label>
-              Do not use my activity for usage analytics
-            </Checkbox.Label>
-          </Checkbox.Root>
-          <Text color="fg.muted" fontSize="sm">
-            TvSync never sells personal data and shows no third-party
-            advertising. With this ticked, no analytics script loads while you
-            are signed in. A browser that sends Global Privacy Control is
-            honoured automatically, whether or not you are signed in.
-          </Text>
-          <Button loading={isPending} type="submit">
-            Save Privacy Choices
-          </Button>
-        </Stack>
-      </fieldset>
-    </form>
-  );
-};
 
 /**
  * The access/portability request (GDPR Art. 15 and 20, CCPA right to know),

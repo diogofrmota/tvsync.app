@@ -44,8 +44,9 @@ export default function PrivacyPage() {
         so they use the least data that still works, which is why an IP address
         is stored only as a keyed digest and never in full. Consent (Art.
         6(1)(a)) covers the one optional use, anonymous product analytics, which
-        you can switch off at any time from Edit Profile. Contact-form messages
-        are handled under legitimate interests in answering you, or as
+        is withheld whenever your browser sends Global Privacy Control and which
+        you can object to at any time through the Contact page. Contact-form
+        messages are handled under legitimate interests in answering you, or as
         pre-contractual steps if you write about registering.
       </LegalSection>
       <LegalSection title="How authentication data is protected">
@@ -81,10 +82,9 @@ export default function PrivacyPage() {
         cookies, so there is no consent banner to click through. The only
         optional processing is anonymous usage analytics, and it is withheld
         rather than merely disabled: if your browser sends the Global Privacy
-        Control signal, or if you have ticked the analytics opt-out under
-        Privacy Choices in Edit Profile, no analytics script is sent to your
-        browser at all. Your account-level choice follows you to every device
-        you sign in on.
+        Control signal, no analytics script is sent to your browser at all. You
+        can also object to analytics through the Contact page, and the choice is
+        saved to your account so it follows you to every device you sign in on.
       </LegalSection>
       <LegalSection title="Your privacy rights">
         You can exercise these rights yourself, immediately, from Edit Profile:
@@ -93,12 +93,13 @@ export default function PrivacyPage() {
         to know); rectification — change your display name, username, bio, and
         email address at any time (Art. 16); erasure — Delete Account removes
         your profile and everything linked to it (Art. 17, CCPA right to
-        delete); objection and opt-out — the analytics switch under Privacy
-        Choices (Art. 21, CCPA right to opt out of sale or sharing). Restriction
-        of processing (Art. 18) and any request you cannot make yourself can be
-        sent through the Contact page; TvSync answers within 30 days, and never
-        charges for a request or treats you differently for making one. You also
-        have the right to complain to your local data protection authority.
+        delete). Objection and opt-out — Global Privacy Control, honoured
+        automatically (Art. 21, CCPA right to opt out of sale or sharing).
+        Restriction of processing (Art. 18) and any request you cannot make
+        yourself can be sent through the Contact page; TvSync answers within 30
+        days, and never charges for a request or treats you differently for
+        making one. You also have the right to complain to your local data
+        protection authority.
       </LegalSection>
       <LegalSection title="Do not sell or share">
         TvSync does not sell personal information, does not share it for
@@ -129,8 +130,8 @@ export default function PrivacyPage() {
         age); accounts believed to belong to a child below that age are removed.
       </LegalSection>
       <LegalSection title="Downloading your data">
-        Download My Data, under Your Data in Edit Profile, builds a JSON file
-        containing your account details, sign-in methods (never password
+        Download My Data, under Privacy Choices in Edit Profile, builds a JSON
+        file containing your account details, sign-in methods (never password
         hashes), library entries, episode progress, ratings and reviews,
         favourites, watchlist, and the accounts you follow and who follow you.
         The file is generated on request and handed straight to your browser —
@@ -164,15 +165,15 @@ export default function PrivacyPage() {
         Regulation (GDPR) and the California Consumer Privacy Act as amended by
         the CPRA (CCPA). Every requirement described above is implemented in the
         product rather than promised on this page: a stated legal basis for each
-        kind of processing, self-service access, portability, rectification,
-        erasure, and opt-out from Edit Profile, honouring of the Global Privacy
-        Control signal, no sale or sharing of personal data, no non-essential
-        cookies, data minimisation in the security records TvSync keeps, and
-        defined retention periods after which data is deleted automatically.
-        This page is the notice required by GDPR Art. 13-14 and by the CCPA, it
-        reflects what the product actually does today, and TvSync's handling of
-        your personal data is lawful under both. It was last reviewed in July
-        2026; material changes will be published here before they take effect.
+        kind of processing, self-service access, portability, rectification, and
+        erasure from Edit Profile, honouring of the Global Privacy Control
+        signal, no sale or sharing of personal data, no non-essential cookies,
+        data minimisation in the security records TvSync keeps, and defined
+        retention periods after which data is deleted automatically. This page
+        is the notice required by GDPR Art. 13-14 and by the CCPA, it reflects
+        what the product actually does today, and TvSync's handling of your
+        personal data is lawful under both. It was last reviewed in July 2026;
+        material changes will be published here before they take effect.
       </LegalSection>
     </LegalPage>
   );

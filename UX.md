@@ -351,7 +351,6 @@ Content
 * Save Changes button
 * Change Password
 * Privacy Choices
-* Your Data
 * Delete Account
 
 The Delete Account button is the only destructive-looking control on the page: a
@@ -366,12 +365,11 @@ Functionality
 * Users who registered with Google can create a password if required.
 * Users can permanently delete their account after confirming the action.
 * Users can update their email.
-* Users can switch off usage analytics for their account under Privacy Choices.
-  The choice is saved to the account, so it follows them to every device, and a
-  browser sending Global Privacy Control is honoured whether or not anyone is
-  signed in.
+* Privacy Choices states that TvSync never sells personal data and shows no
+  third-party advertising, and holds the data download. A browser sending
+  Global Privacy Control is honoured whether or not anyone is signed in.
 * Users can download everything TvSync stores about them as a JSON file under
-  Your Data. The file is built on request and never stored.
+  Privacy Choices. The file is built on request and never stored.
 
 2.6 Movie and TV Show Pages
 
