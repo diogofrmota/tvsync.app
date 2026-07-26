@@ -6,11 +6,8 @@ import {
   refreshDiscoveryListNow,
   saveDiscoveryLists,
 } from 'lib/features/admin/actions';
-import {
-  AdminFeedback,
-  AdminSection,
-  formatAdminDate,
-} from 'lib/pages/admin/panels';
+import { formatAdminDate } from 'lib/pages/admin/format';
+import { AdminFeedback, AdminSection } from 'lib/pages/admin/panels';
 import {
   DISCOVERY_LIST_ITEM_LIMIT,
   DISCOVERY_LIST_REFRESH_HOURS,

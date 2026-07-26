@@ -14,8 +14,7 @@ import { MediaRatingPanel } from 'lib/components/shared/MediaRating';
 import { MediaReviews } from 'lib/components/shared/MediaReviews';
 import { PageShell } from 'lib/components/shared/PageShell';
 import PosterImage from 'lib/components/shared/PosterImage';
-import { TvDetailLibraryControl } from 'lib/features/library/tv-detail-library-control';
-import { FavoriteButton } from 'lib/features/profile/favorite-button';
+import { MediaDetailActions } from 'lib/features/library/media-detail-actions';
 import { RatingInput } from 'lib/features/reviews';
 import { TvCastsWrapper } from 'lib/pages/tv/detail/components/casts-wrapper';
 import { EpisodeTracker } from 'lib/pages/tv/detail/components/episode-tracker';
@@ -149,60 +148,52 @@ const TvShowDetailPage = ({
           </Stack>
         </Grid>
 
-        {/* Episodes are the point of a show page, so they follow the header:
-            the current season slides left to right and every season opens in
-            place below it. */}
+        {/* The same one row of actions the movie page carries: add the show,
+            then the heart, the finished toggle, and the X that removes it. */}
+        {isAuthenticated ? (
+          <Box as="section">
+            <MediaDetailActions
+              addLabel="Add TV Show"
+              mediaType={MediaType.Tv}
+              tmdbId={show.id}
+            />
+          </Box>
+        ) : (
+          <Stack alignItems="flex-start" as="section" gap={3}>
+            <Text>
+              Log in or register to add this TV Show to your library, track
+              episode progress, mark it as a favourite or rate it.
+            </Text>
+            <Flex gap={3} wrap="wrap">
+              <Button asChild>
+                <Link href={`/login?callbackUrl=/tv/show/${show.id}`}>
+                  Login
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/register">Register</Link>
+              </Button>
+            </Flex>
+          </Stack>
+        )}
+
+        {/* Episodes are the point of a show page, so the seen toggles follow
+            the actions: the current season slides left to right and every
+            season opens in place below it. */}
         <EpisodeTracker seasons={show.seasons} showId={show.id} />
 
-        <Box
-          as="section"
-          borderColor="border"
-          borderRadius="md"
-          borderWidth="1px"
-          padding={{ base: 4, md: 5 }}
-        >
-          <Heading fontSize="lg" marginBottom={3}>
-            Your TV Show
-          </Heading>
-          {isAuthenticated ? (
-            <Grid
-              alignItems="start"
-              gap={{ base: 4, md: 6 }}
-              templateColumns={{
-                base: 'minmax(0, 1fr)',
-                md: 'repeat(2, minmax(0, 1fr))',
-              }}
-            >
-              <Stack alignItems="flex-start" gap={4}>
-                <TvDetailLibraryControl tmdbId={show.id} />
-                <FavoriteButton mediaType={MediaType.Tv} tmdbId={show.id} />
-              </Stack>
-              <RatingInput
-                showAverage={false}
-                showReview
-                target={{ mediaType: MediaType.Tv, tmdbId: show.id }}
-              />
-            </Grid>
-          ) : (
-            <Stack alignItems="flex-start" gap={3}>
-              <Text>
-                Log in or register to add this TV Show to your library, choose
-                its status, track episode progress, mark it as a favourite or
-                rate it.
-              </Text>
-              <Flex gap={3} wrap="wrap">
-                <Button asChild>
-                  <Link href={`/login?callbackUrl=/tv/show/${show.id}`}>
-                    Login
-                  </Link>
-                </Button>
-                <Button asChild variant="outline">
-                  <Link href="/register">Register</Link>
-                </Button>
-              </Flex>
-            </Stack>
-          )}
-        </Box>
+        {isAuthenticated ? (
+          <Box as="section">
+            <Heading fontSize="xl" marginBottom={3}>
+              Rating
+            </Heading>
+            <RatingInput
+              showAverage={false}
+              showReview
+              target={{ mediaType: MediaType.Tv, tmdbId: show.id }}
+            />
+          </Box>
+        ) : null}
 
         <Box as="section">
           <Heading fontSize="xl" marginBottom={2}>

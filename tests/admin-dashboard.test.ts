@@ -7,6 +7,12 @@ import { test } from 'node:test';
 import { PGlite, type PGliteInterface } from '@electric-sql/pglite';
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 
+import { formatAdminChange } from '../src/lib/pages/admin/format';
+import {
+  type CuratedListRail,
+  curatedListHref,
+  selectCuratedListRails,
+} from '../src/lib/pages/media/curated-lists';
 import {
   DEFAULT_DISCOVERY_LIST_SETTINGS,
   type DiscoveryListSetting,
@@ -22,14 +28,22 @@ import {
   verifyAdminSessionToken,
 } from '../src/lib/services/admin/security';
 import {
+  ADMIN_ADD_CURATED_LIST_ITEM_QUERY,
+  ADMIN_CREATE_CURATED_LIST_QUERY,
+  ADMIN_DELETE_CURATED_LIST_QUERY,
+  ADMIN_REMOVE_CURATED_LIST_ITEM_QUERY,
+  ADMIN_SELECT_CURATED_LISTS_QUERY,
+  ADMIN_UPDATE_CURATED_LIST_PLACEMENT_QUERY,
+  SELECT_PUBLIC_CURATED_LISTS_QUERY,
+} from '../src/lib/services/database/admin-curated-list-queries';
+import {
   ADMIN_ACCOUNT_STATS_QUERY,
+  ADMIN_ACTIVE_USERS_QUERY,
   ADMIN_BAN_USER_QUERY,
   ADMIN_FIND_USER_QUERY,
   ADMIN_INSERT_AUDIT_LOG_QUERY,
-  ADMIN_PROVIDER_STATS_QUERY,
   ADMIN_RECENT_AUDIT_LOG_QUERY,
   ADMIN_RECENT_BANS_QUERY,
-  ADMIN_TABLE_ESTIMATES_QUERY,
   ADMIN_UNBAN_USER_QUERY,
 } from '../src/lib/services/database/admin-queries';
 import { GET_SESSION_VERSION_QUERY } from '../src/lib/services/database/auth-queries';
@@ -38,6 +52,7 @@ import {
   SELECT_DISCOVERY_LIST_SETTINGS_QUERY,
   UPSERT_DISCOVERY_LIST_SETTING_QUERY,
 } from '../src/lib/services/database/discovery-list-queries';
+import { MediaType } from '../src/lib/types';
 
 const migrationNames = [
   '0001_initial_tracking_schema.sql',
@@ -47,6 +62,7 @@ const migrationNames = [
   '0005_auth_lifecycle.sql',
   '0006_unify_library_membership.sql',
   '0011_admin_dashboard.sql',
+  '0013_admin_curated_lists.sql',
 ] as const;
 
 const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
@@ -220,6 +236,39 @@ test('discovery list selection honours activation, surface, and order', () => {
   );
 });
 
+test('curated list selection honours publication, surface, and order', () => {
+  const rail = (overrides: Partial<CuratedListRail>): CuratedListRail => ({
+    description: '',
+    id: 'list-1',
+    items: [
+      { id: 1, mediaType: MediaType.Movie, posterPath: null, title: 'A' },
+    ],
+    name: 'List',
+    position: 0,
+    showOnExplore: true,
+    showOnHome: true,
+    ...overrides,
+  });
+  const rails = [
+    rail({ id: 'second', name: 'Second', position: 1 }),
+    rail({ id: 'first', name: 'First', position: 0 }),
+    rail({ id: 'explore-only', position: 2, showOnHome: false }),
+    // An empty list is never shown, whatever its placement says, so publishing
+    // one before filling it cannot leave a bare heading on Home.
+    rail({ id: 'empty', items: [], position: 3 }),
+  ];
+
+  assert.deepEqual(
+    selectCuratedListRails(rails, 'home').map((entry) => entry.id),
+    ['first', 'second']
+  );
+  assert.deepEqual(
+    selectCuratedListRails(rails, 'explore').map((entry) => entry.id),
+    ['first', 'second', 'explore-only']
+  );
+  assert.equal(curatedListHref('abc'), '/lists/abc');
+});
+
 test('every managed "See All" route maps back to the list that links to it', () => {
   assert.equal(
     discoveryRailKeyForList({ isMovie: true, listType: 'popular' }),
@@ -347,37 +396,163 @@ test('admin schema supports moderation, list configuration, and an audit trail',
       );
     });
 
-    await t.test('overview counters are exact for accounts', async () => {
-      const accounts = await getRows<{
-        banned_users: string;
-        total_users: string;
-        verified_users: string;
-      }>(db, ADMIN_ACCOUNT_STATS_QUERY);
+    await t.test(
+      'the overview counts only the four figures it shows, each against its previous window',
+      async () => {
+        const accounts = await getRows<{
+          banned_users: string;
+          signups_last_month: string;
+          signups_previous_month: string;
+          total_users: string;
+        }>(db, ADMIN_ACCOUNT_STATS_QUERY);
 
-      assert.equal(Number(accounts.at(0)?.total_users), 1);
-      assert.equal(Number(accounts.at(0)?.verified_users), 1);
-      assert.equal(Number(accounts.at(0)?.banned_users), 0);
+        assert.equal(Number(accounts.at(0)?.total_users), 1);
+        assert.equal(Number(accounts.at(0)?.banned_users), 0);
+        // The freshly inserted profile lands in the current window, and there
+        // is nothing in the 30 days before it to compare against yet.
+        assert.equal(Number(accounts.at(0)?.signups_last_month), 1);
+        assert.equal(Number(accounts.at(0)?.signups_previous_month), 0);
 
-      const providers = await getRows(db, ADMIN_PROVIDER_STATS_QUERY);
-      assert.equal(providers.length, 1);
+        // The removed tiles no longer cost a query at all.
+        assert.doesNotMatch(ADMIN_ACCOUNT_STATS_QUERY, /verified_users/);
+        assert.doesNotMatch(ADMIN_ACCOUNT_STATS_QUERY, /public_profiles/);
+        assert.doesNotMatch(ADMIN_ACCOUNT_STATS_QUERY, /signups_last_day/);
 
-      // Activity totals are read from planner statistics instead of counting
-      // the largest tables in the database.
-      const estimates = await getRows<{ table_name: string }>(
-        db,
-        ADMIN_TABLE_ESTIMATES_QUERY
-      );
-      assert.ok(
-        estimates.every((row) =>
-          [
-            'episode_progress',
-            'ratings',
-            'user_media',
-            'watchlist_items',
-          ].includes(row.table_name)
-        )
-      );
-    });
+        const active = await getRows<{
+          active_users: string;
+          previous_active_users: string;
+        }>(db, ADMIN_ACTIVE_USERS_QUERY);
+
+        assert.equal(Number(active.at(0)?.active_users), 0);
+        assert.equal(Number(active.at(0)?.previous_active_users), 0);
+      }
+    );
+
+    await t.test(
+      'a custom list is created, searched into, and deleted with its titles',
+      async () => {
+        const created = await getRows<{ id: string; name: string }>(
+          db,
+          ADMIN_CREATE_CURATED_LIST_QUERY,
+          ['Staff Picks', 'Hand-picked by the team']
+        );
+        const listId = created.at(0)?.id;
+        assert.equal(created.at(0)?.name, 'Staff Picks');
+        assert.ok(listId);
+
+        // A list name is unique overall, compared case-insensitively.
+        await assert.rejects(
+          db.query(ADMIN_CREATE_CURATED_LIST_QUERY, ['staff picks', ''])
+        );
+
+        const added = await getRows(db, ADMIN_ADD_CURATED_LIST_ITEM_QUERY, [
+          listId,
+          603,
+          'movie',
+          'The Matrix',
+          '/poster.jpg',
+        ]);
+        assert.equal(added.length, 1);
+
+        // Adding the same title again is a no-op rather than an error.
+        assert.equal(
+          (
+            await getRows(db, ADMIN_ADD_CURATED_LIST_ITEM_QUERY, [
+              listId,
+              603,
+              'movie',
+              'The Matrix',
+              '/poster.jpg',
+            ])
+          ).length,
+          0
+        );
+
+        await db.query(ADMIN_ADD_CURATED_LIST_ITEM_QUERY, [
+          listId,
+          1396,
+          'tv',
+          'Breaking Bad',
+          '',
+        ]);
+
+        const lists = await getRows<{
+          items: Array<{ media_type: string; title: string }>;
+          name: string;
+        }>(db, ADMIN_SELECT_CURATED_LISTS_QUERY, [25]);
+
+        assert.equal(lists.at(0)?.name, 'Staff Picks');
+        assert.deepEqual(
+          lists.at(0)?.items.map((item) => item.title),
+          ['The Matrix', 'Breaking Bad']
+        );
+
+        // Only movies and TV shows can be saved to a list.
+        await assert.rejects(
+          db.query(ADMIN_ADD_CURATED_LIST_ITEM_QUERY, [
+            listId,
+            5,
+            'person',
+            'Someone',
+            '',
+          ])
+        );
+
+        // A new list is unpublished, so it is built before anyone sees it.
+        assert.equal(
+          (await getRows(db, SELECT_PUBLIC_CURATED_LISTS_QUERY)).length,
+          0
+        );
+
+        await db.query(ADMIN_UPDATE_CURATED_LIST_PLACEMENT_QUERY, [
+          listId,
+          true,
+          true,
+          false,
+          0,
+        ]);
+
+        const published = await getRows<{
+          items: Array<{ media_type: string }>;
+          name: string;
+          show_on_explore: boolean;
+          show_on_home: boolean;
+        }>(db, SELECT_PUBLIC_CURATED_LISTS_QUERY);
+
+        assert.equal(published.length, 1);
+        assert.equal(published.at(0)?.name, 'Staff Picks');
+        assert.equal(published.at(0)?.show_on_home, true);
+        assert.equal(published.at(0)?.show_on_explore, false);
+        // A curated rail renders straight from these rows, so one list can hold
+        // both movies and TV shows without a single TMDB request.
+        assert.deepEqual(
+          published.at(0)?.items.map((item) => item.media_type),
+          ['movie', 'tv']
+        );
+
+        assert.equal(
+          (
+            await getRows(db, ADMIN_REMOVE_CURATED_LIST_ITEM_QUERY, [
+              listId,
+              1396,
+              'tv',
+            ])
+          ).length,
+          1
+        );
+
+        await db.query(ADMIN_DELETE_CURATED_LIST_QUERY, [listId]);
+        assert.equal(
+          (await getRows(db, ADMIN_SELECT_CURATED_LISTS_QUERY, [25])).length,
+          0
+        );
+        // Deleting the list cascades to the titles that were on it.
+        assert.equal(
+          (await getRows(db, 'select 1 from admin_curated_list_items')).length,
+          0
+        );
+      }
+    );
 
     await t.test('every shipped list is seeded and configurable', async () => {
       const seeded = await getRows<{
@@ -546,6 +721,12 @@ test('the dashboard opens closed and every mutation re-checks the session', () =
     'refreshDiscoveryListNow',
     'runAdminMaintenance',
     'refreshAdminStats',
+    'searchCuratedListCandidates',
+    'createCuratedList',
+    'saveCuratedListPlacement',
+    'deleteCuratedList',
+    'addTitleToCuratedList',
+    'removeTitleFromCuratedList',
   ]) {
     const start = actions.indexOf(`export const ${mutation} =`);
     assert.notEqual(start, -1, `Missing ${mutation}`);
@@ -558,6 +739,106 @@ test('the dashboard opens closed and every mutation re-checks the session', () =
     rateLimits,
     /adminLogin: \{ limit: 5, windowSeconds: 15 \* 60 \}/
   );
+});
+
+test('the restricted-access wording is what the entry point says', () => {
+  const loginForm = read('src/lib/pages/admin/login-form.tsx');
+  const dashboard = read('src/lib/pages/admin/dashboard.tsx');
+
+  assert.match(loginForm, /TvSync - Admin Access/);
+  assert.match(loginForm, /Access to this space is restricted\./);
+  assert.match(loginForm, />\s*Enter\s*</);
+  assert.doesNotMatch(loginForm, /Enter dashboard|manage TvSync/);
+  assert.match(dashboard, /TvSync - Admin Access/);
+});
+
+test('the overview shows four tiles and the 30-day pair states its change', () => {
+  const dashboard = read('src/lib/pages/admin/dashboard.tsx');
+  const format = read('src/lib/pages/admin/format.ts');
+
+  for (const label of [
+    'label="Users"',
+    'label="Banned users"',
+    'label="New users (30 days)"',
+    'label="Active users (30 days)"',
+  ]) {
+    assert.match(dashboard, new RegExp(label.replaceAll(/[()]/g, '\\$&')));
+  }
+  // Everything else was removed from the dashboard, panel and query alike.
+  assert.doesNotMatch(
+    dashboard,
+    /Verified|Public profiles|Library items|Episodes tracked|Google logins|Latest signups/
+  );
+  assert.doesNotMatch(dashboard, /AdminSignups|recentSignups/);
+  assert.match(dashboard, /formatAdminChange\(/);
+
+  // A previous window of zero has no percentage to state, so the tile names the
+  // start of the series instead of dividing by zero.
+  assert.equal(formatAdminChange(12, 0), 'No previous 30 days to compare');
+  assert.equal(formatAdminChange(0, 0), 'No change');
+  assert.equal(formatAdminChange(12, 10), '+20% vs previous 30 days (10)');
+  assert.equal(formatAdminChange(8, 10), '-20% vs previous 30 days (10)');
+  assert.equal(formatAdminChange(10, 10), 'No change vs previous 30 days (10)');
+  assert.match(format, /export const formatAdminChange/);
+});
+
+test('custom lists are built from an admin-side TMDB search', () => {
+  const panel = read('src/lib/pages/admin/curated-lists.tsx');
+  const actions = read('src/lib/features/admin/actions.ts');
+  const dashboard = read('src/lib/pages/admin/dashboard.tsx');
+
+  assert.match(dashboard, /<AdminCuratedLists/);
+  assert.match(panel, /title="Custom lists"/);
+  assert.match(panel, /Create list/);
+  assert.match(panel, /Search TMDB/);
+  assert.match(panel, />\s*Add\s*</);
+  assert.match(panel, />\s*Remove\s*</);
+  assert.match(panel, /Delete list/);
+
+  // The search runs on the server, so TMDB_API_KEY never reaches the browser.
+  assert.match(actions, /^'use server';/m);
+  assert.match(actions, /getMovieListServer\(/);
+  assert.match(actions, /getTVShowSearchResultList\(/);
+  assert.doesNotMatch(panel, /TMDB_API_KEY|useTmdbSWR|api\/tmdb/);
+});
+
+test('a custom list is published to Home and Explore from the dashboard', () => {
+  const panel = read('src/lib/pages/admin/curated-lists.tsx');
+  const actions = read('src/lib/features/admin/actions.ts');
+  const home = read('src/lib/pages/home/index.tsx');
+  const explore = read('src/lib/pages/explore/discover.server.tsx');
+  const rail = read('src/lib/components/shared/CuratedListRail.tsx');
+  const route = read('src/app/lists/[id]/page.tsx');
+  const service = read('src/lib/services/database/curated-lists.server.ts');
+
+  // Placement is Published/Home/Explore plus an explicit order, saved for the
+  // whole table in one payload so a reorder is never observed half-applied.
+  assert.match(panel, /label="Published"/);
+  assert.match(panel, /label="Home"/);
+  assert.match(panel, /label="Explore"/);
+  assert.match(panel, /Save placement/);
+  assert.match(actions, /export const saveCuratedListPlacement/);
+  assert.match(actions, /UUID_PATTERN\.test\(id\)/);
+
+  // Both public surfaces render curated rails through the shared MediaRail.
+  assert.match(home, /<CuratedListRail/);
+  assert.match(explore, /<CuratedListRail/);
+  assert.match(rail, /<MediaRail/);
+  assert.match(rail, /curatedListHref\(rail\.id\)/);
+
+  // "See All" opens the complete list, and only a published list resolves.
+  assert.match(route, /findPublicCuratedList\(id\)/);
+  assert.match(route, /notFound\(\)/);
+  assert.match(service, /^import 'server-only';/m);
+  assert.match(
+    read('src/lib/services/database/admin-curated-list-queries.ts'),
+    /where l\.active/,
+    'the public read returns published lists only'
+  );
+  // The whole audience shares one cached read, busted by every mutation.
+  assert.match(service, /CURATED_LISTS_REVALIDATE_SECONDS = 300/);
+  assert.match(service, /tags: \[CURATED_LISTS_TAG\]/);
+  assert.match(service, /cachedPublicCuratedLists\(\)\.catch/);
 });
 
 test('banned accounts cannot sign in through either provider', () => {

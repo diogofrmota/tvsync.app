@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  Button,
-  Field,
-  Grid,
-  NativeSelect,
-  Text,
-  Textarea,
-} from '@chakra-ui/react';
+import { Button, Field, Flex, Stack, Text, Textarea } from '@chakra-ui/react';
 import {
   getRatingState,
   type RatingStateResult,
@@ -16,6 +9,7 @@ import {
   saveReview,
 } from 'lib/features/reviews/actions';
 import { REVIEW_MAX_LENGTH } from 'lib/features/reviews/constants';
+import { StarRating } from 'lib/features/reviews/star-rating';
 import type { RatingTarget } from 'lib/types';
 import type { Route } from 'next';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -29,8 +23,6 @@ type RatingInputProps = {
   showReview?: boolean;
   target: RatingTarget;
 };
-
-const ratingOptions = Array.from({ length: 19 }, (_, index) => 1 + index * 0.5);
 
 const getLoginHref = (pathname: string, searchParams: URLSearchParams) => {
   const queryString = searchParams.toString();
@@ -83,9 +75,8 @@ export const RatingInput = ({
     router.push(getLoginHref(pathname, searchParams));
   };
 
-  const handleChange = (value: string) => {
+  const handleChange = (rating: number) => {
     const previousState = state;
-    const rating = Number(value);
     setMessage(null);
 
     setState((current) => ({
@@ -172,29 +163,36 @@ export const RatingInput = ({
   };
 
   return (
-    <Grid
-      gap={2}
-      maxWidth={{ base: '100%', md: showReview ? '420px' : '260px' }}
+    <Stack
+      gap={3}
+      maxWidth={{ base: '100%', md: showReview ? '38rem' : '26rem' }}
     >
-      <Field.Root disabled={isPending}>
-        <Field.Label>{label}</Field.Label>
-        <NativeSelect.Root size="md">
-          <NativeSelect.Field
-            onChange={(event) => handleChange(event.target.value)}
-            value={state.rating ?? ''}
-          >
-            <option disabled value="">
-              {state.status === 'error' ? 'Rating unavailable' : 'Not rated'}
-            </option>
-            {ratingOptions.map((rating) => (
-              <option key={rating} value={rating}>
-                {rating.toFixed(1)} / 10
-              </option>
-            ))}
-          </NativeSelect.Field>
-          <NativeSelect.Indicator />
-        </NativeSelect.Root>
-      </Field.Root>
+      <Stack gap={2}>
+        <Text color="fg.muted" fontSize="sm">
+          {label}
+        </Text>
+        <Flex align="center" gap={3} wrap="wrap">
+          <StarRating
+            disabled={isPending || state.status === 'error'}
+            label={label}
+            onChange={handleChange}
+            rating={state.rating}
+          />
+          <Text fontSize="sm" fontWeight="600">
+            {state.rating ? `${state.rating.toFixed(1)} / 10` : 'Not rated'}
+          </Text>
+          {state.rating ? (
+            <Button
+              loading={isPending}
+              onClick={handleRemove}
+              size="xs"
+              variant="ghost"
+            >
+              Remove rating
+            </Button>
+          ) : null}
+        </Flex>
+      </Stack>
 
       {showAverage ? (
         <RatingDisplay
@@ -204,29 +202,17 @@ export const RatingInput = ({
         />
       ) : null}
 
-      {state.rating ? (
-        <Button
-          alignSelf="flex-start"
-          loading={isPending}
-          onClick={handleRemove}
-          size="xs"
-          variant="ghost"
-        >
-          Remove rating
-        </Button>
-      ) : (
-        <Text color="fg.muted" fontSize="sm">
-          Save a rating from 1.0 to 10.0.
-        </Text>
-      )}
-
-      {showReview && state.rating ? (
-        <Field.Root disabled={isPending} marginTop={2}>
+      {showReview ? (
+        <Field.Root disabled={isPending || !state.rating}>
           <Field.Label>Your review</Field.Label>
           <Textarea
             maxLength={REVIEW_MAX_LENGTH}
             onChange={(event) => setReviewDraft(event.target.value)}
-            placeholder="Share what you thought about it."
+            placeholder={
+              state.rating
+                ? 'Share what you thought about it.'
+                : 'Pick a star rating to leave a review.'
+            }
             rows={4}
             value={reviewDraft}
           />
@@ -235,6 +221,7 @@ export const RatingInput = ({
           </Field.HelperText>
           <Button
             alignSelf="flex-start"
+            disabled={!state.rating}
             loading={isPending}
             marginTop={2}
             onClick={handleSaveReview}
@@ -255,6 +242,6 @@ export const RatingInput = ({
           {message}
         </Text>
       ) : null}
-    </Grid>
+    </Stack>
   );
 };

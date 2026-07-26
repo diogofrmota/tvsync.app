@@ -145,15 +145,3 @@ export const AdminRow = ({
     {children}
   </Flex>
 );
-
-/** Dates render in a fixed UTC format so the server and client agree exactly. */
-export const formatAdminDate = (value: string | null) => {
-  if (!value) {
-    return '—';
-  }
-
-  return `${value.slice(0, 10)} ${value.slice(11, 16)} UTC`;
-};
-
-export const formatAdminNumber = (value: number) =>
-  new Intl.NumberFormat('en-US').format(value);

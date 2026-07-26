@@ -14,14 +14,20 @@ import {
 } from 'lib/services/admin/session.server';
 import { checkRequestAuthRateLimit } from 'lib/services/auth/rate-limit.server';
 import {
+  type AdminCuratedListPlacementInput,
   type AdminUserRecord,
+  addAdminCuratedListItem,
   banAdminUser,
+  createAdminCuratedList,
   type DiscoveryListSettingInput,
+  deleteAdminCuratedList,
   findAdminUser,
   recordAdminAudit,
   refreshAllDiscoveryLists,
   refreshDiscoveryList,
+  removeAdminCuratedListItem,
   revalidateAdminOverviewStats,
+  saveAdminCuratedListPlacement,
   saveDiscoveryListSettings,
   unbanAdminUser,
 } from 'lib/services/database/admin.server';
@@ -31,6 +37,9 @@ import {
   exportPersonalDataForPrivacyRequest,
   findAccountForPrivacyRequest,
 } from 'lib/services/database/privacy.server';
+import { getMovieListServer } from 'lib/services/tmdb/movie/list/index.server';
+import { getTVShowSearchResultList } from 'lib/services/tmdb/tv/list/index.server';
+import { MediaType, type TrackableMediaType } from 'lib/types';
 import { redirect } from 'next/navigation';
 
 export type AdminLoginState = {
@@ -427,6 +436,356 @@ export const refreshAdminStats = async (
   revalidateAdminOverviewStats();
 
   return { success: 'Statistics recalculated.' };
+};
+
+const CURATED_LIST_SEARCH_LIMIT = 12;
+
+/** List ids come back to the server from a browser form, so they are shaped. */
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export type AdminCuratedSearchResult = {
+  mediaType: TrackableMediaType;
+  posterPath: string | null;
+  releaseYear: string;
+  title: string;
+  tmdbId: number;
+};
+
+export type AdminCuratedSearchState = AdminActionState & {
+  listId?: string;
+  query?: string;
+  results?: Array<AdminCuratedSearchResult>;
+};
+
+const releaseYear = (value: string) => {
+  const year = value ? new Date(value).getUTCFullYear() : Number.NaN;
+
+  return Number.isFinite(year) ? String(year) : '';
+};
+
+/**
+ * The dashboard's "search for a title" box. TMDB is only ever reached from the
+ * server, so the key stays server-side and the browser receives the trimmed
+ * shape the panel renders.
+ */
+export const searchCuratedListCandidates = async (
+  _previousState: AdminCuratedSearchState,
+  formData: FormData
+): Promise<AdminCuratedSearchState> => {
+  const authorized = await authorizeAdmin();
+
+  if (!authorized) {
+    return { error: SESSION_EXPIRED_MESSAGE };
+  }
+
+  const listId = readTextField(formData, 'listId');
+  const query = readTextField(formData, 'query').slice(0, 120);
+
+  if (!query) {
+    return { error: 'Enter a title to search for.', listId };
+  }
+
+  try {
+    // A failing half of the search degrades to the other one rather than to an
+    // empty result, exactly as the public search does.
+    const [movies, tvShows] = await Promise.all([
+      getMovieListServer({ section: 'popular', params: { page: 1, query } })
+        .then((response) => response.results)
+        .catch(() => []),
+      getTVShowSearchResultList({ page: 1, query })
+        .then((response) => response.results)
+        .catch(() => []),
+    ]);
+    const results: Array<AdminCuratedSearchResult> = [
+      ...movies.map((movie) => ({
+        mediaType: MediaType.Movie as TrackableMediaType,
+        popularity: movie.popularity,
+        posterPath: movie.poster_path,
+        releaseYear: releaseYear(movie.release_date),
+        title: movie.title,
+        tmdbId: movie.id,
+      })),
+      ...tvShows.map((show) => ({
+        mediaType: MediaType.Tv as TrackableMediaType,
+        popularity: show.popularity,
+        posterPath: show.poster_path,
+        releaseYear: releaseYear(show.first_air_date),
+        title: show.name,
+        tmdbId: show.id,
+      })),
+    ]
+      .toSorted((first, second) => second.popularity - first.popularity)
+      .slice(0, CURATED_LIST_SEARCH_LIMIT)
+      .map(({ popularity: _popularity, ...result }) => result);
+
+    return results.length
+      ? { listId, query, results }
+      : { error: `Nothing on TMDB matches "${query}".`, listId, query };
+  } catch {
+    return { error: 'The TMDB search could not be completed.', listId, query };
+  }
+};
+
+export const createCuratedList = async (
+  _previousState: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> => {
+  const authorized = await authorizeAdmin();
+
+  if (!authorized) {
+    return { error: SESSION_EXPIRED_MESSAGE };
+  }
+
+  const name = readTextField(formData, 'name').slice(0, 80);
+  const description = readTextField(formData, 'description').slice(0, 280);
+
+  if (!name) {
+    return { error: 'Name the list before creating it.' };
+  }
+
+  const { data, error } = await createAdminCuratedList({ description, name });
+
+  if (error) {
+    return {
+      error: error.includes('admin_curated_lists_name_unique')
+        ? `A list called "${name}" already exists.`
+        : error,
+    };
+  }
+
+  if (!data) {
+    return { error: 'The list could not be created.' };
+  }
+
+  await audit({
+    action: 'curated_list.create',
+    actor: authorized.session.user,
+    ipDigest: authorized.ipDigest,
+    target: data.name,
+  });
+
+  return { success: `"${data.name}" was created.` };
+};
+
+/**
+ * Publishing is the whole table in one payload, exactly like the discovery
+ * lists: a reorder is saved atomically, and this input arrives from a browser
+ * so every id is validated and every flag is coerced here as well.
+ */
+const parseCuratedPlacements = (
+  value: string
+): Array<AdminCuratedListPlacementInput> | null => {
+  try {
+    const parsed: unknown = JSON.parse(value);
+
+    if (!Array.isArray(parsed)) {
+      return null;
+    }
+
+    return parsed.flatMap((entry, index) => {
+      if (!(entry && typeof entry === 'object')) {
+        return [];
+      }
+
+      const candidate = entry as Record<string, unknown>;
+      const id = String(candidate.id ?? '');
+
+      if (!UUID_PATTERN.test(id)) {
+        return [];
+      }
+
+      return [
+        {
+          active: candidate.active === true,
+          id,
+          position: Number.isFinite(Number(candidate.position))
+            ? Math.max(0, Math.trunc(Number(candidate.position)))
+            : index,
+          showOnExplore: candidate.showOnExplore === true,
+          showOnHome: candidate.showOnHome === true,
+        },
+      ];
+    });
+  } catch {
+    return null;
+  }
+};
+
+export const saveCuratedListPlacement = async (
+  _previousState: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> => {
+  const authorized = await authorizeAdmin();
+
+  if (!authorized) {
+    return { error: SESSION_EXPIRED_MESSAGE };
+  }
+
+  const placements = parseCuratedPlacements(
+    readTextField(formData, 'placements')
+  );
+
+  if (!placements?.length) {
+    return { error: 'The list placement could not be read.' };
+  }
+
+  const { error } = await saveAdminCuratedListPlacement(placements);
+
+  if (error) {
+    return { error };
+  }
+
+  const published = placements.filter((placement) => placement.active).length;
+
+  await audit({
+    action: 'curated_list.placement',
+    actor: authorized.session.user,
+    details: `${published} of ${placements.length} lists published`,
+    ipDigest: authorized.ipDigest,
+  });
+
+  return {
+    success: `${published} of ${placements.length} lists are published to Home and Explore.`,
+  };
+};
+
+export const deleteCuratedList = async (
+  _previousState: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> => {
+  const authorized = await authorizeAdmin();
+
+  if (!authorized) {
+    return { error: SESSION_EXPIRED_MESSAGE };
+  }
+
+  const listId = readTextField(formData, 'listId');
+
+  if (!listId) {
+    return { error: 'Choose the list to delete.' };
+  }
+
+  const { data, error } = await deleteAdminCuratedList(listId);
+
+  if (error) {
+    return { error };
+  }
+
+  if (!data) {
+    return { error: 'That list no longer exists.' };
+  }
+
+  await audit({
+    action: 'curated_list.delete',
+    actor: authorized.session.user,
+    ipDigest: authorized.ipDigest,
+    target: data.name,
+  });
+
+  return { success: `"${data.name}" and its titles were deleted.` };
+};
+
+const readCuratedItem = (
+  formData: FormData
+): {
+  listId: string;
+  mediaType: TrackableMediaType;
+  tmdbId: number;
+} | null => {
+  const listId = readTextField(formData, 'listId');
+  const tmdbId = Number(readTextField(formData, 'tmdbId'));
+  const mediaType = readTextField(formData, 'mediaType');
+
+  if (!(listId && Number.isInteger(tmdbId) && tmdbId > 0)) {
+    return null;
+  }
+
+  if (mediaType === MediaType.Movie || mediaType === MediaType.Tv) {
+    return { listId, mediaType, tmdbId };
+  }
+
+  return null;
+};
+
+export const addTitleToCuratedList = async (
+  _previousState: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> => {
+  const authorized = await authorizeAdmin();
+
+  if (!authorized) {
+    return { error: SESSION_EXPIRED_MESSAGE };
+  }
+
+  const item = readCuratedItem(formData);
+
+  if (!item) {
+    return { error: 'That title could not be read.' };
+  }
+
+  const title = readTextField(formData, 'title').slice(0, 200);
+  const { data, error } = await addAdminCuratedListItem({
+    ...item,
+    posterPath: readTextField(formData, 'posterPath') || null,
+    title,
+  });
+
+  if (error) {
+    return { error };
+  }
+
+  if (!data) {
+    return { error: 'That list no longer exists.' };
+  }
+
+  await audit({
+    action: 'curated_list.add_item',
+    actor: authorized.session.user,
+    details: `${item.mediaType} ${item.tmdbId}`,
+    ipDigest: authorized.ipDigest,
+    target: data.listName,
+  });
+
+  return data.added
+    ? { success: `${title || 'The title'} was added to "${data.listName}".` }
+    : { success: `${title || 'That title'} is already on "${data.listName}".` };
+};
+
+export const removeTitleFromCuratedList = async (
+  _previousState: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> => {
+  const authorized = await authorizeAdmin();
+
+  if (!authorized) {
+    return { error: SESSION_EXPIRED_MESSAGE };
+  }
+
+  const item = readCuratedItem(formData);
+
+  if (!item) {
+    return { error: 'That title could not be read.' };
+  }
+
+  const { data, error } = await removeAdminCuratedListItem(item);
+
+  if (error) {
+    return { error };
+  }
+
+  if (!data) {
+    return { error: 'That title is no longer on the list.' };
+  }
+
+  await audit({
+    action: 'curated_list.remove_item',
+    actor: authorized.session.user,
+    details: `${item.mediaType} ${item.tmdbId}`,
+    ipDigest: authorized.ipDigest,
+  });
+
+  return { success: 'The title was removed from the list.' };
 };
 
 export type AdminDataRequestState = AdminActionState & {

@@ -48,16 +48,21 @@ test('movie page renders required metadata and focused sections in a clear hiera
     'as="h1"',
     '<MediaRatingPanel',
     'Release year:',
-    'Runtime:',
     'Status:',
     '<GenreList',
-    'Your movie',
+    '<MediaDetailActions',
+    'Rating',
+    '<RatingInput',
     'Description',
     '<MovieTrailer',
     '<MediaCrewSection',
     '<CastsWrapper',
     '<MediaReviews',
   ]);
+  // Runtime is no longer one of the facts the header carries.
+  assert.doesNotMatch(page, /Runtime|movie\.runtime/);
+  // The personal panel is one row of controls, not a bordered "Your movie" box.
+  assert.doesNotMatch(page, /Your movie/);
   // The director is no longer a line of text stranded in the header.
   assert.doesNotMatch(page, /Director:/);
   assert.doesNotMatch(
@@ -231,29 +236,28 @@ test('movie detail no longer exposes streaming or similar sections', async () =>
   assert.doesNotMatch(page, /Similar movies|similarMovie|SliderContainer/);
 });
 
-test('authenticated library actions add with status, update, remove, and roll back failures', async () => {
-  const [control, actions] = await Promise.all([
-    read('src/lib/features/library/movie-detail-library-control.tsx'),
+test('the movie actions are one Add button that becomes favourite, finished, and remove', async () => {
+  const [control, actions, page] = await Promise.all([
+    read('src/lib/features/library/media-detail-actions.tsx'),
     read('src/lib/features/library/actions.ts'),
+    read('src/lib/pages/movie/detail/index.tsx'),
   ]);
 
-  for (const label of [
-    'Add to Library',
-    'Planned to Watch',
-    'Finished',
-    'Current status:',
-    'Remove from Library',
-  ]) {
-    assert.match(control, new RegExp(label));
-  }
+  assert.match(page, /addLabel="Add Movie"/);
+  // A saved title carries exactly three controls: the heart, the finished
+  // toggle, and the X that removes it again.
+  assert.match(control, /aria-label="Remove from your library"/);
+  assert.match(control, /'Remove from Favourites' : 'Mark as Favourite'/);
+  assert.match(control, /isFinished \? 'Finished' : 'Mark as Finished'/);
+  assert.match(control, /FiHeart/);
+  assert.match(control, /FiX/);
+  // The status select is gone; adding and finishing are the only two states.
+  assert.doesNotMatch(control, /NativeSelect|Planned to Watch|Library status/);
+
   assert.match(control, /await updateMovieLibraryStatus/);
   assert.match(control, /await removeMovieFromLibrary/);
   assert.match(control, /setStatus\(previousStatus\)/);
-  assert.match(control, /setSelectedStatus\(previousSelectedStatus\)/);
-  assert.match(
-    control,
-    /role=\{message\.startsWith\('We could not'\) \? 'alert'/
-  );
+  assert.match(control, /setFavorite\(previousFavorite\)/);
   assert.doesNotMatch(control, /window\.location|location\.reload/);
   assert.match(actions, /await isAuthenticated\(\)/);
   assert.match(actions, /status: 'login_required'/);
@@ -262,7 +266,7 @@ test('authenticated library actions add with status, update, remove, and roll ba
 test('favourite and personal rating mutations authenticate, reconcile, and support create or update', async () => {
   const [favorite, favoriteActions, rating, ratingActions, database] =
     await Promise.all([
-      read('src/lib/features/profile/favorite-button.tsx'),
+      read('src/lib/features/library/media-detail-actions.tsx'),
       read('src/lib/features/profile/favorite-actions.ts'),
       read('src/lib/features/reviews/rating-input.tsx'),
       read('src/lib/features/reviews/actions.ts'),
@@ -271,7 +275,7 @@ test('favourite and personal rating mutations authenticate, reconcile, and suppo
 
   assert.match(favorite, /Mark as Favourite/);
   assert.match(favorite, /Remove from Favourites/);
-  assert.match(favorite, /setFavorite\(favorite\)/);
+  assert.match(favorite, /setFavorite\(!nextFavorite\)/);
   assert.match(favoriteActions, /status: 'login_required'/);
   assert.match(rating, /await saveRating/);
   assert.match(rating, /setState\(previousState\)/);
@@ -283,6 +287,30 @@ test('favourite and personal rating mutations authenticate, reconcile, and suppo
     /on conflict \(user_id, tmdb_id, media_type, season_number, episode_number\) do update set/
   );
   assert.match(database, /rating = excluded\.rating/);
+});
+
+test('the rating section is ten stars plus a review, on its own subtitle', async () => {
+  const [page, stars, input] = await Promise.all([
+    read('src/lib/pages/movie/detail/index.tsx'),
+    read('src/lib/features/reviews/star-rating.tsx'),
+    read('src/lib/features/reviews/rating-input.tsx'),
+  ]);
+
+  assert.match(page, /Rating\s*<\/Heading>/);
+  assert.match(page, /<RatingInput/);
+  // Ten stars, each with a half-point hit area, so the stored 0.5 scale stays
+  // reachable from the artwork-free control.
+  assert.match(stars, /STAR_VALUES = \[1, 2, 3, 4, 5, 6, 7, 8, 9, 10\]/);
+  assert.match(
+    stars,
+    /aria-label=\{`Rate \$\{value\.toFixed\(1\)\} out of 10`\}/
+  );
+  assert.match(stars, /FiStar/);
+  assert.match(input, /<StarRating/);
+  // The dropdown the stars replaced is gone.
+  assert.doesNotMatch(input, /NativeSelect|ratingOptions/);
+  assert.match(input, /Your review/);
+  assert.match(input, /await saveReview/);
 });
 
 test('public protected actions lead clearly to Login or Register', async () => {

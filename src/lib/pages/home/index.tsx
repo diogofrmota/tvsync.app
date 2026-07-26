@@ -1,4 +1,5 @@
 import { SimpleGrid, Skeleton, Stack } from '@chakra-ui/react';
+import { CuratedListRail } from 'lib/components/shared/CuratedListRail';
 import { MediaRail, MediaRailLoading } from 'lib/components/shared/MediaRail';
 import { PageShell } from 'lib/components/shared/PageShell';
 import { SectionHeading, StatePanel } from 'lib/components/shared/Section';
@@ -8,6 +9,7 @@ import {
   type HomeDiscoverySection,
 } from 'lib/pages/home/config';
 import Hero from 'lib/pages/home/Hero';
+import type { CuratedListRail as CuratedListRailData } from 'lib/pages/media/curated-lists';
 import type { ReactNode } from 'react';
 
 export type { HomeDiscoverySection } from 'lib/pages/home/config';
@@ -53,12 +55,19 @@ const DiscoverySection = ({ section }: { section: HomeDiscoverySection }) => (
 );
 
 export const Home = ({
+  curatedRails = [],
   discoverySections,
 }: {
+  curatedRails?: Array<CuratedListRailData>;
   discoverySections: Array<HomeDiscoverySection>;
 }) => (
   <PageShell>
     <Hero />
+    {/* The operator's own lists lead the page: they are hand-picked, so they
+        come ahead of the algorithmic discovery rails below them. */}
+    {curatedRails.map((rail) => (
+      <CuratedListRail key={rail.id} rail={rail} />
+    ))}
     {discoverySections.map((section) => (
       <DiscoverySection key={section.key} section={section} />
     ))}

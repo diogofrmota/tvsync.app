@@ -2,10 +2,10 @@ import type { DiscoveryListSetting } from 'lib/pages/media/discovery-rails';
 import type {
   AdminAuditEntry,
   AdminBanRecord,
+  AdminCuratedList,
   AdminLoadResult,
   AdminOverviewStats,
   AdminPrivacySummary,
-  AdminSignupRecord,
 } from 'lib/services/database/admin.server';
 
 /**
@@ -28,10 +28,10 @@ export type AdminHealth = {
 export type AdminDashboardData = {
   actor: string;
   auditLog: AdminLoadResult<Array<AdminAuditEntry>>;
+  curatedLists: AdminLoadResult<Array<AdminCuratedList>>;
   health: AdminHealth;
   lists: Array<DiscoveryListSetting>;
   privacy: AdminLoadResult<AdminPrivacySummary>;
   recentBans: AdminLoadResult<Array<AdminBanRecord>>;
-  recentSignups: AdminLoadResult<Array<AdminSignupRecord>>;
   stats: AdminLoadResult<AdminOverviewStats>;
 };

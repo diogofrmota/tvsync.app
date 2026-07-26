@@ -159,7 +159,7 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
     rail,
     movieDetail,
     tvDetail,
-    favoriteButton,
+    detailActions,
     statisticsPage,
   ] = await Promise.all([
     read('src/lib/pages/profile/index.tsx'),
@@ -167,7 +167,7 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
     read('src/lib/components/profile/ProfileStatRail.tsx'),
     read('src/lib/pages/movie/detail/index.tsx'),
     read('src/lib/pages/tv/detail/index.tsx'),
-    read('src/lib/features/profile/favorite-button.tsx'),
+    read('src/lib/features/library/media-detail-actions.tsx'),
     read('src/lib/pages/profile/statistics.tsx'),
   ]);
 
@@ -215,11 +215,11 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
   assert.match(rail, /templateColumns=\{\{/);
   assert.match(profileRoute, /getOwnProfileStatistics/);
   assert.match(profileRoute, /getOwnProfileFavorites/);
-  assert.match(movieDetail, /<FavoriteButton/);
-  assert.match(tvDetail, /<FavoriteButton/);
-  assert.match(favoriteButton, /Mark as Favourite/);
-  assert.match(favoriteButton, /Remove from Favourites/);
-  assert.match(favoriteButton, /aria-pressed=\{favorite\}/);
+  assert.match(movieDetail, /<MediaDetailActions/);
+  assert.match(tvDetail, /<MediaDetailActions/);
+  assert.match(detailActions, /Mark as Favourite/);
+  assert.match(detailActions, /Remove from Favourites/);
+  assert.match(detailActions, /aria-pressed=\{favorite\}/);
   assert.doesNotMatch(page, /Favorite genres|Achievements|Streaks/);
   assert.doesNotMatch(page, /Profile Information|Social Information/);
   // The own-profile page shows no avatar at all, so there is no image source,

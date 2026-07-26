@@ -8,24 +8,32 @@ import {
   discoveryListCacheTag,
   isDiscoveryRailKey,
 } from 'lib/pages/media/discovery-rails';
+import { MediaType, type TrackableMediaType } from 'lib/types';
 import { revalidateTag, unstable_cache } from 'next/cache';
 
+import {
+  ADMIN_ADD_CURATED_LIST_ITEM_QUERY,
+  ADMIN_CREATE_CURATED_LIST_QUERY,
+  ADMIN_DELETE_CURATED_LIST_QUERY,
+  ADMIN_REMOVE_CURATED_LIST_ITEM_QUERY,
+  ADMIN_SELECT_CURATED_LISTS_QUERY,
+  ADMIN_TOUCH_CURATED_LIST_QUERY,
+  ADMIN_UPDATE_CURATED_LIST_PLACEMENT_QUERY,
+} from './admin-curated-list-queries';
 import {
   ADMIN_ACCOUNT_STATS_QUERY,
   ADMIN_ACTIVE_USERS_QUERY,
   ADMIN_BAN_USER_QUERY,
   ADMIN_FIND_USER_QUERY,
   ADMIN_INSERT_AUDIT_LOG_QUERY,
-  ADMIN_PROVIDER_STATS_QUERY,
   ADMIN_PURGE_AUDIT_LOG_QUERY,
   ADMIN_RECENT_AUDIT_LOG_QUERY,
   ADMIN_RECENT_BANS_QUERY,
-  ADMIN_RECENT_SIGNUPS_QUERY,
-  ADMIN_TABLE_ESTIMATES_QUERY,
   ADMIN_UNBAN_USER_QUERY,
 } from './admin-queries';
 import { revalidateSessionVersion } from './auth.server';
 import { getDatabaseAvailabilityIssue, getDatabaseSql } from './core.server';
+import { revalidateCuratedLists } from './curated-lists.server';
 import {
   BUMP_ALL_DISCOVERY_LIST_CACHE_EPOCHS_QUERY,
   BUMP_DISCOVERY_LIST_CACHE_EPOCH_QUERY,
@@ -36,19 +44,11 @@ import { countAnalyticsOptOuts } from './privacy.server';
 
 export type AdminOverviewStats = {
   activeUsersLast30Days: number;
+  activeUsersPrevious30Days: number;
   bannedUsers: number;
-  credentialAccounts: number;
-  episodesWatchedEstimate: number;
-  googleAccounts: number;
-  libraryItemsEstimate: number;
-  publicProfiles: number;
-  ratingsEstimate: number;
-  signupsLastDay: number;
   signupsLastMonth: number;
-  signupsLastWeek: number;
+  signupsPrevious30Days: number;
   totalUsers: number;
-  verifiedUsers: number;
-  watchlistItemsEstimate: number;
 };
 
 export type AdminUserRecord = {
@@ -70,14 +70,6 @@ export type AdminBanRecord = {
   banReason: string;
   bannedAt: string | null;
   email: string;
-  userId: string;
-  username: string;
-};
-
-export type AdminSignupRecord = {
-  createdAt: string | null;
-  email: string;
-  emailVerifiedAt: string | null;
   userId: string;
   username: string;
 };
@@ -161,36 +153,20 @@ const loadAdminData = async <Data>(
 
 const readOverviewStats = async (): Promise<AdminOverviewStats> => {
   const sql = getDatabaseSql();
-  const [accounts, providers, active, estimates] = await Promise.all([
+  const [accounts, active] = await Promise.all([
     sql.query(ADMIN_ACCOUNT_STATS_QUERY),
-    sql.query(ADMIN_PROVIDER_STATS_QUERY),
     sql.query(ADMIN_ACTIVE_USERS_QUERY),
-    sql.query(ADMIN_TABLE_ESTIMATES_QUERY),
   ]);
   const accountRow = (accounts as Array<Record<string, unknown>>).at(0) ?? {};
-  const providerRow = (providers as Array<Record<string, unknown>>).at(0) ?? {};
   const activeRow = (active as Array<Record<string, unknown>>).at(0) ?? {};
-  const estimateByTable = new Map(
-    (estimates as Array<{ row_estimate: unknown; table_name: string }>).map(
-      (row) => [row.table_name, toCount(row.row_estimate)]
-    )
-  );
 
   return {
     activeUsersLast30Days: toCount(activeRow.active_users),
+    activeUsersPrevious30Days: toCount(activeRow.previous_active_users),
     bannedUsers: toCount(accountRow.banned_users),
-    credentialAccounts: toCount(providerRow.credential_accounts),
-    episodesWatchedEstimate: estimateByTable.get('episode_progress') ?? 0,
-    googleAccounts: toCount(providerRow.google_accounts),
-    libraryItemsEstimate: estimateByTable.get('user_media') ?? 0,
-    publicProfiles: toCount(accountRow.public_profiles),
-    ratingsEstimate: estimateByTable.get('ratings') ?? 0,
-    signupsLastDay: toCount(accountRow.signups_last_day),
     signupsLastMonth: toCount(accountRow.signups_last_month),
-    signupsLastWeek: toCount(accountRow.signups_last_week),
+    signupsPrevious30Days: toCount(accountRow.signups_previous_month),
     totalUsers: toCount(accountRow.total_users),
-    verifiedUsers: toCount(accountRow.verified_users),
-    watchlistItemsEstimate: estimateByTable.get('watchlist_items') ?? 0,
   };
 };
 
@@ -303,24 +279,6 @@ export const listRecentBans = (limit: number) =>
     );
   });
 
-export const listRecentSignups = (limit: number) =>
-  loadAdminData(async () => {
-    const sql = getDatabaseSql();
-    const rows = (await sql.query(ADMIN_RECENT_SIGNUPS_QUERY, [
-      limit,
-    ])) as Array<Record<string, unknown>>;
-
-    return rows.map(
-      (row): AdminSignupRecord => ({
-        createdAt: toIsoString(row.created_at),
-        email: toText(row.email),
-        emailVerifiedAt: toIsoString(row.email_verified_at),
-        userId: toText(row.user_id),
-        username: toText(row.username),
-      })
-    );
-  });
-
 const clampSetting = (value: number, bounds: { max: number; min: number }) =>
   Math.min(bounds.max, Math.max(bounds.min, Math.trunc(value) || bounds.min));
 
@@ -388,6 +346,191 @@ export const refreshAllDiscoveryLists = () =>
     revalidateDiscoveryListSettings();
 
     return rows.length;
+  });
+
+export type AdminCuratedListItem = {
+  mediaType: TrackableMediaType;
+  posterPath: string | null;
+  title: string;
+  tmdbId: number;
+};
+
+export type AdminCuratedList = {
+  active: boolean;
+  createdAt: string | null;
+  description: string;
+  id: string;
+  items: Array<AdminCuratedListItem>;
+  name: string;
+  position: number;
+  showOnExplore: boolean;
+  showOnHome: boolean;
+};
+
+/** The placement fields the dashboard saves for the whole table at once. */
+export type AdminCuratedListPlacementInput = Pick<
+  AdminCuratedList,
+  'active' | 'id' | 'position' | 'showOnExplore' | 'showOnHome'
+>;
+
+export type AdminCuratedListItemInput = AdminCuratedListItem & {
+  listId: string;
+};
+
+const toCuratedItem = (value: unknown): Array<AdminCuratedListItem> => {
+  const rows = Array.isArray(value) ? value : [];
+
+  return rows.flatMap((row) => {
+    if (!(row && typeof row === 'object')) {
+      return [];
+    }
+
+    const item = row as Record<string, unknown>;
+    const mediaType = toText(item.media_type);
+
+    if (!(mediaType === MediaType.Movie || mediaType === MediaType.Tv)) {
+      return [];
+    }
+
+    return [
+      {
+        mediaType,
+        posterPath: toText(item.poster_path) || null,
+        title: toText(item.title),
+        tmdbId: toCount(item.tmdb_id),
+      },
+    ];
+  });
+};
+
+export const listAdminCuratedLists = (limit: number) =>
+  loadAdminData(async () => {
+    const sql = getDatabaseSql();
+    const rows = (await sql.query(ADMIN_SELECT_CURATED_LISTS_QUERY, [
+      limit,
+    ])) as Array<Record<string, unknown>>;
+
+    return rows.map(
+      (row): AdminCuratedList => ({
+        active: row.active === true,
+        createdAt: toIsoString(row.created_at),
+        description: toText(row.description),
+        id: toText(row.id),
+        items: toCuratedItem(row.items),
+        name: toText(row.name),
+        position: toCount(row.position),
+        showOnExplore: row.show_on_explore === true,
+        showOnHome: row.show_on_home === true,
+      })
+    );
+  });
+
+/**
+ * Saves every list's placement in one transaction so a reorder can never be
+ * observed half-applied by Home or Explore, then busts the shared public cache.
+ */
+export const saveAdminCuratedListPlacement = (
+  placements: ReadonlyArray<AdminCuratedListPlacementInput>
+) =>
+  loadAdminData(async () => {
+    const sql = getDatabaseSql();
+
+    await sql.transaction((tx) =>
+      placements.map((placement, index) =>
+        tx.query(ADMIN_UPDATE_CURATED_LIST_PLACEMENT_QUERY, [
+          placement.id,
+          placement.active,
+          placement.showOnHome,
+          placement.showOnExplore,
+          Math.max(0, Math.trunc(placement.position) || index),
+        ])
+      )
+    );
+
+    revalidateCuratedLists();
+
+    return placements.length;
+  });
+
+export const createAdminCuratedList = (input: {
+  description: string;
+  name: string;
+}) =>
+  loadAdminData(async () => {
+    const sql = getDatabaseSql();
+    const rows = (await sql.query(ADMIN_CREATE_CURATED_LIST_QUERY, [
+      input.name,
+      input.description,
+    ])) as Array<Record<string, unknown>>;
+    const row = rows.at(0);
+
+    return row ? { id: toText(row.id), name: toText(row.name) } : null;
+  });
+
+export const deleteAdminCuratedList = (listId: string) =>
+  loadAdminData(async () => {
+    const sql = getDatabaseSql();
+    const rows = (await sql.query(ADMIN_DELETE_CURATED_LIST_QUERY, [
+      listId,
+    ])) as Array<Record<string, unknown>>;
+    const row = rows.at(0);
+
+    if (row) {
+      revalidateCuratedLists();
+    }
+
+    return row ? { id: toText(row.id), name: toText(row.name) } : null;
+  });
+
+/**
+ * Adding a title already on the list is a no-op, so the caller reports the
+ * outcome from whether a row came back rather than from an error.
+ */
+export const addAdminCuratedListItem = (input: AdminCuratedListItemInput) =>
+  loadAdminData(async () => {
+    const sql = getDatabaseSql();
+    const listRows = (await sql.query(ADMIN_TOUCH_CURATED_LIST_QUERY, [
+      input.listId,
+    ])) as Array<Record<string, unknown>>;
+    const list = listRows.at(0);
+
+    if (!list) {
+      return null;
+    }
+
+    const rows = (await sql.query(ADMIN_ADD_CURATED_LIST_ITEM_QUERY, [
+      input.listId,
+      input.tmdbId,
+      input.mediaType,
+      input.title.slice(0, 200),
+      input.posterPath ?? '',
+    ])) as Array<unknown>;
+
+    if (rows.length > 0) {
+      revalidateCuratedLists();
+    }
+
+    return { added: rows.length > 0, listName: toText(list.name) };
+  });
+
+export const removeAdminCuratedListItem = (input: {
+  listId: string;
+  mediaType: TrackableMediaType;
+  tmdbId: number;
+}) =>
+  loadAdminData(async () => {
+    const sql = getDatabaseSql();
+    const rows = (await sql.query(ADMIN_REMOVE_CURATED_LIST_ITEM_QUERY, [
+      input.listId,
+      input.tmdbId,
+      input.mediaType,
+    ])) as Array<unknown>;
+
+    if (rows.length > 0) {
+      revalidateCuratedLists();
+    }
+
+    return rows.length > 0;
   });
 
 /**
