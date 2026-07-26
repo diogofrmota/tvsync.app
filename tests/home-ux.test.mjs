@@ -98,10 +98,14 @@ test('each successful preview is one shared horizontally scrollable rail of twen
   assert.match(rail, /MEDIA_RAIL_ITEM_LIMIT = 20/);
   assert.match(rail, /items\.slice\(0, itemLimit\)/);
   assert.match(config, /HOME_PREVIEW_ITEM_COUNT = MEDIA_RAIL_ITEM_LIMIT/);
+  // A rail previews at most the shared shelf size. An admin may configure a
+  // shorter list, and the preview then follows it down so the rail never shows
+  // more titles than its "See All" page carries.
   assert.match(
     loader,
-    /slice\(MEDIA_RAIL_ITEM_LIMIT\)|slice\(0, MEDIA_RAIL_ITEM_LIMIT\)/
+    /Math\.min\(setting\.itemLimit, MEDIA_RAIL_ITEM_LIMIT\)/
   );
+  assert.match(loader, /slice\(0, itemLimit\)/);
   // A TMDB page holds exactly one rail, so every section costs one request and
   // a short section previews as-is instead of erroring.
   assert.doesNotMatch(loader, /page: 2|HOME_PAGE_NUMBERS/);
@@ -155,14 +159,20 @@ test('the Explore featured area is a ten-slide carousel of poster, name, trailer
   assert.match(discover, /buildExploreHeroSlides/);
 });
 
-test('See All opens one complete 30-title list with no pagination controls', () => {
+test('See All opens one complete admin-sized list with no pagination controls', () => {
   const mediaList = read('src/lib/pages/media/media-list.server.tsx');
   const movieRoute = read('src/app/movies/[section]/page.tsx');
   const genreRoute = read('src/app/movies/genre/[genre]/page.tsx');
   const tvRoute = read('src/app/tv/[listType]/page.tsx');
 
+  // 30 titles remains the shipped size and the fallback for any route with no
+  // managed list behind it; a managed list uses its configured size instead, and
+  // fetches only as many TMDB pages as that size needs.
   assert.match(mediaList, /MEDIA_LIST_ITEM_LIMIT = 30/);
-  assert.match(mediaList, /slice\(\s*0,\s*MEDIA_LIST_ITEM_LIMIT\s*\)/);
+  assert.match(mediaList, /slice\(\s*0,\s*managed\.itemLimit\s*\)/);
+  assert.match(mediaList, /pageNumbersForLimit\(managed\.itemLimit\)/);
+  assert.match(mediaList, /Math\.ceil\(limit \/ TMDB_PAGE_SIZE\) \+ 2/);
+  assert.match(mediaList, /loadDiscoveryListConfig/);
   assert.match(movieRoute, /<MovieListPage\b/);
   assert.match(genreRoute, /<MovieListPage\b/);
   assert.match(tvRoute, /<TVShowListPage\b/);
@@ -203,10 +213,12 @@ test('Home and Explore read one shared, separately cached set of discovery rails
   const home = read('src/lib/pages/home/load-home-discovery.server.ts');
   const explore = read('src/lib/pages/explore/discover.server.tsx');
 
-  // Both pages resolve their lists through the same loader and the same keys,
-  // so a section they share shows the same titles under the same name.
-  assert.match(home, /loadDiscoveryRails\(HOME_DISCOVERY_RAIL_KEYS\)/);
-  assert.match(explore, /loadDiscoveryRails\(EXPLORE_DISCOVERY_RAIL_KEYS\)/);
+  // Both pages resolve their lists through the same loader and the same
+  // configuration, so a section they share shows the same titles under the same
+  // name. Each page asks only for its own surface.
+  assert.match(home, /loadDiscoveryRails\('home'\)/);
+  assert.match(explore, /loadDiscoveryRails\('explore'\)/);
+  assert.match(rails, /selectDiscoveryListSettings/);
   for (const source of [home, explore]) {
     assert.match(source, /from 'lib\/pages\/media\/discovery-rails/);
     // Neither page may re-query TMDB for a list of its own.
@@ -230,23 +242,31 @@ test('Home and Explore read one shared, separately cached set of discovery rails
     );
   }
 
-  assert.match(loader, /\['discovery-popular-movies'\]/);
-  assert.match(loader, /\['discovery-top-rated-movies'\]/);
-  assert.match(loader, /\['discovery-popular-tv-shows'\]/);
-  assert.match(loader, /\['discovery-top-rated-tv-shows'\]/);
-  assert.match(loader, /\['discovery-trending-movies'\]/);
-  assert.match(loader, /\['discovery-trending-tv-shows'\]/);
-  assert.match(loader, /\['discovery-upcoming-movies'\]/);
+  // Each list keeps its own cache entry, named once, so two pages showing the
+  // same list share one TMDB response.
+  for (const cacheName of [
+    'discovery-popular-movies',
+    'discovery-top-rated-movies',
+    'discovery-popular-tv-shows',
+    'discovery-top-rated-tv-shows',
+    'discovery-trending-movies',
+    'discovery-trending-tv-shows',
+    'discovery-upcoming-movies',
+  ]) {
+    assert.equal(
+      loader.split(`'${cacheName}'`).length - 1,
+      1,
+      `Expected exactly one ${cacheName} cache entry`
+    );
+  }
 
   // Popular ranks by popularity and highest-rated by score, each behind the
-  // shared window that matches how fast the list actually moves.
+  // admin-configured window that matches how fast the list actually moves.
   assert.match(loader, /sort_by: 'popularity\.desc'/);
   assert.match(loader, /sort_by: 'vote_average\.desc'/);
   assert.match(loader, /'vote_count\.gte': '10000'/);
   assert.match(loader, /'vote_count\.gte': '1500'/);
-  assert.match(loader, /revalidate: TMDB_REVALIDATE_SECONDS\.list/);
-  assert.match(loader, /revalidate: TMDB_REVALIDATE_SECONDS\.topRated/);
-  assert.match(loader, /revalidate: TMDB_REVALIDATE_SECONDS\.trending/);
+  assert.match(loader, /setting\.refreshIntervalHours \* HOUR_IN_SECONDS/);
 });
 
 test('movie, TV, season, and episode details remain publicly readable', () => {

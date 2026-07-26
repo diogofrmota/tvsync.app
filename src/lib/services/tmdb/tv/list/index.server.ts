@@ -1,4 +1,8 @@
-import { TMDB_REVALIDATE_SECONDS } from 'lib/services/tmdb/constants';
+import {
+  TMDB_REVALIDATE_SECONDS,
+  type TmdbCacheOptions,
+  tmdbCacheInit,
+} from 'lib/services/tmdb/constants';
 import { TV_SHOW_SEARCH_RESOURCE_PATH } from 'lib/services/tmdb/tv/list/constants';
 import {
   normalizeTVShowListResponse,
@@ -32,7 +36,8 @@ const tvListRevalidate = (listType: TVShowListType): number => {
 
 export const getTVShowByListType = (
   listType: TVShowListType,
-  params?: TVShowListParams
+  params?: TVShowListParams,
+  cache?: TmdbCacheOptions
 ) =>
   tmdbServerFetcherCore<TVShowListResponse>({
     path: tvShowListEndpoint({
@@ -44,14 +49,17 @@ export const getTVShowByListType = (
       with_genres: params?.with_genres,
     }),
     params,
-    reqInit: { next: { revalidate: tvListRevalidate(listType) } },
+    reqInit: tmdbCacheInit(tvListRevalidate(listType), cache),
   }).then(normalizeTVShowListResponse);
 
-export const getDiscoverTVShowsServer = (params?: TVShowListParams) =>
+export const getDiscoverTVShowsServer = (
+  params?: TVShowListParams,
+  cache?: TmdbCacheOptions
+) =>
   tmdbServerFetcherCore<TVShowListResponse>({
     path: '/discover/tv',
     params,
-    reqInit: { next: { revalidate: TMDB_REVALIDATE_SECONDS.list } },
+    reqInit: tmdbCacheInit(TMDB_REVALIDATE_SECONDS.list, cache),
   }).then(normalizeTVShowListResponse);
 
 export const getTVShowSearchResultList = (params: SearchTVShowParams) =>
@@ -62,12 +70,13 @@ export const getTVShowSearchResultList = (params: SearchTVShowParams) =>
 
 export const getTrendingTVShowsServer = (
   params?: TVShowListParams,
-  timeWindow: 'day' | 'week' = 'day'
+  timeWindow: 'day' | 'week' = 'day',
+  cache?: TmdbCacheOptions
 ) =>
   tmdbServerFetcherCore<TVShowListResponse>({
     path: `/trending/tv/${timeWindow}`,
     params,
-    reqInit: { next: { revalidate: TMDB_REVALIDATE_SECONDS.trending } },
+    reqInit: tmdbCacheInit(TMDB_REVALIDATE_SECONDS.trending, cache),
   }).then(normalizeTVShowListResponse);
 
 export const getSimilarTVShowsServer = (

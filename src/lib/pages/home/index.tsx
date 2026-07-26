@@ -44,7 +44,7 @@ const discoveryFallback = (section: HomeDiscoverySection): ReactNode => {
 const DiscoverySection = ({ section }: { section: HomeDiscoverySection }) => (
   <MediaRail
     fallback={discoveryFallback(section)}
-    itemLimit={HOME_PREVIEW_ITEM_COUNT}
+    itemLimit={section.itemLimit}
     items={section.items}
     mediaType={section.mediaType}
     seeAllHref={section.seeAllHref}

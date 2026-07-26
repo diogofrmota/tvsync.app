@@ -149,6 +149,7 @@ The `/` route is the signed-out discovery home: a title/subtitle hero plus the s
 - `/watchlist` - Auth-protected watchlist page with separated Neon-backed saved movie and TV show sections, TMDB hydration, local search, filtering, sorting, detail links, and direct removal.
 - `/profile` - Auth-protected current-user profile page with a left-aligned title/subtitle, generated initials avatar, editable text fields, username validation, duplicate username protection, privacy settings, and logout.
 - `/person/[id]` - Person detail page.
+- `/admin` - Credential-gated admin dashboard (`ADMIN_USER`/`ADMIN_PASSWORD`). One page covering registered-user statistics, account moderation (ban/unban by email or username), the Home/Explore list configuration, maintenance actions, integration health, and the admin audit trail. Not linked from navigation, excluded from the sitemap, and served `noindex, nofollow`.
 - `/api/tmdb/[[...path]]` - Server-side proxy to TMDB, keeping the TMDB API key out of client code.
 - `/api/auth/[...nextauth]` - NextAuth route handler.
 
@@ -175,6 +176,8 @@ TMDB_WATCH_REGION=US
 DATABASE_URL=postgres://user:password@host/database?sslmode=require
 DATABASE_URL_UNPOOLED=postgres://user:password@host/database?sslmode=require
 AUTH_SECRET=generate_a_strong_auth_secret
+ADMIN_USER=
+ADMIN_PASSWORD=
 AUTH_URL=http://localhost:3000
 NEXTAUTH_URL=http://localhost:3000
 GOOGLE_CLIENT_ID=
@@ -193,6 +196,7 @@ NEXT_PUBLIC_UMAMI_SRC=
 - `DATABASE_URL` is required before using Neon-backed Server Components, Server Actions, or Route Handlers.
 - `DATABASE_URL_UNPOOLED` is used by migration tooling and direct `psql` schema application.
 - `AUTH_SECRET` is required for production auth sessions. Generate a strong value and store it only in local/Vercel environment variables.
+- `ADMIN_USER` and `ADMIN_PASSWORD` open the `/admin` dashboard. Both are required, along with `AUTH_SECRET`, which signs the admin session cookie; with any of them missing the route renders a "not configured" panel instead of a login form. Rotating the password invalidates every issued admin session immediately.
 - `AUTH_URL` and `NEXTAUTH_URL` should be `http://localhost:3000` locally and `https://tvsync.app` in the Vercel production environment. `NEXTAUTH_URL` is required by NextAuth v4 in many deployments.
 - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are required for Google OAuth login/register. Without them, the auth pages render a configuration warning and disable Google sign-in.
 - `RESEND_API_KEY` and `AUTH_EMAIL_FROM` are required for verification and password-reset delivery. Use a Resend-verified sender domain in production. `AUTH_EMAIL_REPLY_TO` is optional.

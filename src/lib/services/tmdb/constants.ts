@@ -33,3 +33,25 @@ export const TMDB_REVALIDATE_SECONDS = {
   /** Free-text search responses. */
   search: 3600, // 1h
 } as const;
+
+/**
+ * Per-call cache overrides for the shared discovery lists. Those lists are
+ * identical for every visitor and are administered from `/admin`, so their
+ * cadence comes from the stored configuration rather than the default window,
+ * and their tag lets a manual "fetch now" drop the cached response instead of
+ * waiting the window out.
+ */
+export type TmdbCacheOptions = {
+  revalidateSeconds?: number;
+  tags?: ReadonlyArray<string>;
+};
+
+export const tmdbCacheInit = (
+  defaultRevalidateSeconds: number,
+  options?: TmdbCacheOptions
+): RequestInit => ({
+  next: {
+    revalidate: options?.revalidateSeconds ?? defaultRevalidateSeconds,
+    ...(options?.tags?.length ? { tags: [...options.tags] } : {}),
+  },
+});

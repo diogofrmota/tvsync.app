@@ -9,6 +9,9 @@ import { headers } from 'next/headers';
 
 export const AUTH_RATE_LIMITS = {
   accountDelete: { limit: 3, windowSeconds: 60 * 60 },
+  // The admin dashboard has exactly one credential pair, so its login is the
+  // single highest-value target in the app and gets the tightest throttle.
+  adminLogin: { limit: 5, windowSeconds: 15 * 60 },
   emailChange: { limit: 3, windowSeconds: 60 * 60 },
   forgotPassword: { limit: 5, windowSeconds: 60 * 60 },
   login: { limit: 10, windowSeconds: 15 * 60 },

@@ -172,7 +172,7 @@ test('Explore discovery drops the recommendation rail and the genre browser', as
   assert.doesNotMatch(discover, /GenreChips|Browse by genre/);
   // Explore shows every shared rail, named by the shared definitions so the
   // lists it has in common with Home read identically on both pages.
-  assert.match(discover, /loadDiscoveryRails\(EXPLORE_DISCOVERY_RAIL_KEYS\)/);
+  assert.match(discover, /loadDiscoveryRails\('explore'\)/);
   for (const rail of [
     'Trending Movies This Week',
     'Trending TV Shows This Week',

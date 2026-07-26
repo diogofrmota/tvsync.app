@@ -123,13 +123,34 @@ test('durable caching is centralized and personalized caches stay short-lived', 
 
   assert.match(constants, /trending: 43_200/);
 
-  // Home and Explore share one cached rail per list, so the same list is never
-  // fetched twice with two different windows.
+  // Home and Explore share one cached read per list, so the same list is never
+  // fetched twice with two different windows. The window and the manual refetch
+  // come from the admin-managed settings, and both are part of the cache key, so
+  // a change applies on the next read instead of whenever the entry expires.
   const discovery = read('src/lib/pages/media/discovery-rails.server.ts');
-  assert.equal(discovery.match(/unstable_cache\(/g)?.length, 7);
-  assert.match(discovery, /revalidate: TMDB_REVALIDATE_SECONDS\.list/);
-  assert.match(discovery, /revalidate: TMDB_REVALIDATE_SECONDS\.topRated/);
-  assert.match(discovery, /revalidate: TMDB_REVALIDATE_SECONDS\.trending/);
+  assert.equal(discovery.match(/unstable_cache\(/g)?.length, 1);
+  assert.match(discovery, /const cachedListResults =/);
+  assert.match(discovery, /revalidate: cache\.revalidateSeconds/);
+  assert.match(discovery, /tags: \[discoveryListCacheTag\(cache\.key\)\]/);
+  assert.match(
+    discovery,
+    /\[name, String\(cache\.epoch\), String\(cache\.revalidateSeconds\)\]/
+  );
+
+  // That configuration is itself cached for the whole app and busted on save,
+  // so one query serves the entire audience.
+  const listSettings = read(
+    'src/lib/services/database/discovery-lists.server.ts'
+  );
+  assert.match(
+    listSettings,
+    /DISCOVERY_LIST_SETTINGS_REVALIDATE_SECONDS = 300/
+  );
+  assert.match(listSettings, /tags: \[DISCOVERY_LIST_SETTINGS_TAG\]/);
+  // Discovery must survive a database outage, so a failed settings read falls
+  // back to the shipped defaults and the failure is never cached.
+  assert.match(listSettings, /DEFAULT_DISCOVERY_LIST_SETTINGS\.map/);
+  assert.match(listSettings, /cachedDiscoveryListSettings\(\)\.catch/);
 
   // The public profile statistics cache is bounded, not indefinite.
   const stats = read('src/lib/features/profile/profile-statistics.server.ts');

@@ -1,4 +1,8 @@
-import { TMDB_REVALIDATE_SECONDS } from 'lib/services/tmdb/constants';
+import {
+  TMDB_REVALIDATE_SECONDS,
+  type TmdbCacheOptions,
+  tmdbCacheInit,
+} from 'lib/services/tmdb/constants';
 import {
   movieListEndpoint,
   normalizeMovieListResponse,
@@ -29,9 +33,11 @@ const movieListRevalidate = (
 };
 
 export const getMovieListServer = ({
+  cache,
   section = 'popular',
   params,
 }: {
+  cache?: TmdbCacheOptions;
   section: ListType;
   params?: MovieListParams;
 }) =>
@@ -46,17 +52,18 @@ export const getMovieListServer = ({
       with_genres: params?.with_genres,
     }),
     params,
-    reqInit: { next: { revalidate: movieListRevalidate(section, params) } },
+    reqInit: tmdbCacheInit(movieListRevalidate(section, params), cache),
   }).then(normalizeMovieListResponse);
 
 export const getTrendingMoviesServer = (
   params?: MovieListParams,
-  timeWindow: 'day' | 'week' = 'day'
+  timeWindow: 'day' | 'week' = 'day',
+  cache?: TmdbCacheOptions
 ) =>
   tmdbServerFetcherCore<MovieListResponse>({
     path: `/trending/movie/${timeWindow}`,
     params,
-    reqInit: { next: { revalidate: TMDB_REVALIDATE_SECONDS.trending } },
+    reqInit: tmdbCacheInit(TMDB_REVALIDATE_SECONDS.trending, cache),
   }).then(normalizeMovieListResponse);
 
 export const getMovieRecommendationsServer = (
