@@ -27,6 +27,7 @@
     "ultracite:check": "ultracite check --error-on-warnings",
     "ultracite:fix": "ultracite fix --error-on-warnings",
     "biome:ci": "biome ci",
+    "knip": "knip",
     "start": "next start",
     "test": "tsx --test tests/*.test.mjs tests/*.test.ts",
     "test:e2e": "playwright test",
