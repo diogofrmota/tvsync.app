@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import { PGlite, type PGliteInterface } from '@electric-sql/pglite';
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 
+import { formatAdminChange } from '../src/lib/pages/admin/format';
 import {
   DEFAULT_DISCOVERY_LIST_SETTINGS,
   type DiscoveryListSetting,
@@ -22,14 +23,20 @@ import {
   verifyAdminSessionToken,
 } from '../src/lib/services/admin/security';
 import {
+  ADMIN_ADD_CURATED_LIST_ITEM_QUERY,
+  ADMIN_CREATE_CURATED_LIST_QUERY,
+  ADMIN_DELETE_CURATED_LIST_QUERY,
+  ADMIN_REMOVE_CURATED_LIST_ITEM_QUERY,
+  ADMIN_SELECT_CURATED_LISTS_QUERY,
+} from '../src/lib/services/database/admin-curated-list-queries';
+import {
   ADMIN_ACCOUNT_STATS_QUERY,
+  ADMIN_ACTIVE_USERS_QUERY,
   ADMIN_BAN_USER_QUERY,
   ADMIN_FIND_USER_QUERY,
   ADMIN_INSERT_AUDIT_LOG_QUERY,
-  ADMIN_PROVIDER_STATS_QUERY,
   ADMIN_RECENT_AUDIT_LOG_QUERY,
   ADMIN_RECENT_BANS_QUERY,
-  ADMIN_TABLE_ESTIMATES_QUERY,
   ADMIN_UNBAN_USER_QUERY,
 } from '../src/lib/services/database/admin-queries';
 import { GET_SESSION_VERSION_QUERY } from '../src/lib/services/database/auth-queries';
@@ -47,6 +54,7 @@ const migrationNames = [
   '0005_auth_lifecycle.sql',
   '0006_unify_library_membership.sql',
   '0011_admin_dashboard.sql',
+  '0013_admin_curated_lists.sql',
 ] as const;
 
 const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
@@ -347,37 +355,131 @@ test('admin schema supports moderation, list configuration, and an audit trail',
       );
     });
 
-    await t.test('overview counters are exact for accounts', async () => {
-      const accounts = await getRows<{
-        banned_users: string;
-        total_users: string;
-        verified_users: string;
-      }>(db, ADMIN_ACCOUNT_STATS_QUERY);
+    await t.test(
+      'the overview counts only the four figures it shows, each against its previous window',
+      async () => {
+        const accounts = await getRows<{
+          banned_users: string;
+          signups_last_month: string;
+          signups_previous_month: string;
+          total_users: string;
+        }>(db, ADMIN_ACCOUNT_STATS_QUERY);
 
-      assert.equal(Number(accounts.at(0)?.total_users), 1);
-      assert.equal(Number(accounts.at(0)?.verified_users), 1);
-      assert.equal(Number(accounts.at(0)?.banned_users), 0);
+        assert.equal(Number(accounts.at(0)?.total_users), 1);
+        assert.equal(Number(accounts.at(0)?.banned_users), 0);
+        // The freshly inserted profile lands in the current window, and there
+        // is nothing in the 30 days before it to compare against yet.
+        assert.equal(Number(accounts.at(0)?.signups_last_month), 1);
+        assert.equal(Number(accounts.at(0)?.signups_previous_month), 0);
 
-      const providers = await getRows(db, ADMIN_PROVIDER_STATS_QUERY);
-      assert.equal(providers.length, 1);
+        // The removed tiles no longer cost a query at all.
+        assert.doesNotMatch(ADMIN_ACCOUNT_STATS_QUERY, /verified_users/);
+        assert.doesNotMatch(ADMIN_ACCOUNT_STATS_QUERY, /public_profiles/);
+        assert.doesNotMatch(ADMIN_ACCOUNT_STATS_QUERY, /signups_last_day/);
 
-      // Activity totals are read from planner statistics instead of counting
-      // the largest tables in the database.
-      const estimates = await getRows<{ table_name: string }>(
-        db,
-        ADMIN_TABLE_ESTIMATES_QUERY
-      );
-      assert.ok(
-        estimates.every((row) =>
-          [
-            'episode_progress',
-            'ratings',
-            'user_media',
-            'watchlist_items',
-          ].includes(row.table_name)
-        )
-      );
-    });
+        const active = await getRows<{
+          active_users: string;
+          previous_active_users: string;
+        }>(db, ADMIN_ACTIVE_USERS_QUERY);
+
+        assert.equal(Number(active.at(0)?.active_users), 0);
+        assert.equal(Number(active.at(0)?.previous_active_users), 0);
+      }
+    );
+
+    await t.test(
+      'a custom list is created, searched into, and deleted with its titles',
+      async () => {
+        const created = await getRows<{ id: string; name: string }>(
+          db,
+          ADMIN_CREATE_CURATED_LIST_QUERY,
+          ['Staff Picks', 'Hand-picked by the team']
+        );
+        const listId = created.at(0)?.id;
+        assert.equal(created.at(0)?.name, 'Staff Picks');
+        assert.ok(listId);
+
+        // A list name is unique overall, compared case-insensitively.
+        await assert.rejects(
+          db.query(ADMIN_CREATE_CURATED_LIST_QUERY, ['staff picks', ''])
+        );
+
+        const added = await getRows(db, ADMIN_ADD_CURATED_LIST_ITEM_QUERY, [
+          listId,
+          603,
+          'movie',
+          'The Matrix',
+          '/poster.jpg',
+        ]);
+        assert.equal(added.length, 1);
+
+        // Adding the same title again is a no-op rather than an error.
+        assert.equal(
+          (
+            await getRows(db, ADMIN_ADD_CURATED_LIST_ITEM_QUERY, [
+              listId,
+              603,
+              'movie',
+              'The Matrix',
+              '/poster.jpg',
+            ])
+          ).length,
+          0
+        );
+
+        await db.query(ADMIN_ADD_CURATED_LIST_ITEM_QUERY, [
+          listId,
+          1396,
+          'tv',
+          'Breaking Bad',
+          '',
+        ]);
+
+        const lists = await getRows<{
+          items: Array<{ media_type: string; title: string }>;
+          name: string;
+        }>(db, ADMIN_SELECT_CURATED_LISTS_QUERY, [25]);
+
+        assert.equal(lists.at(0)?.name, 'Staff Picks');
+        assert.deepEqual(
+          lists.at(0)?.items.map((item) => item.title),
+          ['The Matrix', 'Breaking Bad']
+        );
+
+        // Only movies and TV shows can be saved to a list.
+        await assert.rejects(
+          db.query(ADMIN_ADD_CURATED_LIST_ITEM_QUERY, [
+            listId,
+            5,
+            'person',
+            'Someone',
+            '',
+          ])
+        );
+
+        assert.equal(
+          (
+            await getRows(db, ADMIN_REMOVE_CURATED_LIST_ITEM_QUERY, [
+              listId,
+              1396,
+              'tv',
+            ])
+          ).length,
+          1
+        );
+
+        await db.query(ADMIN_DELETE_CURATED_LIST_QUERY, [listId]);
+        assert.equal(
+          (await getRows(db, ADMIN_SELECT_CURATED_LISTS_QUERY, [25])).length,
+          0
+        );
+        // Deleting the list cascades to the titles that were on it.
+        assert.equal(
+          (await getRows(db, 'select 1 from admin_curated_list_items')).length,
+          0
+        );
+      }
+    );
 
     await t.test('every shipped list is seeded and configurable', async () => {
       const seeded = await getRows<{
@@ -546,6 +648,11 @@ test('the dashboard opens closed and every mutation re-checks the session', () =
     'refreshDiscoveryListNow',
     'runAdminMaintenance',
     'refreshAdminStats',
+    'searchCuratedListCandidates',
+    'createCuratedList',
+    'deleteCuratedList',
+    'addTitleToCuratedList',
+    'removeTitleFromCuratedList',
   ]) {
     const start = actions.indexOf(`export const ${mutation} =`);
     assert.notEqual(start, -1, `Missing ${mutation}`);
@@ -558,6 +665,67 @@ test('the dashboard opens closed and every mutation re-checks the session', () =
     rateLimits,
     /adminLogin: \{ limit: 5, windowSeconds: 15 \* 60 \}/
   );
+});
+
+test('the restricted-access wording is what the entry point says', () => {
+  const loginForm = read('src/lib/pages/admin/login-form.tsx');
+  const dashboard = read('src/lib/pages/admin/dashboard.tsx');
+
+  assert.match(loginForm, /TvSync - Admin Access/);
+  assert.match(loginForm, /Access to this space is restricted\./);
+  assert.match(loginForm, />\s*Enter\s*</);
+  assert.doesNotMatch(loginForm, /Enter dashboard|manage TvSync/);
+  assert.match(dashboard, /TvSync - Admin Access/);
+});
+
+test('the overview shows four tiles and the 30-day pair states its change', () => {
+  const dashboard = read('src/lib/pages/admin/dashboard.tsx');
+  const format = read('src/lib/pages/admin/format.ts');
+
+  for (const label of [
+    'label="Users"',
+    'label="Banned users"',
+    'label="New users (30 days)"',
+    'label="Active users (30 days)"',
+  ]) {
+    assert.match(dashboard, new RegExp(label.replaceAll(/[()]/g, '\\$&')));
+  }
+  // Everything else was removed from the dashboard, panel and query alike.
+  assert.doesNotMatch(
+    dashboard,
+    /Verified|Public profiles|Library items|Episodes tracked|Google logins|Latest signups/
+  );
+  assert.doesNotMatch(dashboard, /AdminSignups|recentSignups/);
+  assert.match(dashboard, /formatAdminChange\(/);
+
+  // A previous window of zero has no percentage to state, so the tile names the
+  // start of the series instead of dividing by zero.
+  assert.equal(formatAdminChange(12, 0), 'No previous 30 days to compare');
+  assert.equal(formatAdminChange(0, 0), 'No change');
+  assert.equal(formatAdminChange(12, 10), '+20% vs previous 30 days (10)');
+  assert.equal(formatAdminChange(8, 10), '-20% vs previous 30 days (10)');
+  assert.equal(formatAdminChange(10, 10), 'No change vs previous 30 days (10)');
+  assert.match(format, /export const formatAdminChange/);
+});
+
+test('custom lists are built from an admin-side TMDB search', () => {
+  const panel = read('src/lib/pages/admin/curated-lists.tsx');
+  const actions = read('src/lib/features/admin/actions.ts');
+  const dashboard = read('src/lib/pages/admin/dashboard.tsx');
+
+  assert.match(dashboard, /<AdminCuratedLists/);
+  assert.match(panel, /title="Custom lists"/);
+  assert.match(panel, /Create list/);
+  assert.match(panel, /Search TMDB/);
+  assert.match(panel, />\s*Add\s*</);
+  assert.match(panel, />\s*Remove\s*</);
+  assert.match(panel, /Delete list/);
+
+  // The search runs on the server, so TMDB_API_KEY never reaches the browser.
+  assert.match(actions, /^'use server';/m);
+  assert.match(actions, /getMovieListServer\(/);
+  assert.match(actions, /getTVShowSearchResultList\(/);
+  assert.doesNotMatch(panel, /TMDB_API_KEY|useTmdbSWR|api\/tmdb/);
 });
 
 test('banned accounts cannot sign in through either provider', () => {

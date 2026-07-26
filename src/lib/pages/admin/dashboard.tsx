@@ -14,6 +14,12 @@ import {
   runAdminMaintenance,
   signOutOfAdmin,
 } from 'lib/features/admin/actions';
+import { AdminCuratedLists } from 'lib/pages/admin/curated-lists';
+import {
+  formatAdminChange,
+  formatAdminDate,
+  formatAdminNumber,
+} from 'lib/pages/admin/format';
 import { AdminDiscoveryLists } from 'lib/pages/admin/lists';
 import { AdminModeration } from 'lib/pages/admin/moderation';
 import {
@@ -21,8 +27,6 @@ import {
   AdminRow,
   AdminSection,
   AdminStat,
-  formatAdminDate,
-  formatAdminNumber,
 } from 'lib/pages/admin/panels';
 import { AdminPrivacyRequests } from 'lib/pages/admin/privacy';
 import type { AdminDashboardData } from 'lib/pages/admin/types';
@@ -46,7 +50,7 @@ const AdminOverview = ({ stats }: { stats: AdminDashboardData['stats'] }) => {
           </Button>
         </form>
       }
-      description="Account figures are exact. Activity totals are planner estimates, which keeps the dashboard from scanning the largest tables in the database."
+      description="The four figures worth watching, counted exactly. The two 30-day tiles state their change against the 30 days before them."
       title="Overview"
     >
       <AdminFeedback
@@ -54,66 +58,32 @@ const AdminOverview = ({ stats }: { stats: AdminDashboardData['stats'] }) => {
         success={state.success}
       />
       {data ? (
-        <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} gap={3}>
+        <SimpleGrid columns={{ base: 2, lg: 4 }} gap={3}>
           <AdminStat
             hint="Registered accounts"
             label="Users"
             value={formatAdminNumber(data.totalUsers)}
           />
           <AdminStat
-            hint={`${formatAdminNumber(data.totalUsers - data.verifiedUsers)} unverified`}
-            label="Verified"
-            value={formatAdminNumber(data.verifiedUsers)}
-          />
-          <AdminStat
             hint="Blocked from signing in"
-            label="Banned"
+            label="Banned users"
             value={formatAdminNumber(data.bannedUsers)}
           />
           <AdminStat
-            hint="Library activity, last 30 days"
-            label="Active users"
-            value={formatAdminNumber(data.activeUsersLast30Days)}
-          />
-          <AdminStat
-            hint="New accounts"
-            label="Last 24 hours"
-            value={formatAdminNumber(data.signupsLastDay)}
-          />
-          <AdminStat
-            hint="New accounts"
-            label="Last 7 days"
-            value={formatAdminNumber(data.signupsLastWeek)}
-          />
-          <AdminStat
-            hint="New accounts"
-            label="Last 30 days"
+            hint={formatAdminChange(
+              data.signupsLastMonth,
+              data.signupsPrevious30Days
+            )}
+            label="New users (30 days)"
             value={formatAdminNumber(data.signupsLastMonth)}
           />
           <AdminStat
-            hint="Public profiles"
-            label="Public"
-            value={formatAdminNumber(data.publicProfiles)}
-          />
-          <AdminStat
-            hint={`${formatAdminNumber(data.credentialAccounts)} password logins`}
-            label="Google logins"
-            value={formatAdminNumber(data.googleAccounts)}
-          />
-          <AdminStat
-            hint="Approximate"
-            label="Library items"
-            value={formatAdminNumber(data.libraryItemsEstimate)}
-          />
-          <AdminStat
-            hint="Approximate"
-            label="Episodes tracked"
-            value={formatAdminNumber(data.episodesWatchedEstimate)}
-          />
-          <AdminStat
-            hint="Approximate"
-            label="Ratings"
-            value={formatAdminNumber(data.ratingsEstimate)}
+            hint={formatAdminChange(
+              data.activeUsersLast30Days,
+              data.activeUsersPrevious30Days
+            )}
+            label="Active users (30 days)"
+            value={formatAdminNumber(data.activeUsersLast30Days)}
           />
         </SimpleGrid>
       ) : (
@@ -124,32 +94,6 @@ const AdminOverview = ({ stats }: { stats: AdminDashboardData['stats'] }) => {
     </AdminSection>
   );
 };
-
-const AdminSignups = ({
-  recentSignups,
-}: {
-  recentSignups: AdminDashboardData['recentSignups'];
-}) => (
-  <AdminSection
-    description="The most recent accounts to register."
-    title="Latest signups"
-  >
-    <AdminFeedback error={recentSignups.error ?? undefined} />
-    {recentSignups.data?.length ? (
-      recentSignups.data.map((signup) => (
-        <AdminRow
-          key={signup.userId}
-          meta={`${signup.email} · ${formatAdminDate(signup.createdAt)}`}
-          title={`@${signup.username}${signup.emailVerifiedAt ? '' : ' · unverified'}`}
-        />
-      ))
-    ) : (
-      <Text color="fg.muted" fontSize="sm" opacity={0.7}>
-        No accounts yet.
-      </Text>
-    )}
-  </AdminSection>
-);
 
 const AdminMaintenance = ({
   health,
@@ -251,7 +195,7 @@ export const AdminDashboard = ({ data }: { data: AdminDashboardData }) => (
     >
       <Stack gap={1}>
         <Heading as="h1" fontSize={{ base: '2xl', md: '3xl' }} fontWeight="600">
-          TvSync Admin
+          TvSync - Admin Access
         </Heading>
         <Text color="fg.muted" fontSize="sm" opacity={0.7}>
           Signed in as {data.actor}
@@ -266,8 +210,8 @@ export const AdminDashboard = ({ data }: { data: AdminDashboardData }) => (
     <AdminOverview stats={data.stats} />
     <AdminModeration recentBans={data.recentBans} />
     <AdminPrivacyRequests privacy={data.privacy} />
+    <AdminCuratedLists curatedLists={data.curatedLists} />
     <AdminDiscoveryLists lists={data.lists} />
-    <AdminSignups recentSignups={data.recentSignups} />
     <AdminMaintenance health={data.health} />
     <AdminAuditLog auditLog={data.auditLog} />
   </Stack>

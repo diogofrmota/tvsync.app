@@ -5,57 +5,39 @@
  */
 
 /**
- * Account figures are counted exactly — "registered users" has to be a real
- * number — and every predicate here is served by an index on `profiles`.
- * The high-volume activity tables are sized separately from planner statistics
- * instead, so the dashboard never triggers a full scan of them.
+ * The four figures the dashboard shows, counted exactly — "registered users"
+ * has to be a real number — with every predicate served by an index on
+ * `profiles`. The previous 30-day window comes back alongside the current one
+ * so the signup tile can state its change instead of a bare total.
  */
 export const ADMIN_ACCOUNT_STATS_QUERY = `
   select
     count(*)::bigint as total_users,
-    count(*) filter (where email_verified_at is not null)::bigint as verified_users,
     count(*) filter (where banned_at is not null)::bigint as banned_users,
-    count(*) filter (where privacy_setting = 'public')::bigint as public_profiles,
-    count(*) filter (where created_at >= now() - interval '1 day')::bigint as signups_last_day,
-    count(*) filter (where created_at >= now() - interval '7 days')::bigint as signups_last_week,
-    count(*) filter (where created_at >= now() - interval '30 days')::bigint as signups_last_month
+    count(*) filter (where created_at >= now() - interval '30 days')::bigint as signups_last_month,
+    count(*) filter (
+      where created_at >= now() - interval '60 days'
+        and created_at < now() - interval '30 days'
+    )::bigint as signups_previous_month
   from profiles
 `;
 
-export const ADMIN_PROVIDER_STATS_QUERY = `
-  select
-    count(*) filter (where provider = 'credentials')::bigint as credential_accounts,
-    count(*) filter (where provider = 'google')::bigint as google_accounts
-  from auth_accounts
-`;
-
-export const ADMIN_ACTIVE_USERS_QUERY = `
-  select count(distinct user_id)::bigint as active_users
-  from user_media
-  where updated_at >= now() - interval '30 days'
-`;
-
 /**
- * Row estimates from the planner's own statistics. `user_media`,
- * `episode_progress`, `ratings`, and `watchlist_items` grow with every action
- * every user takes, so counting them exactly would mean scanning the largest
- * tables in the database to render a dashboard tile. The estimate is accurate
- * to well within a percent after autovacuum and costs a single index lookup.
+ * Activity is "touched the library", read from the recent slice of
+ * `user_media` its `updated_at` index covers. The previous 30 days are counted
+ * in the same pass so the tile can show the change between the two windows.
  */
-export const ADMIN_TABLE_ESTIMATES_QUERY = `
+export const ADMIN_ACTIVE_USERS_QUERY = `
   select
-    c.relname as table_name,
-    greatest(c.reltuples, 0)::bigint as row_estimate
-  from pg_class c
-  join pg_namespace n on n.oid = c.relnamespace
-  where n.nspname = 'public'
-    and c.relkind = 'r'
-    and c.relname in (
-      'user_media',
-      'episode_progress',
-      'ratings',
-      'watchlist_items'
-    )
+    count(distinct user_id) filter (
+      where updated_at >= now() - interval '30 days'
+    )::bigint as active_users,
+    count(distinct user_id) filter (
+      where updated_at >= now() - interval '60 days'
+        and updated_at < now() - interval '30 days'
+    )::bigint as previous_active_users
+  from user_media
+  where updated_at >= now() - interval '60 days'
 `;
 
 export const ADMIN_FIND_USER_QUERY = `
@@ -127,13 +109,6 @@ export const ADMIN_RECENT_BANS_QUERY = `
   from profiles
   where banned_at is not null
   order by banned_at desc
-  limit $1
-`;
-
-export const ADMIN_RECENT_SIGNUPS_QUERY = `
-  select user_id, username, email, created_at, email_verified_at
-  from profiles
-  order by created_at desc
   limit $1
 `;
 

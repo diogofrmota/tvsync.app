@@ -47,6 +47,9 @@ test('TV show page renders required metadata and focused sections in a clear hie
   // Header first, then the episodes: the slider and the season dropdowns come
   // straight after the facts, ahead of the personal panel and the reading
   // sections that close the page.
+  // Actions first, then the episodes to mark as seen, then the ratings, then
+  // the description and the rest — the same order the movie page uses, with
+  // the tracker slotted in where a show needs it.
   assertInOrder(page, [
     'poster`}',
     'as="h1"',
@@ -56,14 +59,19 @@ test('TV show page renders required metadata and focused sections in a clear hie
     'Episodes:',
     'Status:',
     'Genres unavailable',
+    '<MediaDetailActions',
     '<EpisodeTracker',
-    'Your TV Show',
+    'Rating',
+    '<RatingInput',
     'Description',
     '<TvTrailer',
     '<MediaCrewSection',
     '<TvCastsWrapper',
     '<MediaReviews',
   ]);
+  // The personal panel is one row of controls, not a bordered box.
+  assert.doesNotMatch(page, /Your TV Show/);
+  assert.doesNotMatch(page, /Runtime/);
   assert.doesNotMatch(
     page,
     /RecommendForm|Recommended TV shows|WatchlistStateButton|MediaStatusControl/i
@@ -284,31 +292,27 @@ test('the whole-season toggle exists and rolls back on failure', async () => {
   assert.match(tracker, /setWatchedBySeason\(previous\)/);
 });
 
-test('one unified authenticated library control adds, updates, removes, and rolls back', async () => {
+test('the TV actions are the same Add, favourite, finished, and remove row as movies', async () => {
   const [control, actions] = await Promise.all([
-    read('src/lib/features/library/tv-detail-library-control.tsx'),
+    read('src/lib/features/library/media-detail-actions.tsx'),
     read('src/lib/features/library/actions.ts'),
   ]);
 
-  for (const label of [
-    'Add to Library',
-    'Watching',
-    'Planned to Watch',
-    'Finished',
-    'Current status:',
-    'Remove from Library',
-  ]) {
-    assert.match(control, new RegExp(label));
-  }
+  assert.match(control, /'Remove from Favourites' : 'Mark as Favourite'/);
+  assert.match(control, /isFinished \? 'Finished' : 'Mark as Finished'/);
+  assert.match(control, /aria-label="Remove from your library"/);
+  // A show that is un-finished goes back to Watching rather than to Planned,
+  // because its episode progress is still there.
+  assert.match(control, /unfinished: WatchStatus\.Watching/);
   assert.match(control, /await updateTvLibraryStatus/);
   assert.match(control, /await removeTvShowFromLibrary/);
   assert.match(control, /setStatus\(previousStatus\)/);
-  assert.match(control, /setSelectedStatus\(previousSelectedStatus\)/);
   assert.doesNotMatch(control, /window\.location|location\.reload/);
+  assert.doesNotMatch(control, /NativeSelect|Library status/);
   assert.match(actions, /status: 'login_required'/);
 
   const page = await read('src/lib/pages/tv/detail/index.tsx');
-  assert.match(page, /<TvDetailLibraryControl/);
+  assert.match(page, /addLabel="Add TV Show"/);
   assert.doesNotMatch(page, /<WatchlistStateButton/);
 });
 
@@ -336,7 +340,7 @@ test('overall show progress is automatically calculated from watched episodes an
 
 test('favourite and personal rating mutations authenticate and reconcile for TV shows', async () => {
   const [favorite, favoriteActions, rating, ratingActions] = await Promise.all([
-    read('src/lib/features/profile/favorite-button.tsx'),
+    read('src/lib/features/library/media-detail-actions.tsx'),
     read('src/lib/features/profile/favorite-actions.ts'),
     read('src/lib/features/reviews/rating-input.tsx'),
     read('src/lib/features/reviews/actions.ts'),
@@ -347,10 +351,11 @@ test('favourite and personal rating mutations authenticate and reconcile for TV 
   assert.match(favoriteActions, /status: 'login_required'/);
   assert.match(rating, /await saveRating/);
   assert.match(rating, /setState\(previousState\)/);
+  assert.match(rating, /<StarRating/);
   assert.match(ratingActions, /await getAuthSession\(\)/);
 
   const page = await read('src/lib/pages/tv/detail/index.tsx');
-  assert.match(page, /<FavoriteButton mediaType=\{MediaType\.Tv\}/);
+  assert.match(page, /<MediaDetailActions\s+addLabel="Add TV Show"/);
   assert.match(
     page,
     /<RatingInput\s+showAverage=\{false\}\s+showReview\s+target=\{\{ mediaType: MediaType\.Tv/

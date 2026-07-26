@@ -15,12 +15,8 @@ import {
   eraseUserAccountForRequest,
   exportUserDataForRequest,
 } from 'lib/features/admin/actions';
-import {
-  AdminFeedback,
-  AdminSection,
-  AdminStat,
-  formatAdminNumber,
-} from 'lib/pages/admin/panels';
+import { formatAdminNumber } from 'lib/pages/admin/format';
+import { AdminFeedback, AdminSection, AdminStat } from 'lib/pages/admin/panels';
 import type { AdminDashboardData } from 'lib/pages/admin/types';
 import { useActionState } from 'react';
 

@@ -16,13 +16,8 @@ import {
   lookupUserAccount,
   unbanUserAccount,
 } from 'lib/features/admin/actions';
-import {
-  AdminFeedback,
-  AdminRow,
-  AdminSection,
-  formatAdminDate,
-  formatAdminNumber,
-} from 'lib/pages/admin/panels';
+import { formatAdminDate, formatAdminNumber } from 'lib/pages/admin/format';
+import { AdminFeedback, AdminRow, AdminSection } from 'lib/pages/admin/panels';
 import type { AdminDashboardData } from 'lib/pages/admin/types';
 import type { AdminUserRecord } from 'lib/services/database/admin.server';
 import { useActionState } from 'react';

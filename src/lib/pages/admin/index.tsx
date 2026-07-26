@@ -5,8 +5,8 @@ import type { AdminHealth } from 'lib/pages/admin/types';
 import { getAdminSession } from 'lib/services/admin/session.server';
 import {
   listAdminAuditLog,
+  listAdminCuratedLists,
   listRecentBans,
-  listRecentSignups,
   loadAdminOverviewStats,
   loadAdminPrivacySummary,
 } from 'lib/services/database/admin.server';
@@ -14,6 +14,7 @@ import { loadDiscoveryListSettings } from 'lib/services/database/discovery-lists
 
 const RECENT_RECORD_LIMIT = 10;
 const AUDIT_LOG_LIMIT = 20;
+const CURATED_LIST_LIMIT = 25;
 
 const AdminShell = ({ children }: { children: React.ReactNode }) => (
   <Box
@@ -88,11 +89,11 @@ export const AdminPage = async () => {
     );
   }
 
-  const [stats, recentBans, recentSignups, auditLog, lists, privacy] =
+  const [stats, recentBans, curatedLists, auditLog, lists, privacy] =
     await Promise.all([
       loadAdminOverviewStats(),
       listRecentBans(RECENT_RECORD_LIMIT),
-      listRecentSignups(RECENT_RECORD_LIMIT),
+      listAdminCuratedLists(CURATED_LIST_LIMIT),
       listAdminAuditLog(AUDIT_LOG_LIMIT),
       loadDiscoveryListSettings(),
       loadAdminPrivacySummary(),
@@ -104,11 +105,11 @@ export const AdminPage = async () => {
         data={{
           actor: session.user,
           auditLog,
+          curatedLists,
           health: readHealth(),
           lists,
           privacy,
           recentBans,
-          recentSignups,
           stats,
         }}
       />

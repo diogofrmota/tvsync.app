@@ -14,8 +14,7 @@ import { MediaRatingPanel } from 'lib/components/shared/MediaRating';
 import { MediaReviews } from 'lib/components/shared/MediaReviews';
 import { PageShell } from 'lib/components/shared/PageShell';
 import PosterImage from 'lib/components/shared/PosterImage';
-import { MovieDetailLibraryControl } from 'lib/features/library/movie-detail-library-control';
-import { FavoriteButton } from 'lib/features/profile/favorite-button';
+import { MediaDetailActions } from 'lib/features/library/media-detail-actions';
 import { RatingInput } from 'lib/features/reviews';
 import CastsWrapper from 'lib/pages/movie/detail/components/casts-wrapper';
 import { GenreList } from 'lib/pages/movie/detail/components/genre-list';
@@ -109,12 +108,6 @@ export const MovieDetailPage = ({
                 Release year: {getReleaseYear(movie.release_date)}
               </Badge>
               <Badge variant="outline">
-                Runtime:{' '}
-                {movie.runtime && movie.runtime > 0
-                  ? `${movie.runtime} min`
-                  : 'Unavailable'}
-              </Badge>
-              <Badge variant="outline">
                 Status: {movie.status || 'Unavailable'}
               </Badge>
             </Flex>
@@ -127,59 +120,48 @@ export const MovieDetailPage = ({
           </Stack>
         </Grid>
 
-        <Box
-          as="section"
-          borderColor="border"
-          borderRadius="md"
-          borderWidth="1px"
-          padding={{ base: 4, md: 5 }}
-        >
-          <Heading fontSize="lg" marginBottom={3}>
-            Your movie
-          </Heading>
-          {isAuthenticated ? (
-            <Grid
-              alignItems="start"
-              gap={{ base: 4, md: 6 }}
-              templateColumns={{
-                base: 'minmax(0, 1fr)',
-                md: 'repeat(2, minmax(0, 1fr))',
-              }}
-            >
-              <Stack gap={4}>
-                <MovieDetailLibraryControl tmdbId={movie.id} />
-                <Stack alignItems="flex-start" gap={2}>
-                  <FavoriteButton
-                    mediaType={MediaType.Movie}
-                    tmdbId={movie.id}
-                  />
-                </Stack>
-              </Stack>
-              <RatingInput
-                showAverage={false}
-                showReview
-                target={{ mediaType: MediaType.Movie, tmdbId: movie.id }}
-              />
-            </Grid>
-          ) : (
-            <Stack alignItems="flex-start" gap={3}>
-              <Text>
-                Log in or register to add this movie to your library, choose its
-                status, mark it as a favourite or rate it.
-              </Text>
-              <Flex gap={3} wrap="wrap">
-                <Button asChild>
-                  <Link href={`/login?callbackUrl=/movie/${movie.id}`}>
-                    Login
-                  </Link>
-                </Button>
-                <Button asChild variant="outline">
-                  <Link href="/register">Register</Link>
-                </Button>
-              </Flex>
-            </Stack>
-          )}
-        </Box>
+        {/* One row of actions, no panel around it: adding the movie is a single
+            button, and a saved movie carries the heart, the finished toggle,
+            and the X that removes it again. */}
+        {isAuthenticated ? (
+          <Box as="section">
+            <MediaDetailActions
+              addLabel="Add Movie"
+              mediaType={MediaType.Movie}
+              tmdbId={movie.id}
+            />
+          </Box>
+        ) : (
+          <Stack alignItems="flex-start" as="section" gap={3}>
+            <Text>
+              Log in or register to add this movie to your library, mark it as a
+              favourite or rate it.
+            </Text>
+            <Flex gap={3} wrap="wrap">
+              <Button asChild>
+                <Link href={`/login?callbackUrl=/movie/${movie.id}`}>
+                  Login
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/register">Register</Link>
+              </Button>
+            </Flex>
+          </Stack>
+        )}
+
+        {isAuthenticated ? (
+          <Box as="section">
+            <Heading fontSize="xl" marginBottom={3}>
+              Rating
+            </Heading>
+            <RatingInput
+              showAverage={false}
+              showReview
+              target={{ mediaType: MediaType.Movie, tmdbId: movie.id }}
+            />
+          </Box>
+        ) : null}
 
         <Box as="section">
           <Heading fontSize="xl" marginBottom={2}>

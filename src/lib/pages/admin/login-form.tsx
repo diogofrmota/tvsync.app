@@ -29,10 +29,10 @@ export const AdminLoginForm = () => {
     >
       <Stack gap={1}>
         <Heading as="h1" fontSize="2xl" fontWeight="600">
-          TvSync Admin
+          TvSync - Admin Access
         </Heading>
         <Text color="fg.muted" fontSize="sm">
-          Sign in with the dashboard credentials to manage TvSync.
+          Access to this space is restricted.
         </Text>
       </Stack>
       {state.error ? (
@@ -77,7 +77,7 @@ export const AdminLoginForm = () => {
               />
             </Field.Root>
             <Button loading={isPending} size="lg" type="submit">
-              Enter dashboard
+              Enter
             </Button>
           </Stack>
         </fieldset>
