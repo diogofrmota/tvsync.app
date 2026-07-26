@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@bprogress/next':
         specifier: ^3.2.12
-        version: 3.2.12(next@16.2.11(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+        version: 3.2.12(next@16.2.11(@playwright/test@1.62.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@chakra-ui/react':
         specifier: ^3.35.0
         version: 3.35.0(@emotion/react@11.14.0(@types/react@19.2.15)(react@19.2.6))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -31,10 +31,10 @@ importers:
         version: 1.14.3
       next:
         specifier: ^16.2.11
-        version: 16.2.11(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+        version: 16.2.11(@playwright/test@1.62.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       next-auth:
         specifier: ^4.24.15
-        version: 4.24.15(next@16.2.11(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+        version: 4.24.15(next@16.2.11(@playwright/test@1.62.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -63,6 +63,9 @@ importers:
       '@electric-sql/pglite':
         specifier: 0.5.4
         version: 0.5.4
+      '@playwright/test':
+        specifier: ^1.56.0
+        version: 1.62.0
       '@types/node':
         specifier: ^25.9.1
         version: 25.9.1
@@ -80,7 +83,7 @@ importers:
         version: 5.88.1(@types/node@25.9.1)(typescript@5.9.3)
       next-sitemap:
         specifier: ^4.2.3
-        version: 4.2.3(next@16.2.11(react-dom@19.2.6(react@19.2.6))(react@19.2.6))
+        version: 4.2.3(next@16.2.11(@playwright/test@1.62.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))
       node:
         specifier: runtime:24.16.0
         version: runtime:24.16.0
@@ -877,6 +880,11 @@ packages:
   '@panva/hkdf@1.2.1':
     resolution: {integrity: sha512-6oclG6Y3PiDFcoyk8srjLfVKyMfVCKJ27JwNPViuXziFpmdz+MZnZN/aKY0JGXgYuO/VghU0jcOAZgWXZ1Dmrw==}
 
+  '@playwright/test@1.62.0':
+    resolution: {integrity: sha512-9zOJ6ZQRAena31MpOH9VSzIz8Ou3YJ/wtY/eQm5T2uhfhG7/U3COrMS8xOtUrZrp9OgdmzEnIYODye3nY1VqzA==}
+    engines: {node: '>=20'}
+    hasBin: true
+
   '@stablelib/base64@1.0.1':
     resolution: {integrity: sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ==}
 
@@ -1504,6 +1512,11 @@ packages:
       react-dom:
         optional: true
 
+  fsevents@2.3.2:
+    resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==}
+    engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
+    os: [darwin]
+
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
@@ -2092,6 +2105,16 @@ packages:
   pify@3.0.0:
     resolution: {integrity: sha512-C3FsVNH1udSEX48gGX1xfvwTWfsYWj5U+8/uK15BGzIGrKoUpghX8hWZwa/OFnakBiiVNmBvemTJR5mcy7iPcg==}
     engines: {node: '>=4'}
+
+  playwright-core@1.62.0:
+    resolution: {integrity: sha512-nsNRyq0r2zsG8AcRHWknc9QRA5XCueC7gWMrs+Gx2tlZn9hcl8zudfh00lhJPY1DE7NmZ6bDsT9g2yey8mXljA==}
+    engines: {node: '>=20'}
+    hasBin: true
+
+  playwright@1.62.0:
+    resolution: {integrity: sha512-Z14dG305dgaLu6foB1TXQagFiW8JfSUIUaUuPaKQ6NtBPKF1P/qXcqfh6c6K/icPqdy37JmjbiBXf6JNg6Sylw==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   postal-mime@2.7.4:
     resolution: {integrity: sha512-0WdnFQYUrPGGTFu1uOqD2s7omwua8xaeYGdO6rb88oD5yJ/4pPHDA4sdWqfD8wQVfCny563n/HQS7zTFft+f/g==}
@@ -2693,11 +2716,11 @@ snapshots:
 
   '@bprogress/core@1.3.4': {}
 
-  '@bprogress/next@3.2.12(next@16.2.11(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+  '@bprogress/next@3.2.12(next@16.2.11(@playwright/test@1.62.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
     dependencies:
       '@bprogress/core': 1.3.4
       '@bprogress/react': 1.2.7(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      next: 16.2.11(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      next: 16.2.11(@playwright/test@1.62.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       react: 19.2.6
       react-dom: 19.2.6(react@19.2.6)
 
@@ -3169,6 +3192,10 @@ snapshots:
   '@pandacss/is-valid-prop@1.11.1': {}
 
   '@panva/hkdf@1.2.1': {}
+
+  '@playwright/test@1.62.0':
+    dependencies:
+      playwright: 1.62.0
 
   '@stablelib/base64@1.0.1': {}
 
@@ -4159,6 +4186,9 @@ snapshots:
       react: 19.2.6
       react-dom: 19.2.6(react@19.2.6)
 
+  fsevents@2.3.2:
+    optional: true
+
   fsevents@2.3.3:
     optional: true
 
@@ -4411,13 +4441,13 @@ snapshots:
 
   neo-async@2.6.2: {}
 
-  next-auth@4.24.15(next@16.2.11(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(react-dom@19.2.6(react@19.2.6))(react@19.2.6):
+  next-auth@4.24.15(next@16.2.11(@playwright/test@1.62.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(react-dom@19.2.6(react@19.2.6))(react@19.2.6):
     dependencies:
       '@babel/runtime': 7.29.7
       '@panva/hkdf': 1.2.1
       cookie: 0.7.2
       jose: 4.15.9
-      next: 16.2.11(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      next: 16.2.11(@playwright/test@1.62.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       oauth: 0.9.15
       openid-client: 5.7.1
       preact: 10.29.3
@@ -4426,20 +4456,20 @@ snapshots:
       react-dom: 19.2.6(react@19.2.6)
       uuid: 11.1.1
 
-  next-sitemap@4.2.3(next@16.2.11(react-dom@19.2.6(react@19.2.6))(react@19.2.6)):
+  next-sitemap@4.2.3(next@16.2.11(@playwright/test@1.62.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)):
     dependencies:
       '@corex/deepmerge': 4.0.43
       '@next/env': 13.5.11
       fast-glob: 3.3.3
       minimist: 1.2.8
-      next: 16.2.11(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      next: 16.2.11(@playwright/test@1.62.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
 
   next-themes@0.4.6(react-dom@19.2.6(react@19.2.6))(react@19.2.6):
     dependencies:
       react: 19.2.6
       react-dom: 19.2.6(react@19.2.6)
 
-  next@16.2.11(react-dom@19.2.6(react@19.2.6))(react@19.2.6):
+  next@16.2.11(@playwright/test@1.62.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6):
     dependencies:
       '@next/env': 16.2.11
       '@swc/helpers': 0.5.15
@@ -4458,6 +4488,7 @@ snapshots:
       '@next/swc-linux-x64-musl': 16.2.11
       '@next/swc-win32-arm64-msvc': 16.2.11
       '@next/swc-win32-x64-msvc': 16.2.11
+      '@playwright/test': 1.62.0
       sharp: 0.34.5
     transitivePeerDependencies:
       - '@babel/core'
@@ -4612,6 +4643,14 @@ snapshots:
   pify@2.3.0: {}
 
   pify@3.0.0: {}
+
+  playwright-core@1.62.0: {}
+
+  playwright@1.62.0:
+    dependencies:
+      playwright-core: 1.62.0
+    optionalDependencies:
+      fsevents: 2.3.2
 
   postal-mime@2.7.4: {}
 
