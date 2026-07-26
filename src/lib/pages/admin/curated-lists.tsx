@@ -8,6 +8,7 @@ import {
   createCuratedList,
   deleteCuratedList,
   removeTitleFromCuratedList,
+  saveCuratedListPlacement,
   searchCuratedListCandidates,
 } from 'lib/features/admin/actions';
 import { formatAdminDate } from 'lib/pages/admin/format';
@@ -15,20 +16,90 @@ import { AdminFeedback, AdminRow, AdminSection } from 'lib/pages/admin/panels';
 import type { AdminDashboardData } from 'lib/pages/admin/types';
 import type { AdminCuratedList } from 'lib/services/database/admin.server';
 import { MediaType } from 'lib/types';
-import { useActionState } from 'react';
+import { type ChangeEvent, useActionState, useState } from 'react';
 
 const initialAction: AdminActionState = {};
 const initialSearch: AdminCuratedSearchState = {};
 
+const checkboxStyle = { accentColor: '#fbbf24', height: '1rem', width: '1rem' };
+
 const mediaLabel = (mediaType: string) =>
   mediaType === MediaType.Movie ? 'Movie' : 'TV show';
 
+type CuratedPlacement = Pick<
+  AdminCuratedList,
+  'active' | 'showOnExplore' | 'showOnHome'
+>;
+
+const ToggleField = ({
+  checked,
+  label,
+  onChange,
+}: {
+  checked: boolean;
+  label: string;
+  onChange: (checked: boolean) => void;
+}) => (
+  <label
+    style={{
+      alignItems: 'center',
+      cursor: 'pointer',
+      display: 'flex',
+      fontSize: '0.8125rem',
+      gap: '0.375rem',
+    }}
+  >
+    <input
+      checked={checked}
+      onChange={(event: ChangeEvent<HTMLInputElement>) =>
+        onChange(event.currentTarget.checked)
+      }
+      style={checkboxStyle}
+      type="checkbox"
+    />
+    {label}
+  </label>
+);
+
+const move = (
+  lists: Array<AdminCuratedList>,
+  index: number,
+  offset: number
+) => {
+  const target = index + offset;
+
+  if (target < 0 || target >= lists.length) {
+    return lists;
+  }
+
+  const next = [...lists];
+  const [moved] = next.splice(index, 1);
+  next.splice(target, 0, moved);
+
+  return next.map((list, position) => ({ ...list, position }));
+};
+
 /**
- * One list: the titles already on it, each with its own remove button, and the
- * TMDB search that adds new ones. Search and add are separate submissions, so
- * the results stay on screen while several titles are added in a row.
+ * One list: where it is published, the titles already on it with their own
+ * remove buttons, and the TMDB search that adds new ones. Search and add are
+ * separate submissions, so the results stay on screen while several titles are
+ * added in a row.
  */
-const CuratedListCard = ({ list }: { list: AdminCuratedList }) => {
+const CuratedListCard = ({
+  index,
+  isFirst,
+  isLast,
+  list,
+  onMove,
+  onPlacementChange,
+}: {
+  index: number;
+  isFirst: boolean;
+  isLast: boolean;
+  list: AdminCuratedList;
+  onMove: (index: number, offset: number) => void;
+  onPlacementChange: (id: string, patch: Partial<CuratedPlacement>) => void;
+}) => {
   const [searchState, searchAction, isSearching] = useActionState(
     searchCuratedListCandidates,
     initialSearch
@@ -57,12 +128,13 @@ const CuratedListCard = ({ list }: { list: AdminCuratedList }) => {
       borderRadius="lg"
       borderWidth="1px"
       gap={4}
+      opacity={list.active ? 1 : 0.75}
       padding={4}
     >
       <Flex align="flex-start" gap={3} justify="space-between" wrap="wrap">
         <Stack gap={0} minWidth={0}>
           <Text fontSize="md" fontWeight="700">
-            {list.name}
+            {index + 1}. {list.name}
           </Text>
           <Text color="fg.muted" fontSize="xs" opacity={0.7}>
             {list.items.length} {list.items.length === 1 ? 'title' : 'titles'} ·
@@ -74,18 +146,65 @@ const CuratedListCard = ({ list }: { list: AdminCuratedList }) => {
             </Text>
           ) : null}
         </Stack>
-        <form action={deleteAction}>
-          <input name="listId" type="hidden" value={list.id} />
+        <Flex gap={2}>
           <Button
-            color="red.300"
-            loading={isDeleting}
+            aria-label={`Move ${list.name} up`}
+            disabled={isFirst}
+            onClick={() => onMove(index, -1)}
             size="xs"
-            type="submit"
+            type="button"
             variant="outline"
           >
-            Delete list
+            Up
           </Button>
-        </form>
+          <Button
+            aria-label={`Move ${list.name} down`}
+            disabled={isLast}
+            onClick={() => onMove(index, 1)}
+            size="xs"
+            type="button"
+            variant="outline"
+          >
+            Down
+          </Button>
+          <form action={deleteAction}>
+            <input name="listId" type="hidden" value={list.id} />
+            <Button
+              color="red.300"
+              loading={isDeleting}
+              size="xs"
+              type="submit"
+              variant="outline"
+            >
+              Delete list
+            </Button>
+          </form>
+        </Flex>
+      </Flex>
+
+      <Flex align="center" gap={4} wrap="wrap">
+        <ToggleField
+          checked={list.active}
+          label="Published"
+          onChange={(active) => onPlacementChange(list.id, { active })}
+        />
+        <ToggleField
+          checked={list.showOnHome}
+          label="Home"
+          onChange={(showOnHome) => onPlacementChange(list.id, { showOnHome })}
+        />
+        <ToggleField
+          checked={list.showOnExplore}
+          label="Explore"
+          onChange={(showOnExplore) =>
+            onPlacementChange(list.id, { showOnExplore })
+          }
+        />
+        {list.items.length === 0 ? (
+          <Text color="fg.muted" fontSize="xs" opacity={0.7}>
+            An empty list is never shown, whatever is ticked here.
+          </Text>
+        ) : null}
       </Flex>
 
       {list.items.length ? (
@@ -195,7 +314,9 @@ const CuratedListCard = ({ list }: { list: AdminCuratedList }) => {
 /**
  * Operator-curated collections. These are hand-picked and global — unrelated to
  * the per-user personalized lists the product removed — and every mutation
- * re-verifies the admin session before it touches a row.
+ * re-verifies the admin session before it touches a row. Placement is saved for
+ * the whole table at once, so Home and Explore can never observe half a
+ * reordering.
  */
 export const AdminCuratedLists = ({
   curatedLists,
@@ -206,10 +327,20 @@ export const AdminCuratedLists = ({
     createCuratedList,
     initialAction
   );
+  const [placementState, placementAction, isSavingPlacement] = useActionState(
+    saveCuratedListPlacement,
+    initialAction
+  );
+  const [lists, setLists] = useState(curatedLists.data ?? []);
+
+  const updatePlacement = (id: string, patch: Partial<CuratedPlacement>) =>
+    setLists((current) =>
+      current.map((list) => (list.id === id ? { ...list, ...patch } : list))
+    );
 
   return (
     <AdminSection
-      description="Build a collection by hand: name the list, then search TMDB for movies and TV shows and add them one at a time."
+      description="Build a collection by hand: name the list, search TMDB for movies and TV shows and add them one at a time, then publish it to Home, Explore, or both."
       title="Custom lists"
     >
       <form action={createAction}>
@@ -249,17 +380,52 @@ export const AdminCuratedLists = ({
       <AdminFeedback error={createState.error} success={createState.success} />
       <AdminFeedback error={curatedLists.error ?? undefined} />
 
-      {curatedLists.data?.length ? (
+      {lists.length ? (
+        // The cards carry their own forms (search, add, remove, delete), so the
+        // placement payload sits in a form of its own rather than wrapping them
+        // — a form inside a form is not valid HTML.
         <Stack gap={3}>
-          {curatedLists.data.map((list) => (
-            <CuratedListCard key={list.id} list={list} />
+          {lists.map((list, index) => (
+            <CuratedListCard
+              index={index}
+              isFirst={index === 0}
+              isLast={index === lists.length - 1}
+              key={list.id}
+              list={list}
+              onMove={(from, offset) =>
+                setLists((current) => move(current, from, offset))
+              }
+              onPlacementChange={updatePlacement}
+            />
           ))}
+          <form action={placementAction}>
+            <input
+              name="placements"
+              type="hidden"
+              value={JSON.stringify(
+                lists.map((list, index) => ({
+                  active: list.active,
+                  id: list.id,
+                  position: index,
+                  showOnExplore: list.showOnExplore,
+                  showOnHome: list.showOnHome,
+                }))
+              )}
+            />
+            <Button loading={isSavingPlacement} type="submit">
+              Save placement
+            </Button>
+          </form>
         </Stack>
       ) : (
         <Text color="fg.muted" fontSize="sm" opacity={0.7}>
           No custom lists yet.
         </Text>
       )}
+      <AdminFeedback
+        error={placementState.error}
+        success={placementState.success}
+      />
     </AdminSection>
   );
 };

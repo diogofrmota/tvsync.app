@@ -9,6 +9,11 @@ import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 
 import { formatAdminChange } from '../src/lib/pages/admin/format';
 import {
+  type CuratedListRail,
+  curatedListHref,
+  selectCuratedListRails,
+} from '../src/lib/pages/media/curated-lists';
+import {
   DEFAULT_DISCOVERY_LIST_SETTINGS,
   type DiscoveryListSetting,
   discoveryListCacheTag,
@@ -28,6 +33,8 @@ import {
   ADMIN_DELETE_CURATED_LIST_QUERY,
   ADMIN_REMOVE_CURATED_LIST_ITEM_QUERY,
   ADMIN_SELECT_CURATED_LISTS_QUERY,
+  ADMIN_UPDATE_CURATED_LIST_PLACEMENT_QUERY,
+  SELECT_PUBLIC_CURATED_LISTS_QUERY,
 } from '../src/lib/services/database/admin-curated-list-queries';
 import {
   ADMIN_ACCOUNT_STATS_QUERY,
@@ -45,6 +52,7 @@ import {
   SELECT_DISCOVERY_LIST_SETTINGS_QUERY,
   UPSERT_DISCOVERY_LIST_SETTING_QUERY,
 } from '../src/lib/services/database/discovery-list-queries';
+import { MediaType } from '../src/lib/types';
 
 const migrationNames = [
   '0001_initial_tracking_schema.sql',
@@ -226,6 +234,39 @@ test('discovery list selection honours activation, surface, and order', () => {
     discoveryListCacheTag('popular_movies'),
     'discovery-list:popular_movies'
   );
+});
+
+test('curated list selection honours publication, surface, and order', () => {
+  const rail = (overrides: Partial<CuratedListRail>): CuratedListRail => ({
+    description: '',
+    id: 'list-1',
+    items: [
+      { id: 1, mediaType: MediaType.Movie, posterPath: null, title: 'A' },
+    ],
+    name: 'List',
+    position: 0,
+    showOnExplore: true,
+    showOnHome: true,
+    ...overrides,
+  });
+  const rails = [
+    rail({ id: 'second', name: 'Second', position: 1 }),
+    rail({ id: 'first', name: 'First', position: 0 }),
+    rail({ id: 'explore-only', position: 2, showOnHome: false }),
+    // An empty list is never shown, whatever its placement says, so publishing
+    // one before filling it cannot leave a bare heading on Home.
+    rail({ id: 'empty', items: [], position: 3 }),
+  ];
+
+  assert.deepEqual(
+    selectCuratedListRails(rails, 'home').map((entry) => entry.id),
+    ['first', 'second']
+  );
+  assert.deepEqual(
+    selectCuratedListRails(rails, 'explore').map((entry) => entry.id),
+    ['first', 'second', 'explore-only']
+  );
+  assert.equal(curatedListHref('abc'), '/lists/abc');
 });
 
 test('every managed "See All" route maps back to the list that links to it', () => {
@@ -457,6 +498,38 @@ test('admin schema supports moderation, list configuration, and an audit trail',
           ])
         );
 
+        // A new list is unpublished, so it is built before anyone sees it.
+        assert.equal(
+          (await getRows(db, SELECT_PUBLIC_CURATED_LISTS_QUERY)).length,
+          0
+        );
+
+        await db.query(ADMIN_UPDATE_CURATED_LIST_PLACEMENT_QUERY, [
+          listId,
+          true,
+          true,
+          false,
+          0,
+        ]);
+
+        const published = await getRows<{
+          items: Array<{ media_type: string }>;
+          name: string;
+          show_on_explore: boolean;
+          show_on_home: boolean;
+        }>(db, SELECT_PUBLIC_CURATED_LISTS_QUERY);
+
+        assert.equal(published.length, 1);
+        assert.equal(published.at(0)?.name, 'Staff Picks');
+        assert.equal(published.at(0)?.show_on_home, true);
+        assert.equal(published.at(0)?.show_on_explore, false);
+        // A curated rail renders straight from these rows, so one list can hold
+        // both movies and TV shows without a single TMDB request.
+        assert.deepEqual(
+          published.at(0)?.items.map((item) => item.media_type),
+          ['movie', 'tv']
+        );
+
         assert.equal(
           (
             await getRows(db, ADMIN_REMOVE_CURATED_LIST_ITEM_QUERY, [
@@ -650,6 +723,7 @@ test('the dashboard opens closed and every mutation re-checks the session', () =
     'refreshAdminStats',
     'searchCuratedListCandidates',
     'createCuratedList',
+    'saveCuratedListPlacement',
     'deleteCuratedList',
     'addTitleToCuratedList',
     'removeTitleFromCuratedList',
@@ -726,6 +800,45 @@ test('custom lists are built from an admin-side TMDB search', () => {
   assert.match(actions, /getMovieListServer\(/);
   assert.match(actions, /getTVShowSearchResultList\(/);
   assert.doesNotMatch(panel, /TMDB_API_KEY|useTmdbSWR|api\/tmdb/);
+});
+
+test('a custom list is published to Home and Explore from the dashboard', () => {
+  const panel = read('src/lib/pages/admin/curated-lists.tsx');
+  const actions = read('src/lib/features/admin/actions.ts');
+  const home = read('src/lib/pages/home/index.tsx');
+  const explore = read('src/lib/pages/explore/discover.server.tsx');
+  const rail = read('src/lib/components/shared/CuratedListRail.tsx');
+  const route = read('src/app/lists/[id]/page.tsx');
+  const service = read('src/lib/services/database/curated-lists.server.ts');
+
+  // Placement is Published/Home/Explore plus an explicit order, saved for the
+  // whole table in one payload so a reorder is never observed half-applied.
+  assert.match(panel, /label="Published"/);
+  assert.match(panel, /label="Home"/);
+  assert.match(panel, /label="Explore"/);
+  assert.match(panel, /Save placement/);
+  assert.match(actions, /export const saveCuratedListPlacement/);
+  assert.match(actions, /UUID_PATTERN\.test\(id\)/);
+
+  // Both public surfaces render curated rails through the shared MediaRail.
+  assert.match(home, /<CuratedListRail/);
+  assert.match(explore, /<CuratedListRail/);
+  assert.match(rail, /<MediaRail/);
+  assert.match(rail, /curatedListHref\(rail\.id\)/);
+
+  // "See All" opens the complete list, and only a published list resolves.
+  assert.match(route, /findPublicCuratedList\(id\)/);
+  assert.match(route, /notFound\(\)/);
+  assert.match(service, /^import 'server-only';/m);
+  assert.match(
+    read('src/lib/services/database/admin-curated-list-queries.ts'),
+    /where l\.active/,
+    'the public read returns published lists only'
+  );
+  // The whole audience shares one cached read, busted by every mutation.
+  assert.match(service, /CURATED_LISTS_REVALIDATE_SECONDS = 300/);
+  assert.match(service, /tags: \[CURATED_LISTS_TAG\]/);
+  assert.match(service, /cachedPublicCuratedLists\(\)\.catch/);
 });
 
 test('banned accounts cannot sign in through either provider', () => {

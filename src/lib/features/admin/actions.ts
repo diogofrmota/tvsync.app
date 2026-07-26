@@ -14,6 +14,7 @@ import {
 } from 'lib/services/admin/session.server';
 import { checkRequestAuthRateLimit } from 'lib/services/auth/rate-limit.server';
 import {
+  type AdminCuratedListPlacementInput,
   type AdminUserRecord,
   addAdminCuratedListItem,
   banAdminUser,
@@ -26,6 +27,7 @@ import {
   refreshDiscoveryList,
   removeAdminCuratedListItem,
   revalidateAdminOverviewStats,
+  saveAdminCuratedListPlacement,
   saveDiscoveryListSettings,
   unbanAdminUser,
 } from 'lib/services/database/admin.server';
@@ -438,6 +440,10 @@ export const refreshAdminStats = async (
 
 const CURATED_LIST_SEARCH_LIMIT = 12;
 
+/** List ids come back to the server from a browser form, so they are shaped. */
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export type AdminCuratedSearchResult = {
   mediaType: TrackableMediaType;
   posterPath: string | null;
@@ -560,6 +566,88 @@ export const createCuratedList = async (
   });
 
   return { success: `"${data.name}" was created.` };
+};
+
+/**
+ * Publishing is the whole table in one payload, exactly like the discovery
+ * lists: a reorder is saved atomically, and this input arrives from a browser
+ * so every id is validated and every flag is coerced here as well.
+ */
+const parseCuratedPlacements = (
+  value: string
+): Array<AdminCuratedListPlacementInput> | null => {
+  try {
+    const parsed: unknown = JSON.parse(value);
+
+    if (!Array.isArray(parsed)) {
+      return null;
+    }
+
+    return parsed.flatMap((entry, index) => {
+      if (!(entry && typeof entry === 'object')) {
+        return [];
+      }
+
+      const candidate = entry as Record<string, unknown>;
+      const id = String(candidate.id ?? '');
+
+      if (!UUID_PATTERN.test(id)) {
+        return [];
+      }
+
+      return [
+        {
+          active: candidate.active === true,
+          id,
+          position: Number.isFinite(Number(candidate.position))
+            ? Math.max(0, Math.trunc(Number(candidate.position)))
+            : index,
+          showOnExplore: candidate.showOnExplore === true,
+          showOnHome: candidate.showOnHome === true,
+        },
+      ];
+    });
+  } catch {
+    return null;
+  }
+};
+
+export const saveCuratedListPlacement = async (
+  _previousState: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> => {
+  const authorized = await authorizeAdmin();
+
+  if (!authorized) {
+    return { error: SESSION_EXPIRED_MESSAGE };
+  }
+
+  const placements = parseCuratedPlacements(
+    readTextField(formData, 'placements')
+  );
+
+  if (!placements?.length) {
+    return { error: 'The list placement could not be read.' };
+  }
+
+  const { error } = await saveAdminCuratedListPlacement(placements);
+
+  if (error) {
+    return { error };
+  }
+
+  const published = placements.filter((placement) => placement.active).length;
+
+  await audit({
+    action: 'curated_list.placement',
+    actor: authorized.session.user,
+    details: `${published} of ${placements.length} lists published`,
+    ipDigest: authorized.ipDigest,
+  });
+
+  return {
+    success: `${published} of ${placements.length} lists are published to Home and Explore.`,
+  };
 };
 
 export const deleteCuratedList = async (

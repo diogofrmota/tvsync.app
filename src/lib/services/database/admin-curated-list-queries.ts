@@ -26,6 +26,10 @@ export const ADMIN_SELECT_CURATED_LISTS_QUERY = `
     l.id,
     l.name,
     l.description,
+    l.active,
+    l.show_on_home,
+    l.show_on_explore,
+    l.position,
     l.created_at,
     coalesce(
       (
@@ -44,8 +48,58 @@ export const ADMIN_SELECT_CURATED_LISTS_QUERY = `
       '[]'::json
     ) as items
   from admin_curated_lists l
-  order by l.created_at desc
+  order by l.position asc, l.created_at desc
   limit $1
+`;
+
+/**
+ * The public read behind Home and Explore: only published lists, only the
+ * columns a rail renders, and the titles in their stored order. Everything a
+ * rail needs was captured when the admin added the entry, so showing a curated
+ * list costs no TMDB request.
+ */
+export const SELECT_PUBLIC_CURATED_LISTS_QUERY = `
+  select
+    l.id,
+    l.name,
+    l.description,
+    l.show_on_home,
+    l.show_on_explore,
+    l.position,
+    coalesce(
+      (
+        select json_agg(
+          json_build_object(
+            'tmdb_id', i.tmdb_id,
+            'media_type', i.media_type,
+            'title', i.title,
+            'poster_path', i.poster_path
+          )
+          order by i.position asc, i.created_at asc
+        )
+        from admin_curated_list_items i
+        where i.list_id = l.id
+      ),
+      '[]'::json
+    ) as items
+  from admin_curated_lists l
+  where l.active
+  order by l.position asc, l.created_at desc
+`;
+
+/**
+ * Placement is saved for the whole table at once so a reorder can never be
+ * observed half-applied by Home or Explore.
+ */
+export const ADMIN_UPDATE_CURATED_LIST_PLACEMENT_QUERY = `
+  update admin_curated_lists
+  set
+    active = $2,
+    show_on_home = $3,
+    show_on_explore = $4,
+    position = $5,
+    updated_at = now()
+  where id = $1
 `;
 
 /**

@@ -4,17 +4,33 @@
 -- These are global editorial lists owned by the operator, not the per-user
 -- personalized lists that were removed from the product; they never reference
 -- `profiles` and are managed only from the credential-gated dashboard.
+--
+-- `active`, `show_on_home`, and `show_on_explore` are the same placement model
+-- the shared discovery lists use, so a curated list is published to the public
+-- surfaces from the dashboard rather than by a deploy. A new list starts
+-- unpublished: it is built first and shown once it is ready.
 create table if not exists admin_curated_lists (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   description text not null default '',
+  active boolean not null default false,
+  show_on_home boolean not null default false,
+  show_on_explore boolean not null default false,
+  position integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint admin_curated_lists_name_check
     check (length(btrim(name)) between 1 and 80),
   constraint admin_curated_lists_description_check
-    check (length(description) <= 280)
+    check (length(description) <= 280),
+  constraint admin_curated_lists_position_check
+    check (position >= 0)
 );
+
+-- Home and Explore read only the published lists, in their configured order.
+create index if not exists admin_curated_lists_published_idx
+  on admin_curated_lists (position, created_at)
+  where active;
 
 -- One list name overall, compared case-insensitively, so "Staff Picks" and
 -- "staff picks" cannot both exist.
@@ -53,3 +69,6 @@ comment on table admin_curated_list_items is
 
 comment on column admin_curated_list_items.title is
   'The TMDB title captured when the item was added, so the dashboard can list the entry without a TMDB call per row.';
+
+comment on column admin_curated_lists.active is
+  'Publishes the list to the public surfaces. Home/Explore placement is chosen by show_on_home and show_on_explore.';

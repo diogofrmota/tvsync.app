@@ -18,6 +18,7 @@ import {
   ADMIN_REMOVE_CURATED_LIST_ITEM_QUERY,
   ADMIN_SELECT_CURATED_LISTS_QUERY,
   ADMIN_TOUCH_CURATED_LIST_QUERY,
+  ADMIN_UPDATE_CURATED_LIST_PLACEMENT_QUERY,
 } from './admin-curated-list-queries';
 import {
   ADMIN_ACCOUNT_STATS_QUERY,
@@ -32,6 +33,7 @@ import {
 } from './admin-queries';
 import { revalidateSessionVersion } from './auth.server';
 import { getDatabaseAvailabilityIssue, getDatabaseSql } from './core.server';
+import { revalidateCuratedLists } from './curated-lists.server';
 import {
   BUMP_ALL_DISCOVERY_LIST_CACHE_EPOCHS_QUERY,
   BUMP_DISCOVERY_LIST_CACHE_EPOCH_QUERY,
@@ -354,12 +356,22 @@ export type AdminCuratedListItem = {
 };
 
 export type AdminCuratedList = {
+  active: boolean;
   createdAt: string | null;
   description: string;
   id: string;
   items: Array<AdminCuratedListItem>;
   name: string;
+  position: number;
+  showOnExplore: boolean;
+  showOnHome: boolean;
 };
+
+/** The placement fields the dashboard saves for the whole table at once. */
+export type AdminCuratedListPlacementInput = Pick<
+  AdminCuratedList,
+  'active' | 'id' | 'position' | 'showOnExplore' | 'showOnHome'
+>;
 
 export type AdminCuratedListItemInput = AdminCuratedListItem & {
   listId: string;
@@ -400,13 +412,44 @@ export const listAdminCuratedLists = (limit: number) =>
 
     return rows.map(
       (row): AdminCuratedList => ({
+        active: row.active === true,
         createdAt: toIsoString(row.created_at),
         description: toText(row.description),
         id: toText(row.id),
         items: toCuratedItem(row.items),
         name: toText(row.name),
+        position: toCount(row.position),
+        showOnExplore: row.show_on_explore === true,
+        showOnHome: row.show_on_home === true,
       })
     );
+  });
+
+/**
+ * Saves every list's placement in one transaction so a reorder can never be
+ * observed half-applied by Home or Explore, then busts the shared public cache.
+ */
+export const saveAdminCuratedListPlacement = (
+  placements: ReadonlyArray<AdminCuratedListPlacementInput>
+) =>
+  loadAdminData(async () => {
+    const sql = getDatabaseSql();
+
+    await sql.transaction((tx) =>
+      placements.map((placement, index) =>
+        tx.query(ADMIN_UPDATE_CURATED_LIST_PLACEMENT_QUERY, [
+          placement.id,
+          placement.active,
+          placement.showOnHome,
+          placement.showOnExplore,
+          Math.max(0, Math.trunc(placement.position) || index),
+        ])
+      )
+    );
+
+    revalidateCuratedLists();
+
+    return placements.length;
   });
 
 export const createAdminCuratedList = (input: {
@@ -431,6 +474,10 @@ export const deleteAdminCuratedList = (listId: string) =>
       listId,
     ])) as Array<Record<string, unknown>>;
     const row = rows.at(0);
+
+    if (row) {
+      revalidateCuratedLists();
+    }
 
     return row ? { id: toText(row.id), name: toText(row.name) } : null;
   });
@@ -459,6 +506,10 @@ export const addAdminCuratedListItem = (input: AdminCuratedListItemInput) =>
       input.posterPath ?? '',
     ])) as Array<unknown>;
 
+    if (rows.length > 0) {
+      revalidateCuratedLists();
+    }
+
     return { added: rows.length > 0, listName: toText(list.name) };
   });
 
@@ -474,6 +525,10 @@ export const removeAdminCuratedListItem = (input: {
       input.tmdbId,
       input.mediaType,
     ])) as Array<unknown>;
+
+    if (rows.length > 0) {
+      revalidateCuratedLists();
+    }
 
     return rows.length > 0;
   });

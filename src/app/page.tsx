@@ -1,5 +1,8 @@
 import { Home } from 'lib/pages/home';
-import { loadHomeDiscoverySections } from 'lib/pages/home/load-home-discovery.server';
+import {
+  loadHomeCuratedRails,
+  loadHomeDiscoverySections,
+} from 'lib/pages/home/load-home-discovery.server';
 import { getAuthSession } from 'lib/services/auth/session.server';
 import type { Metadata, Route } from 'next';
 import { redirect } from 'next/navigation';
@@ -24,5 +27,12 @@ export default async function Page() {
     redirect('/movies' as Route);
   }
 
-  return <Home discoverySections={await loadHomeDiscoverySections()} />;
+  const [curatedRails, discoverySections] = await Promise.all([
+    loadHomeCuratedRails(),
+    loadHomeDiscoverySections(),
+  ]);
+
+  return (
+    <Home curatedRails={curatedRails} discoverySections={discoverySections} />
+  );
 }
