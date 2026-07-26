@@ -8,6 +8,7 @@ import {
   listRecentBans,
   listRecentSignups,
   loadAdminOverviewStats,
+  loadAdminPrivacySummary,
 } from 'lib/services/database/admin.server';
 import { loadDiscoveryListSettings } from 'lib/services/database/discovery-lists.server';
 
@@ -87,15 +88,15 @@ export const AdminPage = async () => {
     );
   }
 
-  const [stats, recentBans, recentSignups, auditLog, lists] = await Promise.all(
-    [
+  const [stats, recentBans, recentSignups, auditLog, lists, privacy] =
+    await Promise.all([
       loadAdminOverviewStats(),
       listRecentBans(RECENT_RECORD_LIMIT),
       listRecentSignups(RECENT_RECORD_LIMIT),
       listAdminAuditLog(AUDIT_LOG_LIMIT),
       loadDiscoveryListSettings(),
-    ]
-  );
+      loadAdminPrivacySummary(),
+    ]);
 
   return (
     <AdminShell>
@@ -105,6 +106,7 @@ export const AdminPage = async () => {
           auditLog,
           health: readHealth(),
           lists,
+          privacy,
           recentBans,
           recentSignups,
           stats,

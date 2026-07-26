@@ -1,16 +1,10 @@
 'use client';
 
-import {
-  Avatar,
-  Badge,
-  Button,
-  Flex,
-  Heading,
-  Stack,
-  Text,
-} from '@chakra-ui/react';
+import { Avatar, Badge, Button, Flex, Stack, Text } from '@chakra-ui/react';
+import { SectionHeading } from 'lib/components/shared/Section';
 import type { MediaReview } from 'lib/services/tmdb/reviews';
-import { useState } from 'react';
+import type Link from 'next/link';
+import { type ComponentProps, useState } from 'react';
 
 /** Reviews longer than this are clamped until the reader expands them. */
 const COLLAPSED_CHARACTER_COUNT = 480;
@@ -101,20 +95,43 @@ const ReviewCard = ({ review }: { review: MediaReview }) => {
  * Member reviews published on TMDB (`/movie/{id}/reviews` and
  * `/tv/{id}/reviews`). They are other people's write-ups, kept separate from
  * the viewer's own rating and review in the personal panel above.
+ *
+ * A detail page previews the first `VISIBLE_REVIEW_COUNT` reviews and puts
+ * "See All" on the section title line — the same action every other section
+ * uses — which opens the full list on its own page. That page renders the same
+ * component with `showAll`, so it carries every review and no further action.
  */
-export const MediaReviews = ({ reviews }: { reviews: Array<MediaReview> }) => (
-  <Stack as="section" gap={4}>
-    <Heading as="h2" fontSize="xl">
-      Reviews
-    </Heading>
-    {reviews.length > 0 ? (
-      <Stack gap={4}>
-        {reviews.slice(0, VISIBLE_REVIEW_COUNT).map((review) => (
-          <ReviewCard key={review.id} review={review} />
-        ))}
-      </Stack>
-    ) : (
-      <Text color="fg.muted">No TMDB member has reviewed this title yet.</Text>
-    )}
-  </Stack>
-);
+export const MediaReviews = ({
+  reviews,
+  seeAllHref,
+  showAll = false,
+}: {
+  reviews: Array<MediaReview>;
+  seeAllHref?: ComponentProps<typeof Link>['href'];
+  showAll?: boolean;
+}) => {
+  const visibleReviews = showAll
+    ? reviews
+    : reviews.slice(0, VISIBLE_REVIEW_COUNT);
+  const hasMore = !showAll && reviews.length > visibleReviews.length;
+
+  return (
+    <Stack as="section" gap={4}>
+      <SectionHeading
+        seeAllHref={hasMore && seeAllHref ? seeAllHref : undefined}
+        title="Reviews"
+      />
+      {visibleReviews.length > 0 ? (
+        <Stack gap={4}>
+          {visibleReviews.map((review) => (
+            <ReviewCard key={review.id} review={review} />
+          ))}
+        </Stack>
+      ) : (
+        <Text color="fg.muted">
+          No TMDB member has reviewed this title yet.
+        </Text>
+      )}
+    </Stack>
+  );
+};

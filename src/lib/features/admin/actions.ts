@@ -26,6 +26,11 @@ import {
   unbanAdminUser,
 } from 'lib/services/database/admin.server';
 import { purgeExpiredAuthRecords } from 'lib/services/database/auth.server';
+import {
+  deleteAccountForPrivacyRequest,
+  exportPersonalDataForPrivacyRequest,
+  findAccountForPrivacyRequest,
+} from 'lib/services/database/privacy.server';
 import { redirect } from 'next/navigation';
 
 export type AdminLoginState = {
@@ -422,4 +427,118 @@ export const refreshAdminStats = async (
   revalidateAdminOverviewStats();
 
   return { success: 'Statistics recalculated.' };
+};
+
+export type AdminDataRequestState = AdminActionState & {
+  filename?: string;
+  json?: string;
+};
+
+/**
+ * Answers a GDPR Art. 15 / CCPA "right to know" request that arrived out of
+ * band, for a user who cannot reach Edit Profile themselves. The export is the
+ * same data the account can download for itself, and the request is audited by
+ * the username it named — never by the exported contents.
+ */
+export const exportUserDataForRequest = async (
+  _previousState: AdminDataRequestState,
+  formData: FormData
+): Promise<AdminDataRequestState> => {
+  const authorized = await authorizeAdmin();
+
+  if (!authorized) {
+    return { error: SESSION_EXPIRED_MESSAGE };
+  }
+
+  const identifier = normalizeIdentifier(readTextField(formData, 'identifier'));
+
+  if (!identifier) {
+    return { error: 'Enter the email address or username to export.' };
+  }
+
+  try {
+    const account = await findAccountForPrivacyRequest(identifier);
+
+    if (!account) {
+      return { error: `No account matches "${identifier}".` };
+    }
+
+    const data = await exportPersonalDataForPrivacyRequest(account.userId);
+
+    await audit({
+      action: 'privacy.export',
+      actor: authorized.session.user,
+      details: 'Data access request fulfilled',
+      ipDigest: authorized.ipDigest,
+      target: account.username,
+    });
+
+    return {
+      filename: `tvsync-data-${account.username}-${new Date().toISOString().slice(0, 10)}.json`,
+      json: JSON.stringify(data, null, 2),
+      success: `Export ready for @${account.username}.`,
+    };
+  } catch {
+    return { error: 'The export could not be produced.' };
+  }
+};
+
+/**
+ * Erasure (GDPR Art. 17 / CCPA "right to delete") for the same out-of-band
+ * case. The username has to be typed back exactly, because this is the one
+ * admin action nothing can undo.
+ */
+export const eraseUserAccountForRequest = async (
+  _previousState: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> => {
+  const authorized = await authorizeAdmin();
+
+  if (!authorized) {
+    return { error: SESSION_EXPIRED_MESSAGE };
+  }
+
+  const identifier = normalizeIdentifier(readTextField(formData, 'identifier'));
+  const confirmation = normalizeIdentifier(
+    readTextField(formData, 'confirmation')
+  );
+
+  if (!identifier) {
+    return { error: 'Enter the email address or username to erase.' };
+  }
+
+  try {
+    const account = await findAccountForPrivacyRequest(identifier);
+
+    if (!account) {
+      return { error: `No account matches "${identifier}".` };
+    }
+
+    if (confirmation !== account.username.toLowerCase()) {
+      return {
+        error: `Type ${account.username} in the confirmation field to erase this account.`,
+      };
+    }
+
+    const erased = await deleteAccountForPrivacyRequest(account.userId);
+
+    if (!erased) {
+      return { error: 'The account was already erased.' };
+    }
+
+    await audit({
+      action: 'privacy.erase',
+      actor: authorized.session.user,
+      details: 'Erasure request fulfilled',
+      ipDigest: authorized.ipDigest,
+      target: erased.username,
+    });
+    revalidateAdminOverviewStats();
+
+    return {
+      success: `@${erased.username} and all personal data linked to that account were erased.`,
+    };
+  } catch {
+    return { error: 'The account could not be erased.' };
+  }
 };

@@ -153,7 +153,7 @@ export const ProfileConnectionsPage = ({
                   <ProfileStatRail
                     cards={[
                       {
-                        label: 'Movies Watched',
+                        label: 'Movies Finished',
                         value: comparison.moviesWatched,
                       },
                       {
@@ -165,7 +165,7 @@ export const ProfileConnectionsPage = ({
                         value: formatWatchTime(comparison.movieMinutesWatched),
                       },
                       {
-                        label: 'TV Shows Watched',
+                        label: 'TV Shows Finished',
                         value: comparison.tvShowsWatched,
                       },
                       {

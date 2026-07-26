@@ -9,6 +9,7 @@ import {
   Stack,
   Text,
 } from '@chakra-ui/react';
+import { MediaCrewSection } from 'lib/components/shared/MediaCrewSection';
 import { MediaRatingPanel } from 'lib/components/shared/MediaRating';
 import { MediaReviews } from 'lib/components/shared/MediaReviews';
 import { PageShell } from 'lib/components/shared/PageShell';
@@ -20,19 +21,17 @@ import { TvCastsWrapper } from 'lib/pages/tv/detail/components/casts-wrapper';
 import { EpisodeTracker } from 'lib/pages/tv/detail/components/episode-tracker';
 import { TvTrailer } from 'lib/pages/tv/detail/components/trailer';
 import type { ImdbRating } from 'lib/services/omdb/types';
-import type { MediaCertification } from 'lib/services/tmdb/certification';
 import type { MediaReview } from 'lib/services/tmdb/reviews';
 import type { TVCreditsResponse } from 'lib/services/tmdb/tv/credits/types';
 import type { TvShowDetail } from 'lib/services/tmdb/tv/detail/types';
 import type { TvVideo } from 'lib/services/tmdb/tv/videos/types';
 import { MediaType } from 'lib/types';
+import type { Route } from 'next';
 import Link from 'next/link';
 
 export type TvShowDetailPageProps = {
-  certification: MediaCertification | null;
   creditsData: TVCreditsResponse;
   data: TvShowDetail;
-  imdbId: string | null;
   imdbRating: ImdbRating | null;
   isAuthenticated: boolean;
   reviews: Array<MediaReview>;
@@ -46,16 +45,44 @@ const getReleaseYear = (date: string) => {
 };
 
 const TvShowDetailPage = ({
-  certification,
   creditsData: credits,
   data: show,
-  imdbId,
   imdbRating,
   isAuthenticated,
   reviews,
   trailer,
 }: TvShowDetailPageProps) => {
   const title = show.name || show.original_name || 'Untitled TV show';
+  // A show's credits list directors episode by episode, so the same person can
+  // appear repeatedly; many shows credit no director at series level at all,
+  // and for those the creators are the equivalent name to lead the credits.
+  const directors = Array.from(
+    new Map(
+      credits.crew
+        .filter((member) => member.job === 'Director' && member.name.trim())
+        .map((member) => [
+          member.id,
+          {
+            id: member.id,
+            name: member.name,
+            profilePath: member.profile_path,
+            role: 'Director',
+          },
+        ])
+    ).values()
+  );
+  const hasDirectors = directors.length > 0;
+  const crewTitle = hasDirectors ? 'Director' : 'Creator';
+  const crew = hasDirectors
+    ? directors
+    : show.created_by
+        .filter((creator) => creator.name.trim())
+        .map((creator) => ({
+          id: creator.id,
+          name: creator.name,
+          profilePath: creator.profile_path,
+          role: 'Creator',
+        }));
 
   return (
     <PageShell>
@@ -78,6 +105,15 @@ const TvShowDetailPage = ({
             <Heading as="h1" fontSize={{ base: 'xl', md: '3xl' }}>
               {title}
             </Heading>
+
+            {/* The score sits directly under the title, on its own line, so it
+                reads as part of the heading rather than as one more fact. */}
+            <MediaRatingPanel
+              imdbRating={imdbRating}
+              voteAverage={show.vote_average}
+              voteCount={show.vote_count}
+            />
+
             <Flex gap={2} wrap="wrap">
               <Badge variant="outline">
                 Release year: {getReleaseYear(show.first_air_date)}
@@ -110,14 +146,6 @@ const TvShowDetailPage = ({
             ) : (
               <Text color="fg.muted">Genres unavailable</Text>
             )}
-
-            <MediaRatingPanel
-              certification={certification}
-              imdbId={imdbId}
-              imdbRating={imdbRating}
-              voteAverage={show.vote_average}
-              voteCount={show.vote_count}
-            />
           </Stack>
         </Grid>
 
@@ -134,7 +162,7 @@ const TvShowDetailPage = ({
           padding={{ base: 4, md: 5 }}
         >
           <Heading fontSize="lg" marginBottom={3}>
-            Your TV show
+            Your TV Show
           </Heading>
           {isAuthenticated ? (
             <Grid
@@ -158,8 +186,8 @@ const TvShowDetailPage = ({
           ) : (
             <Stack alignItems="flex-start" gap={3}>
               <Text>
-                Log in or register to add this TV show to your library, choose
-                its status, track episode progress, mark it as a favourite, or
+                Log in or register to add this TV Show to your library, choose
+                its status, track episode progress, mark it as a favourite or
                 rate it.
               </Text>
               <Flex gap={3} wrap="wrap">
@@ -187,9 +215,21 @@ const TvShowDetailPage = ({
 
         <TvTrailer trailer={trailer} />
 
+        {/* The director leads the people on the page, in the cast's own
+            format, and falls back to the creators when TMDB credits no
+            series-level director. */}
+        <MediaCrewSection
+          emptyMessage="No director information is available from TMDB."
+          people={crew}
+          title={crewTitle}
+        />
+
         <TvCastsWrapper credits={credits} />
 
-        <MediaReviews reviews={reviews} />
+        <MediaReviews
+          reviews={reviews}
+          seeAllHref={`/tv/show/${show.id}/reviews` as Route}
+        />
       </Stack>
     </PageShell>
   );

@@ -19,9 +19,9 @@ export type ProfileStatCard = {
 
 const iconsByLabel: Record<string, IconType> = {
   'Episodes Watched': FiPlayCircle,
-  'Movies Watched': FiFilm,
+  'Movies Finished': FiFilm,
   'Number of Reviews': FiEdit3,
-  'TV Shows Watched': FiTv,
+  'TV Shows Finished': FiTv,
   'Time in Movies': FiClock,
   'Time in TV Shows': FiClock,
 };

@@ -89,9 +89,9 @@ test('public profile renders only the UX 3.1 public contract', async () => {
   assert.match(page, /getProfileStatCards\(data\.statistics\)/);
 
   for (const label of [
-    'Movies Watched',
+    'Movies Finished',
     'Time in Movies',
-    'TV Shows Watched',
+    'TV Shows Finished',
     'Time in TV Shows',
     'Episodes Watched',
     'Number of Reviews',

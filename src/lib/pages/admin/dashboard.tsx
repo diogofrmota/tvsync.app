@@ -24,6 +24,7 @@ import {
   formatAdminDate,
   formatAdminNumber,
 } from 'lib/pages/admin/panels';
+import { AdminPrivacyRequests } from 'lib/pages/admin/privacy';
 import type { AdminDashboardData } from 'lib/pages/admin/types';
 import { useActionState } from 'react';
 
@@ -264,6 +265,7 @@ export const AdminDashboard = ({ data }: { data: AdminDashboardData }) => (
     </Flex>
     <AdminOverview stats={data.stats} />
     <AdminModeration recentBans={data.recentBans} />
+    <AdminPrivacyRequests privacy={data.privacy} />
     <AdminDiscoveryLists lists={data.lists} />
     <AdminSignups recentSignups={data.recentSignups} />
     <AdminMaintenance health={data.health} />

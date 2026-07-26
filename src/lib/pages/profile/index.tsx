@@ -126,8 +126,8 @@ export const ProfilePage = ({
   // The profile keeps the two headline counters; every other statistic lives
   // behind "See All" on the dedicated statistics page.
   const statCards: Array<ProfileStatCard> = [
-    { label: 'TV Shows Watched', value: statistics.tvShowsWatched },
-    { label: 'Movies Watched', value: statistics.moviesWatched },
+    { label: 'TV Shows Finished', value: statistics.tvShowsWatched },
+    { label: 'Movies Finished', value: statistics.moviesWatched },
   ];
   const favoriteMovies = favorites.filter(
     (item) => item.mediaType === MediaType.Movie

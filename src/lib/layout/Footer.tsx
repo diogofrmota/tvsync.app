@@ -46,7 +46,26 @@ const Footer = () => (
       ))}
     </HStack>
     <Text color="fg.muted" fontSize="sm">
-      Copyright &copy; {new Date().getFullYear()} TvSync
+      Copyright &copy; {new Date().getFullYear()} TvSync - Made by{' '}
+      <Box
+        _hover={{ color: 'gold.300' }}
+        asChild
+        color="fg.muted"
+        display="inline"
+        fontWeight="500"
+        textDecoration="underline"
+        transitionDuration="fast"
+        transitionProperty="color"
+        transitionTimingFunction="ease-out"
+      >
+        <a
+          href="https://diogomota.com"
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          Diogo Mota
+        </a>
+      </Box>
     </Text>
   </Flex>
 );

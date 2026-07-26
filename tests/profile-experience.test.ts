@@ -175,8 +175,8 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
     'Edit Profile',
     'Following',
     'Followers',
-    'TV Shows Watched',
-    'Movies Watched',
+    'TV Shows Finished',
+    'Movies Finished',
     'Favourite Movies',
     'Favourite TV Shows',
   ]) {
@@ -188,9 +188,9 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
   assert.doesNotMatch(page, /Time in Movies|Episodes Watched/);
 
   for (const label of [
-    'Movies Watched',
+    'Movies Finished',
     'Time in Movies',
-    'TV Shows Watched',
+    'TV Shows Finished',
     'Time in TV Shows',
     'Episodes Watched',
     'Number of Reviews',

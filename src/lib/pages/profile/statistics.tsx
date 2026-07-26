@@ -21,8 +21,8 @@ const runtimeDetail = (missingCount: number) =>
 export const getProfileStatCards = (
   statistics: ProfileStatistics
 ): Array<ProfileStatCard> => [
-  { label: 'TV Shows Watched', value: statistics.tvShowsWatched },
-  { label: 'Movies Watched', value: statistics.moviesWatched },
+  { label: 'TV Shows Finished', value: statistics.tvShowsWatched },
+  { label: 'Movies Finished', value: statistics.moviesWatched },
   { label: 'Episodes Watched', value: statistics.episodesWatched },
   {
     detail: runtimeDetail(statistics.missingTvRuntimeCount),

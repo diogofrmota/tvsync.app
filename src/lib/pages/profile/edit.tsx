@@ -1,9 +1,11 @@
 import { Box, Button, Heading, Stack, Text } from '@chakra-ui/react';
 import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
+import type { PrivacyPreferences } from 'lib/services/database/privacy.server';
 import type { AuthMethods } from 'lib/services/database/profile.server';
 import type { OwnProfile } from 'lib/services/database/tracking.server';
 import Link from 'next/link';
 
+import { DownloadPersonalDataButton, PrivacyChoicesForm } from './privacy-form';
 import {
   ChangePasswordForm,
   DeleteAccountDialog,
@@ -40,9 +42,11 @@ const EditSection = ({
 
 export const EditProfilePage = ({
   authMethods,
+  privacyPreferences,
   profile,
 }: {
   authMethods: AuthMethods;
+  privacyPreferences: PrivacyPreferences;
   profile: OwnProfile;
 }) => (
   <PageShell size="narrow">
@@ -86,6 +90,22 @@ export const EditProfilePage = ({
       title="Change Password"
     >
       <ChangePasswordForm hasCredentials={authMethods.hasCredentials} />
+    </EditSection>
+
+    <EditSection
+      description="Choose how TvSync may use your activity. TvSync never sells personal data."
+      title="Privacy Choices"
+    >
+      <PrivacyChoicesForm
+        initialAnalyticsOptOut={privacyPreferences.analyticsOptOut}
+      />
+    </EditSection>
+
+    <EditSection
+      description="Download everything TvSync stores about your account as a JSON file you can keep or move elsewhere."
+      title="Your Data"
+    >
+      <DownloadPersonalDataButton />
     </EditSection>
 
     <EditSection

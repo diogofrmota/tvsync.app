@@ -32,6 +32,7 @@ import {
   UPSERT_DISCOVERY_LIST_SETTING_QUERY,
 } from './discovery-list-queries';
 import { revalidateDiscoveryListSettings } from './discovery-lists.server';
+import { countAnalyticsOptOuts } from './privacy.server';
 
 export type AdminOverviewStats = {
   activeUsersLast30Days: number;
@@ -432,6 +433,31 @@ export const listAdminAuditLog = (limit: number) =>
       })
     );
   });
+
+/**
+ * How long the audit trail is kept before the nightly cleanup cron drops it.
+ * The dashboard states the number so a data-retention question can be answered
+ * from the product rather than from the migration file.
+ */
+export const ADMIN_AUDIT_LOG_RETENTION_DAYS = 90;
+
+export type AdminPrivacySummary = {
+  analyticsOptOuts: number;
+  auditLogRetentionDays: number;
+};
+
+/**
+ * The compliance counters behind the dashboard's privacy panel: how many
+ * accounts have exercised their objection/opt-out right, and how long the one
+ * log of personal-data-adjacent activity is kept.
+ */
+export const loadAdminPrivacySummary = () =>
+  loadAdminData(
+    async (): Promise<AdminPrivacySummary> => ({
+      analyticsOptOuts: await countAnalyticsOptOuts(),
+      auditLogRetentionDays: ADMIN_AUDIT_LOG_RETENTION_DAYS,
+    })
+  );
 
 export const purgeExpiredAdminAuditEntries = async () => {
   const sql = getDatabaseSql();

@@ -40,23 +40,26 @@ test('movie details remain public and load required sections independently', asy
 test('movie page renders required metadata and focused sections in a clear hierarchy', async () => {
   const page = await read('src/lib/pages/movie/detail/index.tsx');
 
-  // The header carries the poster and every fact, the personal controls come
-  // straight after it, and the longer reading sections close the page.
+  // The header carries the poster, the star rating directly under the title,
+  // and every fact; the personal controls come straight after it, and the
+  // longer reading sections — director ahead of the cast — close the page.
   assertInOrder(page, [
     'poster`}',
     'as="h1"',
+    '<MediaRatingPanel',
     'Release year:',
     'Runtime:',
     'Status:',
     '<GenreList',
-    'Director:',
-    '<MediaRatingPanel',
     'Your movie',
     'Description',
     '<MovieTrailer',
+    '<MediaCrewSection',
     '<CastsWrapper',
     '<MediaReviews',
   ]);
+  // The director is no longer a line of text stranded in the header.
+  assert.doesNotMatch(page, /Director:/);
   assert.doesNotMatch(
     page,
     /RecommendForm|Recommended movies|Revenue:|gallery/i
@@ -86,15 +89,17 @@ test('missing movie metadata is represented honestly and every score is labelled
     );
   }
 
-  // IMDb scores are unavailable without OMDb, so the always-available TMDB
-  // score leads — labelled TMDB, never dressed up as an IMDb value — with the
-  // age certificate beside it and IMDb added only when OMDb returns one.
-  assert.match(ratingPanel, /\/ 10 · TMDB/);
-  assert.match(ratingPanel, /voteAverage\.toFixed\(1\)/);
-  assert.match(ratingPanel, /No TMDB score yet/);
-  assert.match(ratingPanel, /imdbRating \?[\s\S]{0,200}IMDb \{imdbRating/);
-  assert.match(ratingPanel, /certification\.certification/);
-  assert.match(page, /<MediaRatingPanel[\s\S]{0,200}movie\.imdb_id/);
+  // The rating is one star and one score: no "/ 10", no source label, no vote
+  // count, no age certificate, and no outbound IMDb link. The score itself is
+  // the genuine IMDb value when OMDb returns one and the TMDB member score
+  // otherwise, and the accessible name still names the source so a TMDB score
+  // is never announced as an IMDb one.
+  assert.match(ratingPanel, /score\.toFixed\(1\)/);
+  assert.match(ratingPanel, /imdbRating\?\.rating \?\? \(hasTmdbScore/);
+  assert.match(ratingPanel, /const source = imdbRating \? 'IMDb' : 'TMDB'/);
+  assert.match(ratingPanel, /aria-label=\{`\$\{source\} rating/);
+  assert.match(ratingPanel, /No rating yet/);
+  assert.doesNotMatch(ratingPanel, /\/ 10|votes|View on IMDb|certification/);
   assert.match(page, /voteAverage=\{movie\.vote_average\}/);
   assert.doesNotMatch(
     detailUtils,
@@ -102,26 +107,22 @@ test('missing movie metadata is represented honestly and every score is labelled
   );
 });
 
-test('movie certificates and member reviews come from TMDB with safe fallbacks', async () => {
-  const [route, releaseDates, reviews, reviewList] = await Promise.all([
+test('movie member reviews come from TMDB with safe fallbacks and a See All list', async () => {
+  const [route, reviewsRoute, reviews, reviewList, page] = await Promise.all([
     read('src/app/movie/[id]/page.tsx'),
-    read('src/lib/services/tmdb/movie/release-dates/index.server.ts'),
+    read('src/app/movie/[id]/reviews/page.tsx'),
     read('src/lib/services/tmdb/reviews.ts'),
     read('src/lib/components/shared/MediaReviews.tsx'),
+    read('src/lib/pages/movie/detail/index.tsx'),
   ]);
 
-  assert.match(releaseDates, /\/movie\/\$\{id\}\/release_dates/);
-  assert.match(
-    releaseDates,
-    /next:\s*\{\s*revalidate:\s*TMDB_REVALIDATE_SECONDS\.detail\s*\}/
-  );
-  assert.match(route, /getMovieReleaseDatesServer\(movieId\)\.catch/);
   assert.match(route, /getMovieReviewsServer\(movieId\)\.catch/);
-  assert.match(
-    route,
-    /certification=\{selectMovieCertification\(releaseDates\)\}/
-  );
   assert.match(route, /reviews=\{reviews\.results\}/);
+  // The age certificate is no longer shown, so the page no longer pays for it.
+  assert.doesNotMatch(
+    route,
+    /getMovieReleaseDatesServer|selectMovieCertification/
+  );
 
   // Review links are only ever TMDB permalinks, and an empty list still renders.
   assert.match(
@@ -131,6 +132,36 @@ test('movie certificates and member reviews come from TMDB with safe fallbacks',
   assert.match(reviews, /url\.startsWith\(TMDB_REVIEW_URL\)/);
   assert.match(reviewList, /No TMDB member has reviewed this title yet\./);
   assert.match(reviewList, /rel="noopener noreferrer"/);
+
+  // "See All" is the section's one action, exactly as every other rail, and it
+  // opens the complete list on its own route.
+  assert.match(reviewList, /<SectionHeading/);
+  assert.match(reviewList, /seeAllHref=\{hasMore && seeAllHref/);
+  assert.match(
+    page,
+    /seeAllHref=\{`\/movie\/\$\{movie\.id\}\/reviews` as Route\}/
+  );
+  assert.match(reviewsRoute, /getMovieReviewsServer\(movieId\)\.catch/);
+  assert.match(reviewsRoute, /<MediaReviewsPage/);
+});
+
+test('the movie director leads the credits in the cast section format', async () => {
+  const [page, crew] = await Promise.all([
+    read('src/lib/pages/movie/detail/index.tsx'),
+    read('src/lib/components/shared/MediaCrewSection.tsx'),
+  ]);
+
+  assert.match(page, /member\.job === 'Director'/);
+  assert.match(page, /title="Director"/);
+  assert.match(
+    page,
+    /emptyMessage="No director information is available from TMDB\."/
+  );
+  // The same avatar grid as the cast section directly below it.
+  assert.match(crew, /base: 'repeat\(2, minmax\(0, 1fr\)\)'/);
+  assert.match(crew, /md: 'repeat\(4, minmax\(0, 1fr\)\)'/);
+  assert.match(crew, /xl: 'repeat\(6, minmax\(0, 1fr\)\)'/);
+  assert.match(crew, /<Avatar\.Fallback name=\{person\.name\}/);
 });
 
 test('trailer playback accepts only normalized YouTube trailer identifiers', async () => {
