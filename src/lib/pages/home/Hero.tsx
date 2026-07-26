@@ -36,12 +36,13 @@ const features: Array<Feature> = [
   },
   {
     description:
-      'Explore trending and top-rated titles pulled straight from TMDB.',
+      'Explore trending and top-rated titles added by other users in TvSync.',
     icon: FiCompass,
     title: 'Discover what to watch',
   },
   {
-    description: 'Turn your viewing history into personal stats and insights.',
+    description:
+      'Turn your viewing history into personal stats and compare with your followers.',
     icon: FiBarChart2,
     title: 'See your progress',
   },

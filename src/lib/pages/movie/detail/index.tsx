@@ -9,6 +9,7 @@ import {
   Stack,
   Text,
 } from '@chakra-ui/react';
+import { MediaCrewSection } from 'lib/components/shared/MediaCrewSection';
 import { MediaRatingPanel } from 'lib/components/shared/MediaRating';
 import { MediaReviews } from 'lib/components/shared/MediaReviews';
 import { PageShell } from 'lib/components/shared/PageShell';
@@ -20,16 +21,15 @@ import CastsWrapper from 'lib/pages/movie/detail/components/casts-wrapper';
 import { GenreList } from 'lib/pages/movie/detail/components/genre-list';
 import { MovieTrailer } from 'lib/pages/movie/detail/components/trailer';
 import type { ImdbRating } from 'lib/services/omdb/types';
-import type { MediaCertification } from 'lib/services/tmdb/certification';
 import type { MovieCreditsResponse } from 'lib/services/tmdb/movie/credits/types';
 import type { MovieDetailResponse } from 'lib/services/tmdb/movie/detail/types';
 import type { MovieVideo } from 'lib/services/tmdb/movie/videos/types';
 import type { MediaReview } from 'lib/services/tmdb/reviews';
 import { MediaType } from 'lib/types';
+import type { Route } from 'next';
 import Link from 'next/link';
 
 export type MovieDetailPageProps = {
-  certification: MediaCertification | null;
   creditsData: MovieCreditsResponse;
   detailData: MovieDetailResponse;
   imdbRating: ImdbRating | null;
@@ -47,7 +47,6 @@ const getReleaseYear = (releaseDate: string) => {
 };
 
 export const MovieDetailPage = ({
-  certification,
   detailData: movie,
   creditsData: credits,
   imdbRating,
@@ -55,10 +54,23 @@ export const MovieDetailPage = ({
   reviews,
   trailer,
 }: MovieDetailPageProps) => {
-  const directors = credits.crew
-    .filter((member) => member.job === 'Director')
-    .map((member) => member.name)
-    .filter(Boolean);
+  // TMDB credits a director once per unit of work, so the same person can come
+  // back more than once on a co-directed or re-cut release.
+  const directors = Array.from(
+    new Map(
+      credits.crew
+        .filter((member) => member.job === 'Director' && member.name.trim())
+        .map((member) => [
+          member.id,
+          {
+            id: member.id,
+            name: member.name,
+            profilePath: member.profile_path,
+            role: 'Director',
+          },
+        ])
+    ).values()
+  );
   const title = movie.title || movie.original_title || 'Untitled movie';
 
   return (
@@ -83,6 +95,15 @@ export const MovieDetailPage = ({
             <Heading as="h1" fontSize={{ base: 'xl', md: '3xl' }}>
               {title}
             </Heading>
+
+            {/* The score sits directly under the title, on its own line, so it
+                reads as part of the heading rather than as one more fact. */}
+            <MediaRatingPanel
+              imdbRating={imdbRating}
+              voteAverage={movie.vote_average}
+              voteCount={movie.vote_count}
+            />
+
             <Flex gap={2} wrap="wrap">
               <Badge variant="outline">
                 Release year: {getReleaseYear(movie.release_date)}
@@ -103,19 +124,6 @@ export const MovieDetailPage = ({
             ) : (
               <Text color="fg.muted">Genres unavailable</Text>
             )}
-
-            <Text color={directors.length > 0 ? undefined : 'fg.muted'}>
-              Director:{' '}
-              {directors.length > 0 ? directors.join(', ') : 'Unavailable'}
-            </Text>
-
-            <MediaRatingPanel
-              certification={certification}
-              imdbId={movie.imdb_id ?? null}
-              imdbRating={imdbRating}
-              voteAverage={movie.vote_average}
-              voteCount={movie.vote_count}
-            />
           </Stack>
         </Grid>
 
@@ -157,7 +165,7 @@ export const MovieDetailPage = ({
             <Stack alignItems="flex-start" gap={3}>
               <Text>
                 Log in or register to add this movie to your library, choose its
-                status, mark it as a favourite, or rate it.
+                status, mark it as a favourite or rate it.
               </Text>
               <Flex gap={3} wrap="wrap">
                 <Button asChild>
@@ -184,9 +192,21 @@ export const MovieDetailPage = ({
 
         <MovieTrailer trailer={trailer} />
 
+        {/* The director leads the people on the page, in the cast's own
+            format, so the credits read top-down from the one name that used to
+            be a stray line in the header. */}
+        <MediaCrewSection
+          emptyMessage="No director information is available from TMDB."
+          people={directors}
+          title="Director"
+        />
+
         <CastsWrapper credits={credits} />
 
-        <MediaReviews reviews={reviews} />
+        <MediaReviews
+          reviews={reviews}
+          seeAllHref={`/movie/${movie.id}/reviews` as Route}
+        />
       </Stack>
     </PageShell>
   );

@@ -2,6 +2,7 @@ import { ProfileAccessIssue } from 'lib/pages/profile';
 import { EditProfilePage } from 'lib/pages/profile/edit';
 import { getAuthSession } from 'lib/services/auth/session.server';
 import { getDatabaseAvailabilityIssue } from 'lib/services/database/core.server';
+import { getOwnPrivacyPreferences } from 'lib/services/database/privacy.server';
 import { getOwnAuthMethods } from 'lib/services/database/profile.server';
 import { getOwnProfile } from 'lib/services/database/tracking.server';
 import type { Metadata, Route } from 'next';
@@ -22,9 +23,10 @@ export default async function Page() {
   }
 
   try {
-    const [profile, authMethods] = await Promise.all([
+    const [profile, authMethods, privacyPreferences] = await Promise.all([
       getOwnProfile(),
       getOwnAuthMethods(),
+      getOwnPrivacyPreferences(),
     ]);
 
     if (!profile) {
@@ -38,7 +40,13 @@ export default async function Page() {
       );
     }
 
-    return <EditProfilePage authMethods={authMethods} profile={profile} />;
+    return (
+      <EditProfilePage
+        authMethods={authMethods}
+        privacyPreferences={privacyPreferences}
+        profile={profile}
+      />
+    );
   } catch (error) {
     const issue = getDatabaseAvailabilityIssue(error);
 

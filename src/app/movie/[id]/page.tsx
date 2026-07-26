@@ -3,8 +3,6 @@ import { isMovieDetailViewerAuthenticated } from 'lib/pages/movie/detail/load-vi
 import { getImdbRatingServer } from 'lib/services/omdb/index.server';
 import { getMovieCreditsServer } from 'lib/services/tmdb/movie/credits/index.server';
 import { getMovieDetailServer } from 'lib/services/tmdb/movie/detail/index.server';
-import { getMovieReleaseDatesServer } from 'lib/services/tmdb/movie/release-dates/index.server';
-import { selectMovieCertification } from 'lib/services/tmdb/movie/release-dates/utils';
 import { getMovieReviewsServer } from 'lib/services/tmdb/movie/reviews/index.server';
 import { getMovieVideosServer } from 'lib/services/tmdb/movie/videos/index.server';
 import { selectTrustedMovieTrailer } from 'lib/services/tmdb/movie/videos/utils';
@@ -81,43 +79,32 @@ export default async function Page({
     }
 
     const detailData = await getMovieDetailServer(movieId);
-    // The age certificate, reviews, and the optional IMDb score are extras: a
-    // failing lookup degrades to an omitted value instead of a missing page.
-    const [
-      creditsData,
-      videosData,
-      releaseDates,
-      reviews,
-      imdbRating,
-      session,
-    ] = await Promise.all([
-      getMovieCreditsServer(movieId).catch(() => ({
-        cast: [],
-        crew: [],
-        id: movieId,
-      })),
-      getMovieVideosServer(movieId).catch(() => ({
-        id: movieId,
-        results: [],
-      })),
-      getMovieReleaseDatesServer(movieId).catch(() => ({
-        id: movieId,
-        results: [],
-      })),
-      getMovieReviewsServer(movieId).catch(() => ({
-        id: movieId,
-        page: 1,
-        results: [],
-        total_pages: 0,
-        total_results: 0,
-      })),
-      getImdbRatingServer(detailData.imdb_id),
-      isMovieDetailViewerAuthenticated(),
-    ]);
+    // Reviews and the optional IMDb score are extras: a failing lookup degrades
+    // to an omitted value instead of a missing page.
+    const [creditsData, videosData, reviews, imdbRating, session] =
+      await Promise.all([
+        getMovieCreditsServer(movieId).catch(() => ({
+          cast: [],
+          crew: [],
+          id: movieId,
+        })),
+        getMovieVideosServer(movieId).catch(() => ({
+          id: movieId,
+          results: [],
+        })),
+        getMovieReviewsServer(movieId).catch(() => ({
+          id: movieId,
+          page: 1,
+          results: [],
+          total_pages: 0,
+          total_results: 0,
+        })),
+        getImdbRatingServer(detailData.imdb_id),
+        isMovieDetailViewerAuthenticated(),
+      ]);
 
     return (
       <MovieDetailPage
-        certification={selectMovieCertification(releaseDates)}
         creditsData={creditsData}
         detailData={detailData}
         imdbRating={imdbRating}

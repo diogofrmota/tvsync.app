@@ -5,6 +5,7 @@ import Script from 'next/script';
 import 'lib/styles/globals.css';
 import { Provider } from 'lib/components/ui/provider';
 import Layout from 'lib/layout';
+import { isAnalyticsAllowed } from 'lib/services/analytics/consent.server';
 import { getAuthSession } from 'lib/services/auth/session.server';
 
 const fontBody = FontBody({
@@ -63,7 +64,10 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getAuthSession();
+  const [session, analyticsAllowed] = await Promise.all([
+    getAuthSession(),
+    isAnalyticsAllowed(),
+  ]);
 
   return (
     <html className={fontBody.className} lang="en" suppressHydrationWarning>
@@ -72,7 +76,11 @@ export default async function RootLayout({
         <Provider session={session}>
           <Layout>{children}</Layout>
         </Provider>
-        {umamiWebsiteId && umamiScriptSrc ? (
+        {/* Analytics is the app's one optional use of personal data, so the
+            script is not rendered at all when Global Privacy Control or the
+            account's own opt-out withholds it — there is nothing on the page
+            left to disable client-side. */}
+        {analyticsAllowed && umamiWebsiteId && umamiScriptSrc ? (
           <Script
             data-website-id={umamiWebsiteId}
             defer

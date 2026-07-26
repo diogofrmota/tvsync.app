@@ -317,11 +317,11 @@ Statistics
 
 Only two cards are shown on the profile:
 
-* TV Shows Watched
-* Movies Watched
+* TV Shows Finished
+* Movies Finished
 
 Selecting See All opens the Statistics page with every statistic (TV Shows
-Watched, Movies Watched, Episodes Watched, Time in TV Shows, Time in Movies,
+Finished, Movies Finished, Episodes Watched, Time in TV Shows, Time in Movies,
 Number of Reviews) and a Compare with Following button at the bottom.
 
 See All destinations
@@ -350,6 +350,8 @@ Content
 * Biography
 * Save Changes button
 * Change Password
+* Privacy Choices
+* Your Data
 * Delete Account
 
 The Delete Account button is the only destructive-looking control on the page: a
@@ -364,6 +366,12 @@ Functionality
 * Users who registered with Google can create a password if required.
 * Users can permanently delete their account after confirming the action.
 * Users can update their email.
+* Users can switch off usage analytics for their account under Privacy Choices.
+  The choice is saved to the account, so it follows them to every device, and a
+  browser sending Global Privacy Control is honoured whether or not anyone is
+  signed in.
+* Users can download everything TvSync stores about them as a JSON file under
+  Your Data. The file is built on request and never stored.
 
 2.6 Movie and TV Show Pages
 
@@ -377,24 +385,28 @@ Content
 * Runtime
 * Status
 * Genres
-* Rating: the TMDB member score out of 10, labelled TMDB, plus the age
-  certificate from the TMDB release dates. The genuine IMDb score is added only
-  when OMDb returns one; a TMDB score is never presented as an IMDb score.
+* Rating: a star and a single score, directly under the title. Nothing sits
+  beside it — no "out of 10", no source label, no vote count, no age
+  certificate and no IMDb link. The score is the genuine IMDb one when OMDb
+  returns it and the TMDB member score otherwise; because nothing is labelled,
+  the accessible name names the source so a TMDB score is never announced as an
+  IMDb one.
 * Description
 * Trailer
-* Cast
 * Director
+* Cast
 * Reviews written by TMDB members
-* Streaming availability
-* Similar movies
 
 Layout
 
-* A compact poster sits beside the title, the fact badges, the genres, the
-  director and the rating; the poster never fills the screen.
+* A compact poster sits beside the title, the rating directly under it, then the
+  fact badges and the genres; the poster never fills the screen.
 * The personal actions come immediately after that header, so a movie can be
   added to the library without scrolling.
-* The description, trailer, cast and reviews follow, in that order.
+* The description, trailer, director, cast and reviews follow, in that order.
+  The director uses the same avatar grid as the cast, immediately above it.
+* The reviews section shows the first six with a See All button on its title
+  line, opening the complete list on its own page.
 
 User Actions
 
@@ -424,24 +436,26 @@ Content
 * Number of episodes
 * Current status
 * Genres
-* Rating: the TMDB member score out of 10, labelled TMDB, plus the age
-  certificate from the TMDB content ratings. The genuine IMDb score is added
-  only when OMDb returns one; a TMDB score is never presented as an IMDb score.
+* Rating: a star and a single score, directly under the name, on the same terms
+  as the movie page — nothing beside it, and the accessible name carries the
+  source.
 * Description
 * Trailer
+* Director (the creators when TMDB credits no series-level director)
 * Cast
 * Reviews written by TMDB members
-* Streaming availability
-* Similar TV shows
 
 Layout
 
-* A compact poster sits beside the name, the fact badges, the genres and the
-  rating; the poster never fills the screen.
+* A compact poster sits beside the name, the rating directly under it, then the
+  fact badges and the genres; the poster never fills the screen.
 * The episodes come immediately after that header: the episode slider first,
   then the season list.
-* The personal actions follow, and the description, trailer, cast and reviews
-  close the page, in that order.
+* The personal actions follow, and the description, trailer, director, cast and
+  reviews close the page, in that order. The director uses the same avatar grid
+  as the cast, immediately above it.
+* The reviews section shows the first six with a See All button on its title
+  line, opening the complete list on its own page.
 
 Episodes
 
@@ -567,11 +581,18 @@ Explain:
 
 * What personal data is collected
 * How personal data is used
+* The legal basis for each kind of processing
 * How authentication data is protected
 * Which external services process data
-* How users can request or delete their data
-* Cookie usage
+* Every privacy right and how to exercise it from Edit Profile
+* How users can download, correct, or delete their data
+* That personal data is never sold or shared
+* How long each kind of data is kept
+* Where data is processed and how transfers are covered
+* Cookie usage and the analytics opt-out, including Global Privacy Control
 * Contact information
+* A closing Compliance section stating that TvSync complies with the GDPR and
+  the CCPA, listing what backs that up in the product
 
 4.2 Terms of Service
 

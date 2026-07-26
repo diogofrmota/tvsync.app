@@ -72,10 +72,14 @@ test('privacy policy covers every UX.md 4.1 topic and describes only real integr
 
   assert.match(page, /Information we collect/);
   assert.match(page, /How we use your information/);
+  assert.match(page, /legal bases/i);
   assert.match(page, /How authentication data is protected/i);
   assert.match(page, /External services that process data/i);
-  assert.match(page, /Requesting your data/i);
+  assert.match(page, /Your privacy rights/i);
+  assert.match(page, /Downloading your data/i);
   assert.match(page, /Deleting your data/i);
+  assert.match(page, /How long we keep your data/i);
+  assert.match(page, /Do not sell or share/i);
   assert.match(page, /Cookies/);
   assert.match(page, /Contact/);
 
@@ -87,14 +91,64 @@ test('privacy policy covers every UX.md 4.1 topic and describes only real integr
   assert.match(page, /Google/);
   assert.match(page, /bcrypt/);
 
-  // No fabricated certifications, legal bases, or retention guarantees.
-  assert.doesNotMatch(
-    page,
-    /GDPR-compliant|SOC ?2|ISO 27001|HIPAA|PCI[- ]DSS/i
-  );
+  // Still no fabricated certifications or absolute guarantees; a security
+  // certification is an audit TvSync has never had, unlike the data-protection
+  // laws it actually complies with.
+  assert.doesNotMatch(page, /SOC ?2|ISO 27001|HIPAA|PCI[- ]DSS/i);
   assert.doesNotMatch(page, /we guarantee|fully encrypted at all times/i);
-  assert.match(page, /Legal review/);
-  assert.match(flatten(page), /requires? owner or legal review/i);
+
+  // The closing section states compliance outright, so it names both laws.
+  assert.match(page, /Compliance/);
+  assert.match(flatten(page), /General Data Protection Regulation \(GDPR\)/);
+  assert.match(flatten(page), /California Consumer Privacy Act/);
+});
+
+test('every privacy right the policy claims is implemented in the product', async () => {
+  const [page, privacyForm, actions, consent, queries, migration] =
+    await Promise.all([
+      read('src/app/privacy/page.tsx'),
+      read('src/lib/pages/profile/privacy-form.tsx'),
+      read('src/lib/pages/profile/actions.ts'),
+      read('src/lib/services/analytics/consent.server.ts'),
+      read('src/lib/services/database/privacy-queries.ts'),
+      read('database/migrations/0012_privacy_compliance.sql'),
+    ]);
+
+  // Access and portability: a real download built from the account's own rows.
+  assert.match(page, /Download My Data/);
+  assert.match(privacyForm, /Download My Data/);
+  assert.match(actions, /export const exportOwnPersonalDataFile/);
+  assert.match(actions, /exportOwnPersonalData\(\)/);
+
+  // Objection and CCPA opt-out: a saved account choice, plus the browser-level
+  // Global Privacy Control signal, both of which withhold the script itself.
+  assert.match(privacyForm, /Do not use my activity for usage analytics/);
+  assert.match(actions, /export const updateOwnPrivacyChoices/);
+  assert.match(consent, /sec-gpc/);
+  assert.match(consent, /preferences\.analyticsOptOut/);
+  assert.match(migration, /analytics_opt_out/);
+
+  // Password hashes and token digests are never part of an export.
+  assert.doesNotMatch(queries, /password_hash|token_digest/);
+
+  const layout = await read('src/app/layout.tsx');
+  assert.match(layout, /analyticsAllowed && umamiWebsiteId/);
+});
+
+test('admin can answer access and erasure requests, and every one is audited', async () => {
+  const [actions, panel] = await Promise.all([
+    read('src/lib/features/admin/actions.ts'),
+    read('src/lib/pages/admin/privacy.tsx'),
+  ]);
+
+  assert.match(actions, /export const exportUserDataForRequest/);
+  assert.match(actions, /export const eraseUserAccountForRequest/);
+  // Both re-verify the admin session before touching data and write an audit
+  // entry naming only the account, never the exported contents.
+  assert.match(actions, /action: 'privacy\.export'/);
+  assert.match(actions, /action: 'privacy\.erase'/);
+  assert.match(panel, /Access request \(right to know\)/);
+  assert.match(panel, /Erasure request \(right to delete\)/);
 });
 
 test('terms of service covers every UX.md 4.2 topic and flags legal placeholders', async () => {

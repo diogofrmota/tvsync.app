@@ -32,8 +32,9 @@ test('TV show details remain public and load required sections independently', a
   assert.match(route, /getTVShowCreditsServer\(showId\)\.catch/);
   assert.match(route, /getTvVideosServer\(showId\)\.catch/);
   assert.match(route, /getTvExternalIdsServer\(showId\)\.catch/);
-  assert.match(route, /getTvContentRatingsServer\(showId\)\.catch/);
   assert.match(route, /getTvReviewsServer\(showId\)\.catch/);
+  // The age certificate is no longer shown, so the page no longer pays for it.
+  assert.doesNotMatch(route, /getTvContentRatingsServer|selectTvContentRating/);
   assert.doesNotMatch(route, /getSimilarTVShowsServer/);
   assert.doesNotMatch(route, /getTvWatchProvidersServer/);
   assert.doesNotMatch(route, /redirect\(['"]\/login/);
@@ -49,16 +50,17 @@ test('TV show page renders required metadata and focused sections in a clear hie
   assertInOrder(page, [
     'poster`}',
     'as="h1"',
+    '<MediaRatingPanel',
     'Release year:',
     'Seasons:',
     'Episodes:',
     'Status:',
     'Genres unavailable',
-    '<MediaRatingPanel',
     '<EpisodeTracker',
-    'Your TV show',
+    'Your TV Show',
     'Description',
     '<TvTrailer',
+    '<MediaCrewSection',
     '<TvCastsWrapper',
     '<MediaReviews',
   ]);
@@ -93,37 +95,54 @@ test('missing TV show metadata is represented honestly and every score is labell
     );
   }
 
-  // IMDb scores need OMDb and are often unavailable, so the TMDB score leads,
-  // always labelled TMDB, with the TMDB content rating certificate beside it.
-  assert.match(ratingPanel, /\/ 10 · TMDB/);
-  assert.match(ratingPanel, /voteAverage\.toFixed\(1\)/);
-  assert.match(ratingPanel, /No TMDB score yet/);
-  assert.match(ratingPanel, /imdbRating \?[\s\S]{0,200}IMDb \{imdbRating/);
+  // The rating is one star and one score: no "/ 10", no source label, no vote
+  // count, no age certificate, and no outbound IMDb link.
+  assert.match(ratingPanel, /score\.toFixed\(1\)/);
+  assert.match(ratingPanel, /No rating yet/);
+  assert.doesNotMatch(ratingPanel, /\/ 10|votes|View on IMDb|certification/);
   assert.match(page, /<MediaRatingPanel/);
-  assert.match(page, /imdbId=\{imdbId\}/);
   assert.match(page, /voteAverage=\{show\.vote_average\}/);
 });
 
-test('TV certificates and member reviews come from TMDB with safe fallbacks', async () => {
-  const [route, contentRatings, utils, reviews] = await Promise.all([
+test('TV member reviews come from TMDB with safe fallbacks and a See All list', async () => {
+  const [route, reviewsRoute, reviews, page] = await Promise.all([
     read('src/app/tv/show/[id]/page.tsx'),
-    read('src/lib/services/tmdb/tv/content-ratings/index.server.ts'),
-    read('src/lib/services/tmdb/tv/content-ratings/utils.ts'),
+    read('src/app/tv/show/[id]/reviews/page.tsx'),
     read('src/lib/services/tmdb/tv/reviews/index.server.ts'),
+    read('src/lib/pages/tv/detail/index.tsx'),
   ]);
 
-  assert.match(contentRatings, /\/tv\/\$\{id\}\/content_ratings/);
   assert.match(reviews, /\/tv\/\$\{id\}\/reviews/);
-  for (const source of [contentRatings, reviews]) {
-    assert.match(
-      source,
-      /next:\s*\{\s*revalidate:\s*TMDB_REVALIDATE_SECONDS\./
-    );
-  }
-  // One certificate is chosen deterministically, English-speaking boards first.
-  assert.match(utils, /selectPreferredCertification/);
-  assert.match(route, /certification: selectTvContentRating\(contentRatings\)/);
+  assert.match(reviews, /next:\s*\{\s*revalidate:\s*TMDB_REVALIDATE_SECONDS\./);
   assert.match(route, /reviews: reviews\.results/);
+
+  // "See All" is the section's one action and opens the complete list.
+  assert.match(
+    page,
+    /seeAllHref=\{`\/tv\/show\/\$\{show\.id\}\/reviews` as Route\}/
+  );
+  assert.match(reviewsRoute, /getTvReviewsServer\(showId\)\.catch/);
+  assert.match(reviewsRoute, /<MediaReviewsPage/);
+});
+
+test('the TV director leads the credits and falls back to the creators', async () => {
+  const [page, crew] = await Promise.all([
+    read('src/lib/pages/tv/detail/index.tsx'),
+    read('src/lib/components/shared/MediaCrewSection.tsx'),
+  ]);
+
+  assert.match(page, /member\.job === 'Director'/);
+  assert.match(page, /crewTitle = hasDirectors \? 'Director' : 'Creator'/);
+  assert.match(page, /show\.created_by/);
+  assert.match(
+    page,
+    /emptyMessage="No director information is available from TMDB\."/
+  );
+  // The same avatar grid as the cast section directly below it.
+  assert.match(crew, /base: 'repeat\(2, minmax\(0, 1fr\)\)'/);
+  assert.match(crew, /md: 'repeat\(4, minmax\(0, 1fr\)\)'/);
+  assert.match(crew, /xl: 'repeat\(6, minmax\(0, 1fr\)\)'/);
+  assert.match(crew, /<Avatar\.Fallback name=\{person\.name\}/);
 });
 
 test('trailer playback accepts only normalized YouTube trailer identifiers', async () => {
@@ -341,7 +360,7 @@ test('favourite and personal rating mutations authenticate and reconcile for TV 
 test('public protected actions lead clearly to Login or Register', async () => {
   const page = await read('src/lib/pages/tv/detail/index.tsx');
 
-  assert.match(page, /Log in or register to add this TV show/);
+  assert.match(page, /Log in or register to add this TV Show/);
   assert.match(
     page,
     /href=\{`\/login\?callbackUrl=\/tv\/show\/\$\{show\.id\}`\}/

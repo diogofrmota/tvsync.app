@@ -14,6 +14,10 @@ import {
 import { getAuthSession } from 'lib/services/auth/session.server';
 import { getDatabaseAvailabilityIssue } from 'lib/services/database/core.server';
 import {
+  exportOwnPersonalData,
+  updateOwnPrivacyPreferences,
+} from 'lib/services/database/privacy.server';
+import {
   type AuthMethods,
   createOwnEmailChangeToken,
   deleteOwnAccount,
@@ -60,6 +64,18 @@ export type DeleteAccountFormState = {
   deleted?: boolean;
   error?: string;
   fieldErrors?: Partial<Record<'confirmation' | 'currentPassword', string>>;
+};
+
+export type PrivacyChoicesFormState = {
+  analyticsOptOut?: boolean;
+  error?: string;
+  success?: string;
+};
+
+export type PersonalDataExportResult = {
+  error?: string;
+  filename?: string;
+  json?: string;
 };
 
 const readTextField = (formData: FormData, fieldName: string) => {
@@ -411,3 +427,79 @@ export const permanentlyDeleteOwnAccount = async (
     return { error: 'Your account could not be deleted. Please try again.' };
   }
 };
+
+/**
+ * The GDPR Art. 21 objection and the CCPA opt-out of sale/sharing are the same
+ * switch here, because TvSync has exactly one optional, non-essential use of
+ * personal data: anonymous product analytics. Saving the choice is enough to
+ * stop it — the analytics script is not rendered at all for an account that has
+ * opted out.
+ */
+export const updateOwnPrivacyChoices = async (
+  _previousState: PrivacyChoicesFormState,
+  formData: FormData
+): Promise<PrivacyChoicesFormState> => {
+  const session = await getAuthenticatedSession();
+
+  if (!session?.user) {
+    return { error: 'Sign in again before changing your privacy choices.' };
+  }
+
+  const analyticsOptOut = formData.get('analyticsOptOut') === 'on';
+
+  try {
+    const saved = await updateOwnPrivacyPreferences({ analyticsOptOut });
+
+    return {
+      analyticsOptOut: saved.analyticsOptOut,
+      success: saved.analyticsOptOut
+        ? 'Saved. Usage analytics are switched off for your account.'
+        : 'Saved. Anonymous usage analytics are switched on for your account.',
+    };
+  } catch (error) {
+    const databaseIssue = getDatabaseAvailabilityIssue(error);
+
+    return {
+      analyticsOptOut,
+      error: databaseIssue
+        ? `${databaseIssue.title}: ${databaseIssue.description}`
+        : 'Your privacy choices could not be saved. Please try again.',
+    };
+  }
+};
+
+/**
+ * The GDPR Art. 15/20 access-and-portability request, answered in the product
+ * instead of by email: the signed-in account gets its own data as JSON, built
+ * from the same rows the app itself reads. Security records — password hashes,
+ * token digests, rate-limit counters — are never part of it.
+ */
+export const exportOwnPersonalDataFile =
+  async (): Promise<PersonalDataExportResult> => {
+    const session = await getAuthenticatedSession();
+
+    if (!session?.user) {
+      return { error: 'Sign in again before downloading your data.' };
+    }
+
+    try {
+      const [profile, data] = await Promise.all([
+        getOwnProfile(),
+        exportOwnPersonalData(),
+      ]);
+      const date = new Date().toISOString().slice(0, 10);
+
+      return {
+        filename: `tvsync-data-${profile?.username ?? 'account'}-${date}.json`,
+        json: JSON.stringify(data, null, 2),
+      };
+    } catch (error) {
+      const databaseIssue = getDatabaseAvailabilityIssue(error);
+
+      return {
+        error: databaseIssue
+          ? `${databaseIssue.title}: ${databaseIssue.description}`
+          : 'Your data could not be prepared. Please try again.',
+      };
+    }
+  };

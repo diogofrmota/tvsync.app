@@ -40,7 +40,7 @@ export const ExploreDiscover = async () => {
               placeholder="Search movies and TV shows"
             />
           }
-          subtitle="Discover trending titles, new releases and all-time highlights across movies and TV Shows."
+          subtitle="Discover trending titles, new releases and all-time highlights across movies and tv shows."
           title="Explore"
         />
         {heroSlides.length > 0 ? <ExploreHero slides={heroSlides} /> : null}

@@ -194,7 +194,7 @@ test('Explore leads with the reworded subtitle and a readable search field', asy
 
   assert.match(
     discover,
-    /subtitle="Discover trending titles, new releases and all-time highlights across movies and TV Shows\."/
+    /subtitle="Discover trending titles, new releases and all-time highlights across movies and tv shows\."/
   );
   assert.doesNotMatch(discover, /all in one place/);
   // The field is wide enough to read its own placeholder before typing.

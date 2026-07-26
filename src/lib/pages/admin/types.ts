@@ -4,6 +4,7 @@ import type {
   AdminBanRecord,
   AdminLoadResult,
   AdminOverviewStats,
+  AdminPrivacySummary,
   AdminSignupRecord,
 } from 'lib/services/database/admin.server';
 
@@ -29,6 +30,7 @@ export type AdminDashboardData = {
   auditLog: AdminLoadResult<Array<AdminAuditEntry>>;
   health: AdminHealth;
   lists: Array<DiscoveryListSetting>;
+  privacy: AdminLoadResult<AdminPrivacySummary>;
   recentBans: AdminLoadResult<Array<AdminBanRecord>>;
   recentSignups: AdminLoadResult<Array<AdminSignupRecord>>;
   stats: AdminLoadResult<AdminOverviewStats>;

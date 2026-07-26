@@ -1,85 +1,54 @@
-import { Badge, Box, Flex, Text } from '@chakra-ui/react';
+import { Box, Flex, Text } from '@chakra-ui/react';
 import type { ImdbRating } from 'lib/services/omdb/types';
-import type { MediaCertification } from 'lib/services/tmdb/certification';
 import { FiStar } from 'react-icons/fi';
 
 /**
- * The rating block shared by the movie and TV show detail pages.
+ * The rating shown directly under a movie or TV show title: one star and one
+ * score, with nothing else beside it — no vote count, no source label, no age
+ * certificate, and no outbound rating link.
  *
- * TMDB does not publish IMDb scores, and OMDb (which does) is optional, so the
- * always-available TMDB member score leads and is labelled as such — it is
- * never presented as an IMDb value. The age certificate comes from
- * `/tv/{id}/content_ratings` and `/movie/{id}/release_dates`. A genuine IMDb
- * score is added only when OMDb actually returns one.
+ * The displayed number is the genuine IMDb score whenever OMDb returns one and
+ * the TMDB member score otherwise. Because the panel prints no label, the
+ * accessible name still names the source, so a TMDB score is never announced
+ * as an IMDb one.
  */
 export const MediaRatingPanel = ({
-  certification,
-  imdbId,
   imdbRating,
   voteAverage,
   voteCount,
 }: {
-  certification: MediaCertification | null;
-  imdbId: string | null;
   imdbRating: ImdbRating | null;
   voteAverage: number;
   voteCount: number;
 }) => {
   const hasTmdbScore = voteCount > 0 && voteAverage > 0;
+  const score = imdbRating?.rating ?? (hasTmdbScore ? voteAverage : null);
+  const source = imdbRating ? 'IMDb' : 'TMDB';
+
+  if (score === null) {
+    return (
+      <Text color="fg.muted" fontSize="sm">
+        No rating yet
+      </Text>
+    );
+  }
 
   return (
-    <Flex align="center" gap={3} wrap="wrap">
-      {hasTmdbScore ? (
-        <Flex align="center" gap={2}>
-          {/* The icon is a child of a styled span rather than Chakra's icon
-              wrapper: this panel renders inside Server Components, and a
-              component handed to a Chakra client component as a prop cannot be
-              serialized across that boundary. */}
-          <Box aria-hidden as="span" color="gold.400" display="inline-flex">
-            <FiStar fill="currentColor" />
-          </Box>
-          <Text fontSize="lg" fontWeight="700">
-            {voteAverage.toFixed(1)}
-          </Text>
-          <Text color="fg.muted" fontSize="sm">
-            / 10 · TMDB
-          </Text>
-          <Text color="fg.muted" fontSize="sm">
-            ({voteCount.toLocaleString('en-US')} votes)
-          </Text>
-        </Flex>
-      ) : (
-        <Text color="fg.muted" fontSize="sm">
-          No TMDB score yet
-        </Text>
-      )}
-
-      {certification ? (
-        <Badge
-          aria-label={`Content rating ${certification.certification} (${certification.region})`}
-          variant="outline"
-        >
-          {certification.certification} · {certification.region}
-        </Badge>
-      ) : null}
-
-      {imdbRating ? (
-        <Text color="fg.muted" fontSize="sm">
-          IMDb {imdbRating.rating.toFixed(1)} / 10
-        </Text>
-      ) : null}
-
-      {imdbId ? (
-        <Text asChild color="fg.muted" fontSize="sm">
-          <a
-            href={`https://www.imdb.com/title/${imdbId}`}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            View on IMDb
-          </a>
-        </Text>
-      ) : null}
+    <Flex
+      align="center"
+      aria-label={`${source} rating ${score.toFixed(1)} out of 10`}
+      gap={2}
+    >
+      {/* The icon is a child of a styled span rather than Chakra's icon
+          wrapper: this panel renders inside Server Components, and a component
+          handed to a Chakra client component as a prop cannot be serialized
+          across that boundary. */}
+      <Box aria-hidden as="span" color="gold.400" display="inline-flex">
+        <FiStar fill="currentColor" />
+      </Box>
+      <Text fontSize="lg" fontWeight="700">
+        {score.toFixed(1)}
+      </Text>
     </Flex>
   );
 };
