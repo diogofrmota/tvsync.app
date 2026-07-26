@@ -2,6 +2,45 @@
 
 Guidance for AI agents and contributors working in this repository.
 
+## Refactoring in Progress
+
+A structural refactor is planned in `docs/refactor/PLAN.md`, built on the
+architecture audit in `BEHAVIOR.md`, `docs/baseline/**`, and
+`docs/refactor/**`. Read `PLAN.md` before making any change described below
+as a "current structure" note rather than a hard rule — the refactor is
+explicitly allowed to change file locations, route rendering modes, and the
+UI library, in that plan's order, and should not be treated as violating
+this document by doing so.
+
+**Permanent invariants — the refactor must preserve these regardless of
+what else changes:** server-only database access through `*.server.ts`;
+`TMDB_API_KEY` never reaching client code; the established credentials
+auth model (bcrypt, verified-email gating, digest-only tokens,
+session-version revocation); Google identity linking rules; storage-free
+avatars; every item in "Privacy Compliance Notes" (GDPR/CCPA claims are
+tied to code, not a promise); admin dashboard security properties;
+migration history staying append-only (never edit or delete a shipped
+migration file — add a new one, as `docs/refactor/PLAN.md`'s Phase E1
+does for dropping `custom_lists`/`custom_list_items`). The
+Chakra-component-as-prop rule below is an invariant *conditional on Chakra
+still being in use* — if `docs/refactor/ui-library-decision.md`'s migration
+completes for a given file, the rule simply no longer applies to that file,
+it isn't being violated.
+
+**One line elsewhere in this document that the refactor will make false,
+and should be corrected the moment it happens, not left stale:**
+"Environment Notes" states "All App Router routes render dynamically (no
+`generateStaticParams`)." `docs/refactor/PLAN.md`'s Phase A moves several
+routes to static/ISR rendering specifically to get off that default —
+update that line as each Phase A step lands rather than after the whole
+plan finishes, so this document never describes a rendering model the code
+has already moved past.
+
+The blanket "avoid broad refactors" rule further down is suspended for the
+scope and duration of `docs/refactor/PLAN.md` specifically — follow that
+plan's ordering and step boundaries instead. It still applies to any change
+outside that plan.
+
 ## Project Facts
 
 - App name: TVSync.
@@ -17,7 +56,7 @@ Guidance for AI agents and contributors working in this repository.
 
 ## Working Rules
 
-- Do not add major product features until the current architecture is understood and documented.
+- Do not add major product features until `docs/refactor/PLAN.md` lands — the architecture is now documented (`BEHAVIOR.md`, `docs/baseline/**`, `docs/refactor/**`); this refactor is the next thing that should happen before resuming feature work, not a precondition still waiting to be met.
 - Keep route files in `src/app` thin; route UI belongs in `src/lib/pages` and reusable pieces in `src/lib/components`.
 - Keep the global app shell and primary navigation in `src/lib/layout`; route links should stay aligned with the shared header navigation.
 - Keep TMDB access behind `src/lib/services/tmdb`, and OMDb (genuine IMDb ratings) behind `src/lib/services/omdb`.
@@ -37,7 +76,7 @@ Guidance for AI agents and contributors working in this repository.
 - Prefer existing Chakra UI patterns and the local theme in `src/lib/styles/theme`.
 - Chakra UI 3 ships its components as client components, so a Server Component must never hand one of them a component as a prop (`as={SomeIcon}`, `icon={...}`). React cannot serialize a function across that boundary and the whole route falls back to the error page. Render the icon as a child of a styled element instead — see `src/lib/components/shared/FavoriteHeart.tsx` — or mark the wrapper `'use client'`. `tests/server-component-boundaries.test.ts` guards this.
 - Use the `lib/*` import base configured by `tsconfig.json`.
-- Avoid broad refactors, dependency churn, or unrelated formatting-only edits.
+- Avoid broad refactors, dependency churn, or unrelated formatting-only edits — except for the structural refactor tracked in `docs/refactor/PLAN.md`, which is explicitly scoped, ordered, and exempted from this rule for its own steps. See "Refactoring in Progress" above.
 
 ## Folder Boundaries
 
@@ -57,6 +96,13 @@ Guidance for AI agents and contributors working in this repository.
 - `src/lib/styles` - Chakra theme and global CSS.
 - `src/lib/utils` - Cross-cutting utility functions.
 - `database/migrations` - SQL migrations for the Neon Postgres schema.
+
+Two known deviations from these boundaries, scheduled for
+`docs/refactor/PLAN.md`'s Phase C, not yet fixed: `BackButton` currently
+lives under `lib/pages/movie/detail/components` despite being imported by
+TV pages too (belongs in `lib/components/shared`), and `/privacy`/`/terms`
+hold their full content directly in `src/app` instead of delegating to
+`lib/pages/legal` like every other route. See `docs/refactor/boundaries.md`.
 
 ## Validation
 
@@ -177,7 +223,7 @@ Optional:
 - `NEXT_PUBLIC_UMAMI_WEBSITE_ID`
 - `NEXT_PUBLIC_UMAMI_SRC`
 
-`TMDB_API_KEY` is required at runtime for discovery and detail content. All App Router routes render dynamically (no `generateStaticParams`), so the build itself does not call TMDB.
+`TMDB_API_KEY` is required at runtime for discovery and detail content. All App Router routes render dynamically (no `generateStaticParams`), so the build itself does not call TMDB. **This line is scheduled to become false**: `docs/refactor/PLAN.md`'s Phase A moves several routes (`/`, `/lists/[id]`, `/privacy`, `/terms`, and others) to static/ISR rendering specifically to reduce Vercel function invocations per `docs/baseline/cost-model.md`'s findings. Update this line as each Phase A step ships rather than leaving it describing a rendering model the code has moved past.
 
 Verified email/password credentials and Google OAuth are the active authentication options. Google users with a verified Google email bypass separate TvSync verification. Apple OAuth is not exposed.
 
