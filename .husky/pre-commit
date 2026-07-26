@@ -1,0 +1,17 @@
+set +e
+
+biome_output=$(pnpm exec biome check --staged --error-on-warnings 2>&1)
+biome_status=$?
+
+echo "$biome_output"
+
+if [ "$biome_status" -ne 0 ] && ! echo "$biome_output" | grep -q "No files were processed in the specified paths"; then
+  exit 1
+fi
+
+pnpm run type:check
+type_check_status=$?
+
+if [ "$type_check_status" -ne 0 ]; then
+  exit 1
+fi

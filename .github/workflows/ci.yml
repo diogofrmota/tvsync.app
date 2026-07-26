@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  # next build only compiles/type-checks routes; these dummy values satisfy
+  # module-level env reads (auth config, db client construction) without
+  # needing real Neon/TMDB/Resend credentials.
+  DATABASE_URL: postgres://user:pass@localhost:5432/db
+  DATABASE_URL_UNPOOLED: postgres://user:pass@localhost:5432/db
+  AUTH_SECRET: ci-build-only-secret-not-used-at-runtime
+  AUTH_URL: http://localhost:3000
+  NEXTAUTH_URL: http://localhost:3000
+  TMDB_API_URL: https://api.themoviedb.org/3
+  TMDB_API_KEY: ci-build-only-key
+  RESEND_API_KEY: ci-build-only-key
+  AUTH_EMAIL_FROM: ci@example.com
+  CONTACT_EMAIL_TO: ci@example.com
+  CONTACT_EMAIL_FROM: ci@example.com
+  ADMIN_USER: ci-admin
+  ADMIN_PASSWORD: ci-build-only-password
+  CRON_SECRET: ci-build-only-cron-secret
+  NEXT_PUBLIC_SITE_URL: http://localhost:3000
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.16.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm type:check
+
+      - name: Test
+        run: pnpm test
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: E2E tests
+        # Only the journeys that don't need a real database run here —
+        # auth/library-mutation round trips are gated behind
+        # E2E_REAL_DATABASE, unset in CI. See tests/e2e/README.md.
+        run: pnpm test:e2e
+
+      - name: Cache Next.js build
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: next-build-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            next-build-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+
+      - name: Build
+        run: pnpm build
