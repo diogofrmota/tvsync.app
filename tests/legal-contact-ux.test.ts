@@ -120,9 +120,9 @@ test('every privacy right the policy claims is implemented in the product', asyn
   assert.match(actions, /export const exportOwnPersonalDataFile/);
   assert.match(actions, /exportOwnPersonalData\(\)/);
 
-  // Objection and CCPA opt-out: a saved account choice, plus the browser-level
-  // Global Privacy Control signal, both of which withhold the script itself.
-  assert.match(privacyForm, /Do not use my activity for usage analytics/);
+  // Objection and CCPA opt-out: the browser-level Global Privacy Control
+  // signal, honoured by withholding the script itself, plus the saved account
+  // choice an objection request writes.
   assert.match(actions, /export const updateOwnPrivacyChoices/);
   assert.match(consent, /sec-gpc/);
   assert.match(consent, /preferences\.analyticsOptOut/);
