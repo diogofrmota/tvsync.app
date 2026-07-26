@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { defineConfig, devices } from '@playwright/test';
 
 const PORT = Number(process.env.PLAYWRIGHT_PORT ?? 3100);
@@ -5,11 +6,16 @@ const baseURL = `http://localhost:${PORT}`;
 const TMDB_MOCK_PORT = Number(process.env.TMDB_MOCK_PORT ?? 4100);
 const tmdbMockUrl = `http://localhost:${TMDB_MOCK_PORT}`;
 
-// The container image ships a pinned Chromium build outside npm's control;
-// pointing at it directly avoids `@playwright/test` trying to download a
-// browser revision of its own on every dependency bump.
+// Some sandboxed dev containers ship a pinned Chromium build outside npm's
+// control at this fixed path; pointing at it directly avoids
+// `@playwright/test` trying to download a browser revision of its own. Real
+// CI runners (and most local machines) don't have this path, so fall back to
+// Playwright's normal, npm-managed browser resolution — `npx playwright
+// install chromium` — instead of failing to launch.
+const SANDBOX_CHROMIUM_PATH = '/opt/pw-browsers/chromium';
 const chromiumExecutablePath =
-  process.env.PLAYWRIGHT_CHROMIUM_PATH ?? '/opt/pw-browsers/chromium';
+  process.env.PLAYWRIGHT_CHROMIUM_PATH ??
+  (existsSync(SANDBOX_CHROMIUM_PATH) ? SANDBOX_CHROMIUM_PATH : undefined);
 
 export default defineConfig({
   testDir: './tests/e2e',

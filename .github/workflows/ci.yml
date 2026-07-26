@@ -56,6 +56,15 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: E2E tests
+        # Only the journeys that don't need a real database run here —
+        # auth/library-mutation round trips are gated behind
+        # E2E_REAL_DATABASE, unset in CI. See tests/e2e/README.md.
+        run: pnpm test:e2e
+
       - name: Cache Next.js build
         uses: actions/cache@v4
         with:
