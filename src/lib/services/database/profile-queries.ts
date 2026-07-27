@@ -9,10 +9,13 @@ export const UPDATE_OWN_PROFILE_DETAILS_QUERY = `
     display_name = $2,
     username = $3,
     bio = $4,
+    profile_backdrop_path = nullif($5, ''),
+    profile_backdrop_title = nullif($6, ''),
     updated_at = now()
   where user_id = $1
   returning user_id, name, username, display_name, email, bio,
-    privacy_setting, created_at, updated_at
+    privacy_setting, profile_backdrop_path, profile_backdrop_title,
+    created_at, updated_at
 `;
 
 export const GET_OWN_AUTH_METHODS_QUERY = `

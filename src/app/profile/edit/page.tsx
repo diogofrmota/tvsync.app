@@ -1,3 +1,4 @@
+import { loadOwnLibraryPreview } from 'lib/features/library/library-preview.server';
 import { ProfileAccessIssue } from 'lib/pages/profile';
 import { EditProfilePage } from 'lib/pages/profile/edit';
 import { getAuthSession } from 'lib/services/auth/session.server';
@@ -22,9 +23,10 @@ export default async function Page() {
   }
 
   try {
-    const [profile, authMethods] = await Promise.all([
+    const [profile, authMethods, backdropOptions] = await Promise.all([
       getOwnProfile(),
       getOwnAuthMethods(),
+      loadOwnLibraryPreview({ limit: 20 }),
     ]);
 
     if (!profile) {
@@ -38,7 +40,13 @@ export default async function Page() {
       );
     }
 
-    return <EditProfilePage authMethods={authMethods} profile={profile} />;
+    return (
+      <EditProfilePage
+        authMethods={authMethods}
+        backdropOptions={backdropOptions}
+        profile={profile}
+      />
+    );
   } catch (error) {
     const issue = getDatabaseAvailabilityIssue(error);
 

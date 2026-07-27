@@ -24,6 +24,8 @@ type ProfileRow = {
   display_name: string;
   email: string;
   name: string;
+  profile_backdrop_path: string | null;
+  profile_backdrop_title: string | null;
   privacy_setting: PrivacySetting;
   updated_at: string;
   user_id: string;
@@ -174,7 +176,8 @@ export const getOwnProfile = async () => {
   const userId = await getAuthenticatedUserId();
   const sql = getDatabaseSql();
   const rows = (await sql`
-    select user_id, name, username, display_name, email, bio, privacy_setting, created_at, updated_at
+    select user_id, name, username, display_name, email, bio, privacy_setting,
+      profile_backdrop_path, profile_backdrop_title, created_at, updated_at
     from profiles
     where user_id = ${userId}
     limit 1
@@ -200,7 +203,8 @@ export const isUsernameTakenByAnotherUser = async (username: string) => {
 export const getPublicProfileByUsername = async (username: string) => {
   const sql = getDatabaseSql();
   const rows = (await sql`
-    select user_id, username, display_name, bio, privacy_setting
+    select user_id, username, display_name, bio, privacy_setting,
+      profile_backdrop_path, profile_backdrop_title
     from profiles
     where lower(btrim(username)) = ${username
       .normalize('NFKC')
