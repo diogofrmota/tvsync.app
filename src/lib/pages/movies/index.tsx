@@ -1,7 +1,7 @@
 'use client';
 
 import { Button, Grid, Stack, Text } from '@chakra-ui/react';
-import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
+import { PageShell } from 'lib/components/shared/PageShell';
 import PosterCard from 'lib/components/shared/PosterCard';
 import { SectionHeading, StatePanel } from 'lib/components/shared/Section';
 import { groupMovieLibraryItems } from 'lib/features/library/movie-library-state';
@@ -81,7 +81,6 @@ export const MoviesPage = ({
 
   return (
     <PageShell>
-      <PageHeading title="Movies" />
       <MovieLibrarySection
         items={plannedItems}
         sectionKey="planned"

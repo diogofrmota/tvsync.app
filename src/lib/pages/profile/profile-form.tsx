@@ -152,15 +152,15 @@ export const ProfileForm = ({
             <Input
               autoCapitalize="none"
               autoComplete="username"
-              maxLength={24}
+              maxLength={30}
               name="username"
               onChange={(event) => setUsername(event.target.value)}
-              pattern="[a-z0-9_]{3,24}"
+              pattern="[a-z0-9_-]{3,30}"
               type="text"
               value={username}
             />
             <Field.HelperText>
-              3-24 lowercase letters, numbers or underscores.
+              3-30 letters, numbers, underscores or hyphens.
             </Field.HelperText>
             {availabilityMessage ? (
               <Text

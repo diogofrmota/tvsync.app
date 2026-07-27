@@ -1,52 +1,10 @@
 'use client';
 
-import {
-  Box,
-  Button,
-  Flex,
-  Heading,
-  Icon,
-  SimpleGrid,
-  Stack,
-  Text,
-} from '@chakra-ui/react';
+import { Box, Button, Flex, Heading, Stack, Text } from '@chakra-ui/react';
 import { useReducedMotion } from 'framer-motion';
 import MotionBox from 'lib/components/MotionBox';
+import { ProductFeatures } from 'lib/components/shared/ProductFeatures';
 import Link from 'next/link';
-import type { ComponentType } from 'react';
-import { FiBarChart2, FiBookmark, FiCompass, FiEye } from 'react-icons/fi';
-
-type Feature = {
-  description: string;
-  icon: ComponentType;
-  title: string;
-};
-
-const features: Array<Feature> = [
-  {
-    description:
-      'Mark movies and episodes as you go, and pick up right where you left off.',
-    icon: FiEye,
-    title: 'Track what you watch',
-  },
-  {
-    description: 'Save everything you want to see next in one organized place.',
-    icon: FiBookmark,
-    title: 'Build your watchlist',
-  },
-  {
-    description:
-      'Explore trending and top-rated titles added by other users in TvSync.',
-    icon: FiCompass,
-    title: 'Discover what to watch',
-  },
-  {
-    description:
-      'Turn your viewing history into personal stats and compare with your followers.',
-    icon: FiBarChart2,
-    title: 'See your progress',
-  },
-];
 
 const Hero = () => {
   const reduceMotion = useReducedMotion();
@@ -96,9 +54,9 @@ const Hero = () => {
               fontWeight="700"
               lineHeight="1.05"
             >
-              Everything you watch,{' '}
+              Welcome to Tv
               <Text as="span" color="gold.400">
-                synced in one place
+                Sync
               </Text>
             </Heading>
           </MotionBox>
@@ -146,44 +104,7 @@ const Hero = () => {
       </Box>
 
       <MotionBox {...reveal(0.36)}>
-        <SimpleGrid
-          columns={{ base: 1, sm: 2, lg: 4 }}
-          gap={{ base: 3, md: 4 }}
-        >
-          {features.map((feature) => (
-            <Stack
-              background="bg.surface"
-              borderColor="border"
-              borderRadius="xl"
-              borderWidth="1px"
-              gap={3}
-              height="full"
-              key={feature.title}
-              padding={5}
-            >
-              <Flex align="center" gap={3}>
-                <Flex
-                  align="center"
-                  background="rgba(251, 191, 36, 0.12)"
-                  borderRadius="lg"
-                  color="gold.400"
-                  flexShrink={0}
-                  height="2.5rem"
-                  justify="center"
-                  width="2.5rem"
-                >
-                  <Icon as={feature.icon} boxSize={5} />
-                </Flex>
-                <Text fontSize="md" fontWeight="600">
-                  {feature.title}
-                </Text>
-              </Flex>
-              <Text color="fg.muted" fontSize="sm" lineHeight="1.5">
-                {feature.description}
-              </Text>
-            </Stack>
-          ))}
-        </SimpleGrid>
+        <ProductFeatures />
       </MotionBox>
     </Stack>
   );

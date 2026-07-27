@@ -49,7 +49,47 @@ export type UsernameAvailability = {
   status: 'available' | 'error' | 'invalid' | 'taken';
 };
 
+export type OnboardingFormState = {
+  complete?: boolean;
+  error?: string;
+  fieldErrors?: Partial<Record<'displayName' | 'username', string>>;
+};
+
 const BIO_MAX_LENGTH = 100;
+
+export const completeOnboarding = async (
+  _previousState: OnboardingFormState,
+  formData: FormData
+): Promise<OnboardingFormState> => {
+  if (!(await getAuthenticatedSession())?.user) {
+    return { error: 'Sign in again to finish setting up your profile.' };
+  }
+
+  const displayName = readTextField(formData, 'displayName');
+  const username = normalizeUsername(readTextField(formData, 'username'));
+  const fieldErrors: NonNullable<OnboardingFormState['fieldErrors']> = {};
+  const usernameError = validateUsername(username);
+
+  if (!displayName || displayName.length > 80) {
+    fieldErrors.displayName = 'Use 1-80 characters for your name.';
+  }
+  if (usernameError) {
+    fieldErrors.username = usernameError;
+  }
+  if (Object.keys(fieldErrors).length > 0) {
+    return { fieldErrors };
+  }
+
+  try {
+    if (await isUsernameTakenByAnotherUser(username)) {
+      return { fieldErrors: { username: 'That username is already taken.' } };
+    }
+    await updateOwnProfileDetails({ bio: '', displayName, username });
+    return { complete: true };
+  } catch (error) {
+    return mapProfileUpdateError(error);
+  }
+};
 
 export type PasswordFormState = {
   error?: string;

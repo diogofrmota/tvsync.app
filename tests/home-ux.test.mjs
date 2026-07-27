@@ -32,6 +32,7 @@ test('public shell and Home content follow UX 1.1 and 1.2 order exactly', () => 
   const header = read('src/lib/layout/Header.tsx');
   const home = read('src/lib/pages/home/index.tsx');
   const hero = read('src/lib/pages/home/Hero.tsx');
+  const productFeatures = read('src/lib/components/shared/ProductFeatures.tsx');
   const config = read('src/lib/pages/home/config.ts');
   const rails = read('src/lib/pages/media/discovery-rails.ts');
   const footer = read('src/lib/layout/Footer.tsx');
@@ -44,18 +45,18 @@ test('public shell and Home content follow UX 1.1 and 1.2 order exactly', () => 
   // The signed-out hero lives in its own client component. Its contract is the
   // order of headline, promise, cost, and the two account calls to action.
   assertInOrder(hero, [
-    'Everything you watch,',
-    'synced in one place',
+    'Welcome to Tv',
+    'Sync',
     'Track Movies and TV Shows you are watching and discover what to',
     'Free to use',
     'Create your account',
     'Log in',
   ]);
-  assertInOrder(hero, [
-    'Track what you watch',
-    'Build your watchlist',
-    'Discover what to watch',
-    'See your progress',
+  assertInOrder(productFeatures, [
+    'Track what you are watching',
+    'Rate and Review your favourite shows',
+    'See what your friends are watching',
+    'Get notified about new episodes',
   ]);
   // Home lists the shared discovery rails in the shared order, and takes their
   // names from the shared definitions instead of restating them.
@@ -78,6 +79,7 @@ test('public shell and Home content follow UX 1.1 and 1.2 order exactly', () => 
     "label: 'Privacy Policy'",
     "label: 'Terms of Service'",
     "label: 'Contact'",
+    "label: 'Report a Bug'",
     'Copyright &copy;',
   ]);
   assert.doesNotMatch(
