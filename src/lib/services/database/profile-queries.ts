@@ -9,13 +9,26 @@ export const UPDATE_OWN_PROFILE_DETAILS_QUERY = `
     display_name = $2,
     username = $3,
     bio = $4,
-    profile_backdrop_path = nullif($5, ''),
-    profile_backdrop_title = nullif($6, ''),
     updated_at = now()
   where user_id = $1
   returning user_id, name, username, display_name, email, bio,
-    privacy_setting, profile_backdrop_path, profile_backdrop_title,
+    privacy_setting, profile_avatar_path, profile_avatar_title,
     created_at, updated_at
+`;
+
+/**
+ * The avatar is its own mutation: it is picked from a dialog on the profile
+ * itself, not from the profile details form. An empty path clears it back to
+ * the generated initials avatar.
+ */
+export const UPDATE_OWN_PROFILE_AVATAR_QUERY = `
+  update profiles
+  set
+    profile_avatar_path = nullif($2, ''),
+    profile_avatar_title = nullif($3, ''),
+    updated_at = now()
+  where user_id = $1
+  returning user_id, profile_avatar_path, profile_avatar_title
 `;
 
 export const GET_OWN_AUTH_METHODS_QUERY = `

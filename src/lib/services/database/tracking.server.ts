@@ -24,8 +24,8 @@ type ProfileRow = {
   display_name: string;
   email: string;
   name: string;
-  profile_backdrop_path: string | null;
-  profile_backdrop_title: string | null;
+  profile_avatar_path: string | null;
+  profile_avatar_title: string | null;
   privacy_setting: PrivacySetting;
   updated_at: string;
   user_id: string;
@@ -35,7 +35,13 @@ type ProfileRow = {
 export type OwnProfile = ProfileRow;
 export type PublicProfile = Pick<
   ProfileRow,
-  'bio' | 'display_name' | 'privacy_setting' | 'user_id' | 'username'
+  | 'bio'
+  | 'display_name'
+  | 'privacy_setting'
+  | 'profile_avatar_path'
+  | 'profile_avatar_title'
+  | 'user_id'
+  | 'username'
 >;
 
 export type OwnProfileInput = {
@@ -141,6 +147,16 @@ export type RatingSummaryRow = {
   rating_count: number;
 };
 
+/** One written review of a whole movie or TV show, newest update first. */
+type ReviewListRow = {
+  created_at: string;
+  media_type: TrackableMediaType;
+  rating: number;
+  review: string;
+  tmdb_id: number;
+  updated_at: string;
+};
+
 // The "see all" library and watchlist pages render one poster per row with no
 // pagination, so they cap at the most recent entries instead of streaming an
 // unbounded personal history. Statistics and search-state reads deliberately
@@ -177,7 +193,7 @@ export const getOwnProfile = async () => {
   const sql = getDatabaseSql();
   const rows = (await sql`
     select user_id, name, username, display_name, email, bio, privacy_setting,
-      profile_backdrop_path, profile_backdrop_title, created_at, updated_at
+      profile_avatar_path, profile_avatar_title, created_at, updated_at
     from profiles
     where user_id = ${userId}
     limit 1
@@ -204,7 +220,7 @@ export const getPublicProfileByUsername = async (username: string) => {
   const sql = getDatabaseSql();
   const rows = (await sql`
     select user_id, username, display_name, bio, privacy_setting,
-      profile_backdrop_path, profile_backdrop_title
+      profile_avatar_path, profile_avatar_title
     from profiles
     where lower(btrim(username)) = ${username
       .normalize('NFKC')
@@ -670,6 +686,30 @@ export const countOwnReviews = async () => {
   `) as Array<{ review_count: number }>;
 
   return rows.at(0)?.review_count ?? 0;
+};
+
+/**
+ * The written reviews behind the profile Reviews section. Only whole movies and
+ * TV shows carry a poster of their own, so season and episode reviews stay out
+ * of the list rather than borrowing the show's artwork.
+ */
+export const listOwnReviews = async (limit?: number) => {
+  const userId = await getAuthenticatedUserId();
+  const sql = getDatabaseSql();
+  const rows = (await sql`
+    select tmdb_id, media_type, rating, review, created_at, updated_at
+    from ratings
+    where user_id = ${userId}
+      and media_type in ('movie', 'tv')
+      and season_number = -1
+      and episode_number = -1
+      and review is not null
+      and btrim(review) <> ''
+    order by updated_at desc
+    limit ${limit ?? null}
+  `) as Array<ReviewListRow>;
+
+  return rows;
 };
 
 export const countPublicReviews = async (username: string) => {

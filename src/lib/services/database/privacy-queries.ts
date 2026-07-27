@@ -27,6 +27,7 @@ export const UPDATE_PRIVACY_PREFERENCES_QUERY = `
 export const EXPORT_ACCOUNT_QUERY = `
   select
     user_id, name, username, display_name, email, bio, privacy_setting,
+    profile_avatar_path, profile_avatar_title,
     analytics_opt_out, privacy_choices_updated_at, email_verified_at,
     banned_at, ban_reason, created_at, updated_at
   from profiles

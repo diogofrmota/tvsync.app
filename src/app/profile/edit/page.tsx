@@ -1,59 +1,11 @@
-import { loadOwnLibraryPreview } from 'lib/features/library/library-preview.server';
-import { ProfileAccessIssue } from 'lib/pages/profile';
-import { EditProfilePage } from 'lib/pages/profile/edit';
-import { getAuthSession } from 'lib/services/auth/session.server';
-import { getDatabaseAvailabilityIssue } from 'lib/services/database/core.server';
-import { getOwnAuthMethods } from 'lib/services/database/profile.server';
-import { getOwnProfile } from 'lib/services/database/tracking.server';
-import type { Metadata, Route } from 'next';
-import { redirect } from 'next/navigation';
+import type { Route } from 'next';
+import { permanentRedirect } from 'next/navigation';
 
-export const dynamic = 'force-dynamic';
-
-export const metadata: Metadata = {
-  description: 'Update your TvSync profile and account security.',
-  title: 'TvSync | Edit Profile',
-};
-
-export default async function Page() {
-  const session = await getAuthSession();
-
-  if (!session?.user?.id) {
-    redirect('/login?callbackUrl=/profile/edit' as Route);
-  }
-
-  try {
-    const [profile, authMethods, backdropOptions] = await Promise.all([
-      getOwnProfile(),
-      getOwnAuthMethods(),
-      loadOwnLibraryPreview({ limit: 20 }),
-    ]);
-
-    if (!profile) {
-      return (
-        <ProfileAccessIssue
-          issue={{
-            description: 'Your profile record could not be loaded.',
-            title: 'Profile data is missing',
-          }}
-        />
-      );
-    }
-
-    return (
-      <EditProfilePage
-        authMethods={authMethods}
-        backdropOptions={backdropOptions}
-        profile={profile}
-      />
-    );
-  } catch (error) {
-    const issue = getDatabaseAvailabilityIssue(error);
-
-    if (!issue) {
-      throw error;
-    }
-
-    return <ProfileAccessIssue issue={issue} />;
-  }
+/**
+ * Profile editing moved into the settings sub-pages, where each entry has a
+ * page of its own. The old route stays as a redirect so existing links (and
+ * the Google reauthentication callback) keep working.
+ */
+export default function Page() {
+  permanentRedirect('/profile/settings/profile' as Route);
 }

@@ -33,6 +33,8 @@ const migrationNames = [
   '0009_reviews_and_public_profiles.sql',
   '0011_admin_dashboard.sql',
   '0012_privacy_compliance.sql',
+  '0014_profile_backdrops.sql',
+  '0015_profile_avatar.sql',
 ] as const;
 
 const read = (path: string) => readFile(join(process.cwd(), path), 'utf8');
