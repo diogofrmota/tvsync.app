@@ -150,7 +150,6 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
     detailActions,
     statisticsPage,
     settingsPage,
-    posterStats,
     headerActions,
   ] = await Promise.all([
     read('src/lib/pages/profile/index.tsx'),
@@ -161,7 +160,6 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
     read('src/lib/features/library/media-detail-actions.tsx'),
     read('src/lib/pages/profile/statistics.tsx'),
     read('src/app/profile/settings/page.tsx'),
-    read('src/lib/components/profile/ProfilePosterStats.tsx'),
     read('src/lib/pages/profile/profile-header-actions.tsx'),
   ]);
 
@@ -174,16 +172,19 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
     assert.match(page, new RegExp(label));
   }
 
-  // The profile section is replaced by four compact counters on the poster.
-  assert.match(page, /<ProfilePosterStats statistics=\{statistics\} \/>/);
-  assert.doesNotMatch(page, /title="Statistics"/);
+  // Four compact counters sit together in the profile Statistics section.
+  assert.match(page, /title="Statistics"/);
+  assert.match(
+    page,
+    /<ProfileStatRail cards=\{getProfileStatCards\(statistics\)\} \/>/
+  );
   for (const label of [
     'TV Shows Finished',
     'Movies Finished',
     'Total Watch Time',
     'Number of Reviews',
   ]) {
-    assert.match(posterStats, new RegExp(label));
+    assert.match(statisticsPage, new RegExp(label));
   }
 
   for (const label of [
@@ -198,8 +199,11 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
   assert.match(page, /<ProfileHeaderActions \/>/);
   assert.match(page, /\/following/);
   assert.match(page, /\/followers/);
-  assert.match(headerActions, /aria-label="View statistics"/);
-  assert.match(headerActions, /FiShare2[\s\S]*FiBarChart2[\s\S]*FiSettings/);
+  assert.match(headerActions, /aria-label="Profile settings"/);
+  assert.doesNotMatch(
+    headerActions,
+    /Share profile|View statistics|FiShare2|FiBarChart2/
+  );
   assert.match(statisticsPage, /Compare with Following/);
   assert.match(statisticsPage, /compare=statistics/);
   assert.doesNotMatch(page, /You have not added a biography yet\./);
@@ -210,7 +214,7 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
   assert.match(rail, /^'use client';/);
   assert.doesNotMatch(rail, /overflowX="auto"/);
   assert.doesNotMatch(rail, /scrollSnapType/);
-  assert.match(rail, /templateColumns="minmax\(0, 1fr\)"/);
+  assert.match(rail, /repeat\(4, minmax\(0, 1fr\)\)/);
   assert.match(profileRoute, /getOwnProfileStatistics/);
   assert.match(profileRoute, /getOwnProfileFavorites/);
   assert.match(movieDetail, /<MediaDetailActions/);
