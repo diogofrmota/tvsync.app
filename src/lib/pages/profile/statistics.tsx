@@ -23,16 +23,14 @@ export const getProfileStatCards = (
 ): Array<ProfileStatCard> => [
   { label: 'TV Shows Finished', value: statistics.tvShowsWatched },
   { label: 'Movies Finished', value: statistics.moviesWatched },
-  { label: 'Episodes Watched', value: statistics.episodesWatched },
   {
-    detail: runtimeDetail(statistics.missingTvRuntimeCount),
-    label: 'Time in TV Shows',
-    value: formatWatchTime(statistics.tvMinutesWatched),
-  },
-  {
-    detail: runtimeDetail(statistics.missingMovieRuntimeCount),
-    label: 'Time in Movies',
-    value: formatWatchTime(statistics.movieMinutesWatched),
+    detail: runtimeDetail(
+      statistics.missingTvRuntimeCount + statistics.missingMovieRuntimeCount
+    ),
+    label: 'Total Watch Time',
+    value: formatWatchTime(
+      statistics.tvMinutesWatched + statistics.movieMinutesWatched
+    ),
   },
   { label: 'Number of Reviews', value: statistics.reviewsWritten },
 ];
