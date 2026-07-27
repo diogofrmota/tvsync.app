@@ -4,8 +4,11 @@ import { Box, Grid, Icon, Text } from '@chakra-ui/react';
 import type { IconType } from 'react-icons';
 import { FiBarChart2, FiClock, FiEdit3, FiFilm, FiTv } from 'react-icons/fi';
 
+/**
+ * A counter is its label and its value. Runtime TMDB never supplied is simply
+ * not counted; the card does not annotate the total as partial.
+ */
 export type ProfileStatCard = {
-  detail?: string;
   label: string;
   value: number | string;
 };
@@ -61,11 +64,6 @@ export const ProfileStatRail = ({
         <Text color="fg.muted" fontSize="sm" fontWeight="medium" marginTop={2}>
           {card.label}
         </Text>
-        {card.detail ? (
-          <Text color="fg.muted" fontSize="xs" marginTop={2}>
-            {card.detail}
-          </Text>
-        ) : null}
       </Box>
     ))}
   </Grid>

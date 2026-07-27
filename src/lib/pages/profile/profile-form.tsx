@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  Box,
   Button,
   CloseButton,
   Dialog,
@@ -11,8 +10,6 @@ import {
   Text,
   Textarea,
 } from '@chakra-ui/react';
-import type { MediaCardEntry } from 'lib/components/shared/media-item';
-import { IMAGE_URL } from 'lib/components/shared/tmdb-image-urls';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { useActionState, useEffect, useRef, useState } from 'react';
@@ -32,8 +29,6 @@ export type ProfileFormValues = {
   bio: string;
   displayName: string;
   email: string;
-  profileBackdropPath: string | null;
-  profileBackdropTitle: string | null;
   username: string;
 };
 
@@ -56,7 +51,9 @@ const Feedback = ({ error, success }: { error?: string; success?: string }) => (
 
 const GoogleReauthentication = () => (
   <Button
-    onClick={() => signIn('google', { callbackUrl: '/profile/edit' })}
+    onClick={() =>
+      signIn('google', { callbackUrl: '/profile/settings/profile' })
+    }
     type="button"
     variant="outline"
   >
@@ -79,11 +76,9 @@ const usernameAvailabilityColor = (
 };
 
 export const ProfileForm = ({
-  backdropOptions,
   hasCredentials,
   initialValues,
 }: {
-  backdropOptions: Array<MediaCardEntry>;
   hasCredentials: boolean;
   initialValues: ProfileFormValues;
 }) => {
@@ -92,12 +87,6 @@ export const ProfileForm = ({
     FormData
   >(updateOwnProfile, {});
   const [username, setUsername] = useState(initialValues.username);
-  const [selectedBackdrop, setSelectedBackdrop] = useState(
-    initialValues.profileBackdropPath ?? ''
-  );
-  const [selectedBackdropTitle, setSelectedBackdropTitle] = useState(
-    initialValues.profileBackdropTitle ?? ''
-  );
   const [availability, setAvailability] = useState<
     UsernameAvailability | { status: 'checking' } | { status: 'idle' }
   >({ status: 'idle' });
@@ -145,67 +134,6 @@ export const ProfileForm = ({
       >
         <Stack gap={5}>
           <Feedback error={state.error} success={state.success} />
-          <Field.Root>
-            <Field.Label>Profile poster</Field.Label>
-            <Field.HelperText>
-              Pick a horizontal image from a movie or show in your library.
-            </Field.HelperText>
-            <input
-              name="profileBackdropPath"
-              type="hidden"
-              value={selectedBackdrop}
-            />
-            <input
-              name="profileBackdropTitle"
-              type="hidden"
-              value={selectedBackdropTitle}
-            />
-            <Box display="flex" gap={3} overflowX="auto" paddingY={2}>
-              {backdropOptions
-                .filter((item) => item.backdropPath)
-                .map((item) => (
-                  <Button
-                    aria-label={`Use ${item.title} as profile poster`}
-                    aria-pressed={selectedBackdrop === item.backdropPath}
-                    as="button"
-                    backgroundImage={`linear-gradient(rgba(0,0,0,.08), rgba(0,0,0,.5)), url(${IMAGE_URL}${item.backdropPath})`}
-                    backgroundPosition="center"
-                    backgroundSize="cover"
-                    borderColor={
-                      selectedBackdrop === item.backdropPath
-                        ? 'gold.400'
-                        : 'border'
-                    }
-                    borderRadius="lg"
-                    borderWidth="2px"
-                    flex="0 0 12rem"
-                    height="6.75rem"
-                    key={`${item.mediaType}-${item.id}`}
-                    onClick={() => {
-                      setSelectedBackdrop(item.backdropPath ?? '');
-                      setSelectedBackdropTitle(item.title);
-                    }}
-                    position="relative"
-                    type="button"
-                    variant="outline"
-                  >
-                    <Text
-                      bottom={2}
-                      color="white"
-                      fontSize="xs"
-                      fontWeight="bold"
-                      left={2}
-                      lineClamp="1"
-                      position="absolute"
-                      right={2}
-                      textAlign="left"
-                    >
-                      {item.title}
-                    </Text>
-                  </Button>
-                ))}
-            </Box>
-          </Field.Root>
           <Field.Root
             invalid={Boolean(state.fieldErrors?.displayName)}
             required

@@ -51,7 +51,7 @@ export const LogoutButton = ({
     setIsPending(true);
     await signOut({ callbackUrl }).catch(() => setIsPending(false));
   };
-  // Signing out is a secondary action next to "Edit Profile", so it keeps the
+  // Signing out is a secondary action next to the settings entries, so it keeps the
   // quieter outline treatment instead of competing with the primary button.
   return (
     <Button

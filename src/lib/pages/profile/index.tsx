@@ -1,13 +1,15 @@
 import { Box, Button, Flex, Heading, Stack, Text } from '@chakra-ui/react';
+import { ProfileReviewList } from 'lib/components/profile/ProfileReviews';
 import { ProfileStatRail } from 'lib/components/profile/ProfileStatRail';
 import { FavoriteHeartIcon } from 'lib/components/shared/FavoriteHeart';
 import { MediaRail } from 'lib/components/shared/MediaRail';
 import type { MediaCardItem } from 'lib/components/shared/media-item';
 import { PageShell } from 'lib/components/shared/PageShell';
 import { SectionHeading, StatePanel } from 'lib/components/shared/Section';
-import { IMAGE_URL_ORIGINAL } from 'lib/components/shared/tmdb-image-urls';
 import type { ProfileFavoriteItem } from 'lib/features/profile/profile-favorites.server';
+import type { ProfileReviewItem } from 'lib/features/profile/profile-reviews.server';
 import type { ProfileStatistics } from 'lib/features/profile/profile-statistics';
+import { ProfileAvatarPicker } from 'lib/pages/profile/profile-avatar-picker';
 import { ProfileHeaderActions } from 'lib/pages/profile/profile-header-actions';
 import { getProfileStatCards } from 'lib/pages/profile/statistics';
 import type { AuthSessionIssue } from 'lib/services/auth/session-error.server';
@@ -111,6 +113,7 @@ export const ProfilePage = ({
   followCounts,
   movies,
   profile,
+  reviews,
   statistics,
   tvShows,
 }: {
@@ -118,6 +121,7 @@ export const ProfilePage = ({
   followCounts: FollowCountsRow;
   movies: Array<MediaCardItem>;
   profile: OwnProfile;
+  reviews: Array<ProfileReviewItem>;
   statistics: ProfileStatistics;
   tvShows: Array<MediaCardItem>;
 }) => {
@@ -133,31 +137,19 @@ export const ProfilePage = ({
   return (
     <PageShell>
       <Stack gap={{ base: 3, md: 4 }}>
-        <Stack
-          align="center"
-          aspectRatio={{ base: '16 / 7', md: '16 / 5' }}
-          background="linear-gradient(120deg, gray.900, gray.800 55%, rgba(251, 191, 36, 0.18))"
-          backgroundImage={
-            profile.profile_backdrop_path
-              ? `linear-gradient(rgba(0, 0, 0, 0.38), rgba(0, 0, 0, 0.78)), url(${IMAGE_URL_ORIGINAL}${profile.profile_backdrop_path})`
-              : undefined
-          }
-          backgroundPosition="center"
-          backgroundSize="cover"
-          borderRadius="xl"
-          justify="center"
-          overflow="hidden"
-          padding={5}
-          position="relative"
-          textAlign="center"
-          width="full"
-        >
-          <Flex gap={2} position="absolute" right={4} top={4}>
-            <ProfileHeaderActions />
-          </Flex>
-        </Stack>
+        <Flex justify="flex-end">
+          <ProfileHeaderActions />
+        </Flex>
 
-        <Stack align="center" gap={2} textAlign="center">
+        <Stack align="center" gap={3} textAlign="center">
+          {/* The avatar is a poster the user picks in search, so it opens the
+              picker dialog on click instead of an upload control. */}
+          <ProfileAvatarPicker
+            avatarPath={profile.profile_avatar_path}
+            avatarTitle={profile.profile_avatar_title}
+            displayName={displayName}
+          />
+
           <Stack align="center" gap={0.5}>
             <Heading fontSize={{ base: 'lg', md: 'xl' }}>{displayName}</Heading>
             <Text color="fg.muted" fontSize="sm">
@@ -192,6 +184,20 @@ export const ProfilePage = ({
           title="Statistics"
         />
         <ProfileStatRail cards={getProfileStatCards(statistics)} />
+      </Stack>
+
+      <Stack as="section" gap={5}>
+        <SectionHeading
+          seeAllHref={
+            reviews.length > 0 ? ('/profile/reviews' as Route) : undefined
+          }
+          title="Reviews"
+        />
+        {reviews.length > 0 ? (
+          <ProfileReviewList reviews={reviews} />
+        ) : (
+          <StatePanel message="You have not written a review yet. Rate a show or film and add a review from its page." />
+        )}
       </Stack>
 
       <ProfileRail

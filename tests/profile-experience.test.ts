@@ -42,6 +42,7 @@ const migrationNames = [
   '0008_profile_experience.sql',
   '0009_reviews_and_public_profiles.sql',
   '0014_profile_backdrops.sql',
+  '0015_profile_avatar.sql',
 ] as const;
 
 const read = (path: string) => readFile(join(process.cwd(), path), 'utf8');
@@ -159,7 +160,7 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
     read('src/lib/pages/tv/detail/index.tsx'),
     read('src/lib/features/library/media-detail-actions.tsx'),
     read('src/lib/pages/profile/statistics.tsx'),
-    read('src/app/profile/settings/page.tsx'),
+    read('src/lib/pages/profile/settings.tsx'),
     read('src/lib/pages/profile/profile-header-actions.tsx'),
   ]);
 
@@ -224,11 +225,121 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
   assert.match(detailActions, /aria-pressed=\{favorite\}/);
   assert.doesNotMatch(page, /Favorite genres|Achievements|Streaks/);
   assert.doesNotMatch(page, /Profile Information|Social Information/);
-  // The own-profile page shows no avatar at all, so there is no image source,
-  // upload control, or stored avatar column to expose.
-  assert.doesNotMatch(page, /Avatar|type="file"|avatar_url|avatarUrl/);
   assert.doesNotMatch(page, /LogoutButton/);
   assert.match(settingsPage, /LogoutButton/);
+});
+
+test('Profile avatar is a circular poster picked in search, never an upload', async () => {
+  const [page, avatar, picker, publicProfile, actions, migration] =
+    await Promise.all([
+      read('src/lib/pages/profile/index.tsx'),
+      read('src/lib/components/profile/ProfileAvatarImage.tsx'),
+      read('src/lib/pages/profile/profile-avatar-picker.tsx'),
+      read('src/lib/pages/profile/public-profile.tsx'),
+      read('src/lib/pages/profile/actions.ts'),
+      read('database/migrations/0015_profile_avatar.sql'),
+    ]);
+
+  // The avatar sits above the name, and it is a circle.
+  const avatarIndex = page.indexOf('<ProfileAvatarPicker');
+  const nameIndex = page.indexOf('{displayName}');
+
+  assert.ok(avatarIndex !== -1, 'Profile renders the avatar picker');
+  assert.ok(avatarIndex < nameIndex, 'The avatar sits above the display name');
+  assert.match(avatar, /borderRadius="full"/);
+  assert.match(avatar, /getProfileInitials/);
+  assert.match(publicProfile, /<ProfileAvatarImage/);
+
+  // The picture comes from a title found in search, and the picker saves the
+  // TMDB poster path only — there is no file input and no object storage.
+  assert.match(picker, /useSearchResults/);
+  assert.match(picker, /Search shows and films/);
+  assert.match(picker, /updateOwnProfileAvatarSelection/);
+  assert.match(picker, /Remove avatar/);
+  for (const source of [page, avatar, picker, actions]) {
+    assert.doesNotMatch(source, /type="file"|FormData\(\).*file|uploadAvatar/);
+  }
+  assert.match(actions, /TMDB_IMAGE_PATH_PATTERN\.test\(posterPath\)/);
+
+  // The horizontal profile poster it replaces is gone, column and all.
+  assert.doesNotMatch(page, /profile_backdrop_path|aspectRatio/);
+  assert.match(migration, /profile_avatar_path/);
+  assert.match(migration, /drop column if exists profile_backdrop_path/);
+});
+
+test('Profile lists the reviews the user wrote, poster first, with no partial-total note', async () => {
+  const [page, card, reviewsPage, statisticsPage, statRail, connections] =
+    await Promise.all([
+      read('src/lib/pages/profile/index.tsx'),
+      read('src/lib/components/profile/ProfileReviews.tsx'),
+      read('src/lib/pages/profile/reviews.tsx'),
+      read('src/lib/pages/profile/statistics.tsx'),
+      read('src/lib/components/profile/ProfileStatRail.tsx'),
+      read('src/lib/pages/profile/connections.tsx'),
+    ]);
+
+  assert.match(page, /title="Reviews"/);
+  assert.match(page, /<ProfileReviewList/);
+  assert.match(page, /'\/profile\/reviews' as Route/);
+  // A review card carries the poster, the title, the rating, and the review.
+  assert.match(card, /IMAGE_URL/);
+  assert.match(card, /review\.title/);
+  assert.match(card, /<ReviewRating rating=\{review\.rating\}/);
+  assert.match(card, /\{review\.review\}/);
+  assert.match(reviewsPage, /Back to Profile/);
+
+  // Watch totals no longer explain themselves as partial.
+  for (const source of [statisticsPage, statRail, connections]) {
+    assert.doesNotMatch(source, /Partial total/);
+  }
+});
+
+test('Settings opens a page per entry and can get back to the profile', async () => {
+  const [
+    settings,
+    settingsRoute,
+    profileRoute,
+    accountRoute,
+    privacyRoute,
+    editRoute,
+  ] = await Promise.all([
+    read('src/lib/pages/profile/settings.tsx'),
+    read('src/app/profile/settings/page.tsx'),
+    read('src/app/profile/settings/profile/page.tsx'),
+    read('src/app/profile/settings/account/page.tsx'),
+    read('src/app/profile/settings/privacy/page.tsx'),
+    read('src/app/profile/edit/page.tsx'),
+  ]);
+
+  // Each entry points at its own route instead of a shared anchor.
+  for (const href of [
+    '/profile/settings/profile',
+    '/profile/settings/account',
+    '/profile/settings/privacy',
+  ]) {
+    assert.match(settings, new RegExp(href));
+  }
+  assert.doesNotMatch(settings, /profile\/edit#/);
+  // Preferences TvSync does not store are not listed as settings.
+  assert.doesNotMatch(settings, /Appearance|Notifications/);
+
+  assert.match(settings, /Back to Profile/);
+  assert.match(settings, /Back to Settings/);
+  assert.match(settingsRoute, /<SettingsIndexPage/);
+  assert.match(profileRoute, /<SettingsProfilePage/);
+  assert.match(accountRoute, /<SettingsAccountPage/);
+  assert.match(privacyRoute, /<SettingsPrivacyPage/);
+  // The old combined editor redirects into the settings pages.
+  assert.match(editRoute, /permanentRedirect\('\/profile\/settings\/profile'/);
+
+  for (const route of [
+    settingsRoute,
+    profileRoute,
+    accountRoute,
+    privacyRoute,
+  ]) {
+    assert.match(route, /login\?callbackUrl=|requireOwnProfile/);
+  }
 });
 
 test('follower and following pages search, navigate, and follow without exposing internal ids', async () => {
@@ -255,10 +366,13 @@ test('follower and following pages search, navigate, and follow without exposing
   assert.match(following, /compare === 'statistics'/);
 });
 
-test('Edit Profile exposes secure profile, email, password, Google setup, and deletion flows', async () => {
+test('Settings exposes secure profile, email, password, Google setup, and deletion flows', async () => {
   const [editPage, form, actions, email, authConfig, authDatabase] =
     await Promise.all([
-      read('src/lib/pages/profile/edit.tsx'),
+      Promise.all([
+        read('src/lib/pages/profile/settings-profile.tsx'),
+        read('src/lib/pages/profile/settings-account.tsx'),
+      ]).then((pages) => pages.join('\n')),
       read('src/lib/pages/profile/profile-form.tsx'),
       read('src/lib/pages/profile/actions.ts'),
       read('src/lib/services/auth/email.server.ts'),
@@ -301,15 +415,14 @@ test('Edit Profile exposes secure profile, email, password, Google setup, and de
   );
 });
 
-test('Profile and Edit Profile include explicit mobile and desktop layouts', async () => {
+test('Profile and Settings include explicit mobile and desktop layouts', async () => {
   const [profile, edit, form] = await Promise.all([
     read('src/lib/pages/profile/index.tsx'),
-    read('src/lib/pages/profile/edit.tsx'),
+    read('src/lib/pages/profile/settings.tsx'),
     read('src/lib/pages/profile/profile-form.tsx'),
   ]);
 
-  assert.match(profile, /aspectRatio=\{\{ base: '16 \/ 7', md: '16 \/ 5' \}\}/);
-  // Profile leads with a horizontal hero and keeps account actions in settings.
+  // Profile leads with the avatar and keeps account actions in settings.
   assertProfileHeaderOrder(profile);
   assert.match(profile, /<FollowCountChip/);
   assert.match(profile, /textAlign="center"/);
@@ -354,14 +467,7 @@ test('PostgreSQL profile lifecycle preserves identity and deletes personal data 
         const updated = await getRows<{ user_id: string; username: string }>(
           db,
           UPDATE_OWN_PROFILE_DETAILS_QUERY,
-          [
-            'user-a',
-            'Alice Updated',
-            'alice_updated',
-            'Updated biography',
-            '',
-            '',
-          ]
+          ['user-a', 'Alice Updated', 'alice_updated', 'Updated biography']
         );
         assert.deepEqual(
           updated.map(({ user_id, username }) => ({ user_id, username })),
@@ -379,8 +485,6 @@ test('PostgreSQL profile lifecycle preserves identity and deletes personal data 
             'user-a',
             'Alice',
             'bob',
-            '',
-            '',
             '',
           ]),
           /profiles_username_(lower|normalized)_unique/

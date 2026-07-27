@@ -18,7 +18,14 @@ export type PublicProfileData = {
   followState: FollowState;
   isAuthenticated: boolean;
   isOwnProfile: boolean;
-  profile: Pick<PublicProfile, 'bio' | 'display_name' | 'username'>;
+  profile: Pick<
+    PublicProfile,
+    | 'bio'
+    | 'display_name'
+    | 'profile_avatar_path'
+    | 'profile_avatar_title'
+    | 'username'
+  >;
   statistics: ProfileStatistics;
 };
 
@@ -55,6 +62,8 @@ export const getPublicProfileData = cache(
       profile: {
         bio: profile.bio,
         display_name: profile.display_name,
+        profile_avatar_path: profile.profile_avatar_path,
+        profile_avatar_title: profile.profile_avatar_title,
         username: profile.username,
       },
       statistics,

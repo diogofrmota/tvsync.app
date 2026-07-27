@@ -87,7 +87,7 @@ export default function PrivacyPage() {
         saved to your account so it follows you to every device you sign in on.
       </LegalSection>
       <LegalSection title="Your privacy rights">
-        You can exercise these rights yourself, immediately, from Edit Profile:
+        You can exercise these rights yourself, immediately, from Settings:
         access and portability — Download My Data gives you every record TvSync
         holds for your account as a JSON file (GDPR Art. 15 and 20, CCPA right
         to know); rectification — change your display name, username, bio, and
@@ -130,8 +130,8 @@ export default function PrivacyPage() {
         age); accounts believed to belong to a child below that age are removed.
       </LegalSection>
       <LegalSection title="Downloading your data">
-        Download My Data, under Privacy Choices in Edit Profile, builds a JSON
-        file containing your account details, sign-in methods (never password
+        Download My Data, under Settings then Privacy, builds a JSON file
+        containing your account details, sign-in methods (never password
         hashes), library entries, episode progress, ratings and reviews,
         favourites, watchlist, and the accounts you follow and who follow you.
         The file is generated on request and handed straight to your browser —
@@ -140,18 +140,18 @@ export default function PrivacyPage() {
         on the account.
       </LegalSection>
       <LegalSection title="Deleting your data">
-        You can permanently delete your account from Edit Profile after typing
-        your username to confirm (and your password, for password-based
-        accounts). Confirmed deletion removes your profile and the personal data
-        linked to it, including library activity, episode progress, favourites,
-        ratings, reviews and comments, authentication provider links,
-        verification/reset tokens, and social relationships. Limited operational
-        records, such as security and rate-limit logs or routine provider
-        backups, may persist briefly after deletion under Neon's, Resend's, and
-        Vercel's own operational retention practices before they age out; TvSync
-        does not keep these as an active account or use them to restore your
-        profile. You can also request deletion through the Contact page if you
-        cannot access your account.
+        You can permanently delete your account from Settings then Account,
+        after typing your username to confirm (and your password, for
+        password-based accounts). Confirmed deletion removes your profile and
+        the personal data linked to it, including library activity, episode
+        progress, favourites, ratings, reviews and comments, authentication
+        provider links, verification/reset tokens, and social relationships.
+        Limited operational records, such as security and rate-limit logs or
+        routine provider backups, may persist briefly after deletion under
+        Neon's, Resend's, and Vercel's own operational retention practices
+        before they age out; TvSync does not keep these as an active account or
+        use them to restore your profile. You can also request deletion through
+        the Contact page if you cannot access your account.
       </LegalSection>
       <LegalSection title="Contact">
         Questions about this Privacy Policy or your data can be sent through the{' '}
@@ -166,14 +166,14 @@ export default function PrivacyPage() {
         the CPRA (CCPA). Every requirement described above is implemented in the
         product rather than promised on this page: a stated legal basis for each
         kind of processing, self-service access, portability, rectification, and
-        erasure from Edit Profile, honouring of the Global Privacy Control
-        signal, no sale or sharing of personal data, no non-essential cookies,
-        data minimisation in the security records TvSync keeps, and defined
-        retention periods after which data is deleted automatically. This page
-        is the notice required by GDPR Art. 13-14 and by the CCPA, it reflects
-        what the product actually does today, and TvSync's handling of your
-        personal data is lawful under both. It was last reviewed in July 2026;
-        material changes will be published here before they take effect.
+        erasure from Settings, honouring of the Global Privacy Control signal,
+        no sale or sharing of personal data, no non-essential cookies, data
+        minimisation in the security records TvSync keeps, and defined retention
+        periods after which data is deleted automatically. This page is the
+        notice required by GDPR Art. 13-14 and by the CCPA, it reflects what the
+        product actually does today, and TvSync's handling of your personal data
+        is lawful under both. It was last reviewed in July 2026; material
+        changes will be published here before they take effect.
       </LegalSection>
     </LegalPage>
   );

@@ -185,8 +185,14 @@ export const EmailChangeVerificationPage = ({
         color="gold.300"
         fontWeight="600"
       >
-        <Link href={changed ? '/login?account=email-updated' : '/profile/edit'}>
-          {changed ? 'Continue to Login' : 'Return to Edit Profile'}
+        <Link
+          href={
+            changed
+              ? '/login?account=email-updated'
+              : '/profile/settings/profile'
+          }
+        >
+          {changed ? 'Continue to Login' : 'Return to Profile Settings'}
         </Link>
       </Box>
     </Stack>

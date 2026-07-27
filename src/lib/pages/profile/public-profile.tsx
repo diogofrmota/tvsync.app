@@ -1,4 +1,5 @@
-import { Avatar, Box, Flex, Heading, Stack, Text } from '@chakra-ui/react';
+import { Box, Flex, Heading, Stack, Text } from '@chakra-ui/react';
+import { ProfileAvatarImage } from 'lib/components/profile/ProfileAvatarImage';
 import { ProfileStatRail } from 'lib/components/profile/ProfileStatRail';
 import { FavoriteHeartIcon } from 'lib/components/shared/FavoriteHeart';
 import { MediaRail } from 'lib/components/shared/MediaRail';
@@ -63,9 +64,11 @@ export const PublicProfilePage = ({ data }: { data: PublicProfileData }) => {
         gap={5}
         padding={5}
       >
-        <Avatar.Root aria-label={`${displayName} profile avatar`} size="2xl">
-          <Avatar.Fallback name={displayName} />
-        </Avatar.Root>
+        <ProfileAvatarImage
+          avatarPath={profile.profile_avatar_path}
+          avatarTitle={profile.profile_avatar_title}
+          displayName={displayName}
+        />
         <Stack flex="1" gap={2} minWidth={0}>
           <Heading as="h2" fontSize={{ base: '2xl', md: '3xl' }}>
             {displayName}
