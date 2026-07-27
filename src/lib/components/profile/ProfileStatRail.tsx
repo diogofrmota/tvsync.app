@@ -2,14 +2,7 @@
 
 import { Box, Grid, Icon, Text } from '@chakra-ui/react';
 import type { IconType } from 'react-icons';
-import {
-  FiBarChart2,
-  FiClock,
-  FiEdit3,
-  FiFilm,
-  FiPlayCircle,
-  FiTv,
-} from 'react-icons/fi';
+import { FiBarChart2, FiClock, FiEdit3, FiFilm, FiTv } from 'react-icons/fi';
 
 export type ProfileStatCard = {
   detail?: string;
@@ -18,12 +11,10 @@ export type ProfileStatCard = {
 };
 
 const iconsByLabel: Record<string, IconType> = {
-  'Episodes Watched': FiPlayCircle,
   'Movies Finished': FiFilm,
   'Number of Reviews': FiEdit3,
   'TV Shows Finished': FiTv,
-  'Time in Movies': FiClock,
-  'Time in TV Shows': FiClock,
+  'Total Watch Time': FiClock,
 };
 
 const getStatIcon = (label: string): IconType =>
@@ -39,11 +30,7 @@ export const ProfileStatRail = ({
     columnGap={4}
     role="list"
     rowGap={4}
-    templateColumns={{
-      base: 'repeat(2, minmax(0, 1fr))',
-      md: 'repeat(3, minmax(0, 1fr))',
-      lg: `repeat(${cards.length}, minmax(0, 1fr))`,
-    }}
+    templateColumns="minmax(0, 1fr)"
   >
     {cards.map((card) => (
       <Box
@@ -58,7 +45,12 @@ export const ProfileStatRail = ({
         transitionProperty="border-color"
         transitionTimingFunction="ease-out"
       >
-        <Icon as={getStatIcon(card.label)} boxSize={5} color="gold.400" />
+        <Box alignItems="center" display="flex" gap={3}>
+          <Icon as={getStatIcon(card.label)} boxSize={5} color="gold.400" />
+          <Text color="fg.muted" fontSize="sm" fontWeight="medium">
+            {card.label}
+          </Text>
+        </Box>
         <Text
           color="gold.300"
           fontSize={{ base: '2xl', md: '3xl' }}
@@ -66,9 +58,6 @@ export const ProfileStatRail = ({
           marginTop={2}
         >
           {card.value}
-        </Text>
-        <Text color="fg.muted" fontSize="sm" fontWeight="medium">
-          {card.label}
         </Text>
         {card.detail ? (
           <Text color="fg.muted" fontSize="xs" marginTop={2}>

@@ -1,13 +1,10 @@
 import { Box, Button, Flex, Heading, Stack, Text } from '@chakra-ui/react';
-import {
-  type ProfileStatCard,
-  ProfileStatRail,
-} from 'lib/components/profile/ProfileStatRail';
+import { ProfilePosterStats } from 'lib/components/profile/ProfilePosterStats';
 import { FavoriteHeartIcon } from 'lib/components/shared/FavoriteHeart';
 import { MediaRail } from 'lib/components/shared/MediaRail';
 import type { MediaCardItem } from 'lib/components/shared/media-item';
 import { PageShell } from 'lib/components/shared/PageShell';
-import { SectionHeading, StatePanel } from 'lib/components/shared/Section';
+import { StatePanel } from 'lib/components/shared/Section';
 import { IMAGE_URL_ORIGINAL } from 'lib/components/shared/tmdb-image-urls';
 import type { ProfileFavoriteItem } from 'lib/features/profile/profile-favorites.server';
 import type { ProfileStatistics } from 'lib/features/profile/profile-statistics';
@@ -125,12 +122,6 @@ export const ProfilePage = ({
 }) => {
   const displayName = profile.display_name || profile.name || profile.username;
   const baseProfilePath = `/profile/${profile.username}`;
-  // The profile keeps the two headline counters; every other statistic lives
-  // behind "See All" on the dedicated statistics page.
-  const statCards: Array<ProfileStatCard> = [
-    { label: 'TV Shows Finished', value: statistics.tvShowsWatched },
-    { label: 'Movies Finished', value: statistics.moviesWatched },
-  ];
   const favoriteMovies = favorites.filter(
     (item) => item.mediaType === MediaType.Movie
   );
@@ -163,6 +154,7 @@ export const ProfilePage = ({
           <Flex gap={2} position="absolute" right={4} top={4}>
             <ProfileHeaderActions />
           </Flex>
+          <ProfilePosterStats statistics={statistics} />
         </Stack>
 
         <Stack align="center" gap={2} textAlign="center">
@@ -192,14 +184,6 @@ export const ProfilePage = ({
             </Text>
           ) : null}
         </Stack>
-      </Stack>
-
-      <Stack as="section" gap={5}>
-        <SectionHeading
-          seeAllHref={'/profile/statistics' as Route}
-          title="Statistics"
-        />
-        <ProfileStatRail cards={statCards} />
       </Stack>
 
       <ProfileRail

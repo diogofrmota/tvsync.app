@@ -2,7 +2,7 @@
 
 import { IconButton } from '@chakra-ui/react';
 import Link from 'next/link';
-import { FiSettings, FiShare2 } from 'react-icons/fi';
+import { FiBarChart2, FiSettings, FiShare2 } from 'react-icons/fi';
 
 export const ProfileHeaderActions = () => {
   const shareProfile = async () => {
@@ -23,6 +23,16 @@ export const ProfileHeaderActions = () => {
         variant="solid"
       >
         <FiShare2 />
+      </IconButton>
+      <IconButton
+        aria-label="View statistics"
+        asChild
+        size="sm"
+        variant="solid"
+      >
+        <Link href="/profile/statistics">
+          <FiBarChart2 />
+        </Link>
       </IconButton>
       <IconButton
         aria-label="Profile settings"

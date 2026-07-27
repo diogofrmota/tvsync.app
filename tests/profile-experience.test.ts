@@ -150,6 +150,8 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
     detailActions,
     statisticsPage,
     settingsPage,
+    posterStats,
+    headerActions,
   ] = await Promise.all([
     read('src/lib/pages/profile/index.tsx'),
     read('src/app/profile/page.tsx'),
@@ -159,29 +161,35 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
     read('src/lib/features/library/media-detail-actions.tsx'),
     read('src/lib/pages/profile/statistics.tsx'),
     read('src/app/profile/settings/page.tsx'),
+    read('src/lib/components/profile/ProfilePosterStats.tsx'),
+    read('src/lib/pages/profile/profile-header-actions.tsx'),
   ]);
 
   for (const label of [
     'Following',
     'Followers',
-    'TV Shows Finished',
-    'Movies Finished',
     'Favourite Movies',
     'Favourite TV Shows',
   ]) {
     assert.match(page, new RegExp(label));
   }
 
-  // Only the two headline counters stay on the profile; the rest of the
-  // statistics live behind "See All" on their own page.
-  assert.doesNotMatch(page, /Time in Movies|Episodes Watched/);
+  // The profile section is replaced by four compact counters on the poster.
+  assert.match(page, /<ProfilePosterStats statistics=\{statistics\} \/>/);
+  assert.doesNotMatch(page, /title="Statistics"/);
+  for (const label of [
+    'TV Shows Finished',
+    'Movies Finished',
+    'Total Watch Time',
+    'Number of Reviews',
+  ]) {
+    assert.match(posterStats, new RegExp(label));
+  }
 
   for (const label of [
     'Movies Finished',
-    'Time in Movies',
     'TV Shows Finished',
-    'Time in TV Shows',
-    'Episodes Watched',
+    'Total Watch Time',
     'Number of Reviews',
   ]) {
     assert.match(statisticsPage, new RegExp(label));
@@ -190,7 +198,8 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
   assert.match(page, /<ProfileHeaderActions \/>/);
   assert.match(page, /\/following/);
   assert.match(page, /\/followers/);
-  assert.match(page, /seeAllHref=\{'\/profile\/statistics' as Route\}/);
+  assert.match(headerActions, /aria-label="View statistics"/);
+  assert.match(headerActions, /FiShare2[\s\S]*FiBarChart2[\s\S]*FiSettings/);
   assert.match(statisticsPage, /Compare with Following/);
   assert.match(statisticsPage, /compare=statistics/);
   assert.doesNotMatch(page, /You have not added a biography yet\./);
@@ -201,7 +210,7 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
   assert.match(rail, /^'use client';/);
   assert.doesNotMatch(rail, /overflowX="auto"/);
   assert.doesNotMatch(rail, /scrollSnapType/);
-  assert.match(rail, /templateColumns=\{\{/);
+  assert.match(rail, /templateColumns="minmax\(0, 1fr\)"/);
   assert.match(profileRoute, /getOwnProfileStatistics/);
   assert.match(profileRoute, /getOwnProfileFavorites/);
   assert.match(movieDetail, /<MediaDetailActions/);

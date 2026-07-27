@@ -90,10 +90,8 @@ test('public profile renders only the UX 3.1 public contract', async () => {
 
   for (const label of [
     'Movies Finished',
-    'Time in Movies',
     'TV Shows Finished',
-    'Time in TV Shows',
-    'Episodes Watched',
+    'Total Watch Time',
     'Number of Reviews',
   ]) {
     assert.match(statCards, new RegExp(label));
