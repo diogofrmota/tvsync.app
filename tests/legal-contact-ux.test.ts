@@ -40,7 +40,7 @@ const consumeRateLimit = async (
   return result.rows.at(0)?.attempt_count ?? 0;
 };
 
-test('footer exposes exactly Privacy Policy, Terms of Service, and Contact, in order', async () => {
+test('footer exposes legal, contact, and bug-report links in order', async () => {
   const footer = await read('src/lib/layout/Footer.tsx');
   const linkMatches = Array.from(
     footer.matchAll(/href:\s*'([^']+)',\s*label:\s*'([^']+)'/g)
@@ -52,6 +52,7 @@ test('footer exposes exactly Privacy Policy, Terms of Service, and Contact, in o
       ['/privacy', 'Privacy Policy'],
       ['/terms', 'Terms of Service'],
       ['/contact', 'Contact'],
+      ['/report-a-bug', 'Report a Bug'],
     ]
   );
   assert.match(footer, /Copyright/);

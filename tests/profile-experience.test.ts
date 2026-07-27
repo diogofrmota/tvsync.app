@@ -46,26 +46,13 @@ const migrationNames = [
 const read = (path: string) => readFile(join(process.cwd(), path), 'utf8');
 
 const assertProfileHeaderOrder = (profile: string) => {
-  const headingIndex = profile.indexOf('<PageHeading');
+  const actionsIndex = profile.indexOf('<ProfileHeaderActions');
   const bioIndex = profile.indexOf('{profile.bio}');
-  const editIndex = profile.indexOf('Edit Profile');
-  const logoutIndex = profile.indexOf('<LogoutButton');
 
-  assert.ok(headingIndex !== -1, 'Profile renders the shared PageHeading');
+  assert.ok(actionsIndex !== -1, 'Profile renders share and settings actions');
   assert.ok(bioIndex !== -1, 'Profile renders the biography');
-  assert.ok(
-    headingIndex < bioIndex,
-    'The route title leads the page, above the identity block'
-  );
-  assert.ok(
-    bioIndex < editIndex && editIndex < logoutIndex,
-    'Edit Profile then Log out sit below the biography'
-  );
-  // The account actions close the centred identity block.
-  assert.match(
-    profile.slice(bioIndex),
-    /<Flex[^>]*justify="center"[\s\S]*Edit Profile/
-  );
+  assert.ok(actionsIndex < bioIndex, 'Profile actions lead the identity block');
+  assert.doesNotMatch(profile, /<PageHeading|Edit Profile|<LogoutButton/);
 };
 
 const runMigration = async (db: PGliteInterface, name: string) => {
@@ -161,6 +148,7 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
     tvDetail,
     detailActions,
     statisticsPage,
+    settingsPage,
   ] = await Promise.all([
     read('src/lib/pages/profile/index.tsx'),
     read('src/app/profile/page.tsx'),
@@ -169,10 +157,10 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
     read('src/lib/pages/tv/detail/index.tsx'),
     read('src/lib/features/library/media-detail-actions.tsx'),
     read('src/lib/pages/profile/statistics.tsx'),
+    read('src/app/profile/settings/page.tsx'),
   ]);
 
   for (const label of [
-    'Edit Profile',
     'Following',
     'Followers',
     'TV Shows Finished',
@@ -198,7 +186,7 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
     assert.match(statisticsPage, new RegExp(label));
   }
 
-  assert.match(page, /href="\/profile\/edit"/);
+  assert.match(page, /<ProfileHeaderActions \/>/);
   assert.match(page, /\/following/);
   assert.match(page, /\/followers/);
   assert.match(page, /seeAllHref=\{'\/profile\/statistics' as Route\}/);
@@ -225,7 +213,8 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
   // The own-profile page shows no avatar at all, so there is no image source,
   // upload control, or stored avatar column to expose.
   assert.doesNotMatch(page, /Avatar|type="file"|avatar_url|avatarUrl/);
-  assert.match(page, /LogoutButton/);
+  assert.doesNotMatch(page, /LogoutButton/);
+  assert.match(settingsPage, /LogoutButton/);
 });
 
 test('follower and following pages search, navigate, and follow without exposing internal ids', async () => {
@@ -305,9 +294,8 @@ test('Profile and Edit Profile include explicit mobile and desktop layouts', asy
     read('src/lib/pages/profile/profile-form.tsx'),
   ]);
 
-  assert.match(profile, /fontSize=\{\{ base: 'xl', md: '2xl' \}\}/);
-  // Profile leads with the shared route title, followed by a centred
-  // name/handle/biography block that closes with Edit Profile and Log out.
+  assert.match(profile, /aspectRatio=\{\{ base: '16 \/ 7', md: '16 \/ 5' \}\}/);
+  // Profile leads with a horizontal hero and keeps account actions in settings.
   assertProfileHeaderOrder(profile);
   assert.match(profile, /<FollowCountChip/);
   assert.match(profile, /textAlign="center"/);

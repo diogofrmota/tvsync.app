@@ -196,13 +196,13 @@ export const RegisterForm = ({
                   autoComplete="username"
                   borderColor="white"
                   defaultValue={state.username}
-                  maxLength={24}
+                  maxLength={30}
                   name="username"
-                  pattern="[A-Za-z0-9_]{3,24}"
+                  pattern="[A-Za-z0-9_-]{3,30}"
                   type="text"
                 />
                 <Field.HelperText>
-                  3-24 letters, numbers or underscores.
+                  3-30 letters, numbers, underscores or hyphens.
                 </Field.HelperText>
                 <Field.ErrorText>{state.fieldErrors?.username}</Field.ErrorText>
               </Field.Root>

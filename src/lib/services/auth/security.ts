@@ -9,7 +9,7 @@ export const RECENT_AUTH_MAX_AGE_MS = 15 * 60 * 1000;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const passwordLetterPattern = /[A-Za-z]/;
 const passwordNumberPattern = /\d/;
-const usernamePattern = /^[a-z0-9_]{3,24}$/;
+const usernamePattern = /^[a-z0-9_-]{3,30}$/;
 
 export type CredentialField =
   | 'confirmPassword'
@@ -44,7 +44,7 @@ export const validateEmail = (email: string) => {
 
 export const validateUsername = (username: string) => {
   if (!usernamePattern.test(username)) {
-    return 'Use 3-24 lowercase letters, numbers, or underscores.';
+    return 'Use 3-30 letters, numbers, underscores, or hyphens.';
   }
 
   return null;

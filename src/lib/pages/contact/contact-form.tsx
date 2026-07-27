@@ -11,7 +11,11 @@ import { useActionState, useRef } from 'react';
 
 const initialState: ContactFormState = {};
 
-export const ContactForm = () => {
+export const ContactForm = ({
+  defaultSubject,
+}: {
+  defaultSubject?: string;
+}) => {
   const [state, formAction, isPending] = useActionState(
     submitContactMessage,
     initialState
@@ -83,7 +87,7 @@ export const ContactForm = () => {
             <Field.Root invalid={Boolean(state.fieldErrors?.subject)} required>
               <Field.Label>Subject</Field.Label>
               <Input
-                defaultValue={state.values?.subject}
+                defaultValue={state.values?.subject ?? defaultSubject}
                 maxLength={CONTACT_FIELD_LIMITS.subject}
                 name="subject"
                 required

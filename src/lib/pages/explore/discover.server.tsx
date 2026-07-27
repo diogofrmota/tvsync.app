@@ -3,7 +3,7 @@ import 'server-only';
 import { Stack } from '@chakra-ui/react';
 import { CuratedListRail } from 'lib/components/shared/CuratedListRail';
 import { MediaRail } from 'lib/components/shared/MediaRail';
-import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
+import { PageShell } from 'lib/components/shared/PageShell';
 import { StatePanel } from 'lib/components/shared/Section';
 import { ExploreHero } from 'lib/pages/explore/hero';
 import { buildExploreHeroSlides } from 'lib/pages/explore/hero-slides.server';
@@ -36,15 +36,9 @@ export const ExploreDiscover = async () => {
   return (
     <PageShell>
       <Stack gap={{ base: 6, md: 8 }}>
-        <PageHeading
-          actions={
-            <MediaSearchBar
-              mediaType={MediaType.Movie}
-              placeholder="Search movies and TV shows"
-            />
-          }
-          subtitle="Discover trending titles, new releases and all-time highlights across movies and tv shows."
-          title="Explore"
+        <MediaSearchBar
+          mediaType={MediaType.Movie}
+          placeholder="Search shows, movies and users"
         />
         {heroSlides.length > 0 ? <ExploreHero slides={heroSlides} /> : null}
       </Stack>
