@@ -8,6 +8,7 @@ import { MediaRail } from 'lib/components/shared/MediaRail';
 import type { MediaCardItem } from 'lib/components/shared/media-item';
 import { PageShell } from 'lib/components/shared/PageShell';
 import { SectionHeading, StatePanel } from 'lib/components/shared/Section';
+import { IMAGE_URL_ORIGINAL } from 'lib/components/shared/tmdb-image-urls';
 import type { ProfileFavoriteItem } from 'lib/features/profile/profile-favorites.server';
 import type { ProfileStatistics } from 'lib/features/profile/profile-statistics';
 import { ProfileHeaderActions } from 'lib/pages/profile/profile-header-actions';
@@ -79,12 +80,14 @@ const FollowCountChip = ({
   value: number;
 }) => (
   <Box
-    _hover={{ borderColor: 'gold.400', color: 'gold.300' }}
+    _hover={{ background: 'gray.100', borderColor: 'gray.100' }}
     alignItems="center"
     asChild
-    borderColor="border"
+    background="white"
+    borderColor="white"
     borderRadius="full"
     borderWidth="1px"
+    color="black"
     display="inline-flex"
     fontSize="sm"
     gap={1.5}
@@ -98,7 +101,7 @@ const FollowCountChip = ({
       <Text as="span" fontWeight="bold">
         {value}
       </Text>
-      <Text as="span" color="fg.muted">
+      <Text as="span" color="black">
         {label}
       </Text>
     </Link>
@@ -139,20 +142,26 @@ export const ProfilePage = ({
     <PageShell>
       <Stack gap={{ base: 3, md: 4 }}>
         <Stack
-          align="center"
           aspectRatio={{ base: '16 / 7', md: '16 / 5' }}
           background="linear-gradient(120deg, gray.900, gray.800 55%, rgba(251, 191, 36, 0.18))"
+          backgroundImage={
+            profile.profile_backdrop_path
+              ? `linear-gradient(rgba(0, 0, 0, 0.38), rgba(0, 0, 0, 0.78)), url(${IMAGE_URL_ORIGINAL}${profile.profile_backdrop_path})`
+              : undefined
+          }
+          backgroundPosition="center"
+          backgroundSize="cover"
           borderRadius="xl"
-          justify="center"
           overflow="hidden"
-          padding={5}
           position="relative"
-          textAlign="center"
           width="full"
         >
-          <Flex gap={2} left={4} position="absolute" top={4}>
+          <Flex gap={2} position="absolute" right={4} top={4}>
             <ProfileHeaderActions />
           </Flex>
+        </Stack>
+
+        <Stack align="center" gap={2} textAlign="center">
           <Stack align="center" gap={0.5}>
             <Heading fontSize={{ base: 'lg', md: 'xl' }}>{displayName}</Heading>
             <Text color="fg.muted" fontSize="sm">

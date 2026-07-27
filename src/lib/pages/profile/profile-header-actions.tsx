@@ -20,7 +20,7 @@ export const ProfileHeaderActions = () => {
         aria-label="Share profile"
         onClick={shareProfile}
         size="sm"
-        variant="subtle"
+        variant="solid"
       >
         <FiShare2 />
       </IconButton>
@@ -28,7 +28,7 @@ export const ProfileHeaderActions = () => {
         aria-label="Profile settings"
         asChild
         size="sm"
-        variant="subtle"
+        variant="solid"
       >
         <Link href="/profile/settings">
           <FiSettings />

@@ -26,6 +26,7 @@ export const hydrateMediaCardItem = async (
       const movie = await getMovieDetailServer(ref.tmdbId);
 
       return {
+        backdropPath: movie.backdrop_path,
         id: ref.tmdbId,
         mediaType: MediaType.Movie,
         posterPath: movie.poster_path,
@@ -36,6 +37,7 @@ export const hydrateMediaCardItem = async (
     const show = await getTvShowDetail(ref.tmdbId);
 
     return {
+      backdropPath: show.backdrop_path,
       id: ref.tmdbId,
       mediaType: MediaType.Tv,
       posterPath: show.poster_path,
@@ -43,6 +45,7 @@ export const hydrateMediaCardItem = async (
     };
   } catch {
     return {
+      backdropPath: null,
       id: ref.tmdbId,
       mediaType: ref.mediaType,
       posterPath: null,

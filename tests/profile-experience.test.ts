@@ -41,6 +41,7 @@ const migrationNames = [
   '0007_reconcile_tv_progress_library.sql',
   '0008_profile_experience.sql',
   '0009_reviews_and_public_profiles.sql',
+  '0014_profile_backdrops.sql',
 ] as const;
 
 const read = (path: string) => readFile(join(process.cwd(), path), 'utf8');
@@ -51,7 +52,10 @@ const assertProfileHeaderOrder = (profile: string) => {
 
   assert.ok(actionsIndex !== -1, 'Profile renders share and settings actions');
   assert.ok(bioIndex !== -1, 'Profile renders the biography');
-  assert.ok(actionsIndex < bioIndex, 'Profile actions lead the identity block');
+  assert.ok(
+    actionsIndex < bioIndex,
+    'Profile actions stay on the poster above the identity block'
+  );
   assert.doesNotMatch(profile, /<PageHeading|Edit Profile|<LogoutButton/);
 };
 
@@ -299,6 +303,13 @@ test('Profile and Edit Profile include explicit mobile and desktop layouts', asy
   assertProfileHeaderOrder(profile);
   assert.match(profile, /<FollowCountChip/);
   assert.match(profile, /textAlign="center"/);
+  assert.match(profile, /right=\{4\} position="absolute" top=\{4\}/);
+  assert.match(profile, /background="white"/);
+  assert.doesNotMatch(profile, /left=\{4\} position="absolute" top=\{4\}/);
+  assert.doesNotMatch(
+    await read('src/lib/pages/profile/profile-header-actions.tsx'),
+    />\s*(Share|Settings)\s*</
+  );
   assert.match(edit, /padding=\{\{ base: 5, md: 6 \}\}/);
   assert.match(form, /maxLength=\{BIO_MAX_LENGTH\}/);
   assert.match(form, /autoComplete="current-password"/);
@@ -340,7 +351,14 @@ test('PostgreSQL profile lifecycle preserves identity and deletes personal data 
         const updated = await getRows<{ user_id: string; username: string }>(
           db,
           UPDATE_OWN_PROFILE_DETAILS_QUERY,
-          ['user-a', 'Alice Updated', 'alice_updated', 'Updated biography']
+          [
+            'user-a',
+            'Alice Updated',
+            'alice_updated',
+            'Updated biography',
+            '',
+            '',
+          ]
         );
         assert.deepEqual(
           updated.map(({ user_id, username }) => ({ user_id, username })),
@@ -358,6 +376,8 @@ test('PostgreSQL profile lifecycle preserves identity and deletes personal data 
             'user-a',
             'Alice',
             'bob',
+            '',
+            '',
             '',
           ]),
           /profiles_username_(lower|normalized)_unique/

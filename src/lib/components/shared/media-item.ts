@@ -7,6 +7,7 @@ import type { TrackableMediaType } from 'lib/types';
  * lists inherit it from the rail or grid.
  */
 export type MediaCardItem = {
+  backdropPath?: string | null;
   id: number;
   mediaType?: TrackableMediaType;
   posterPath: string | null;
