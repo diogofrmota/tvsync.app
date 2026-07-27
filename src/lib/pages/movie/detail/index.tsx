@@ -1,19 +1,16 @@
 import {
-  AspectRatio,
   Badge,
   Box,
   Button,
   Flex,
-  Grid,
   Heading,
   Stack,
   Text,
 } from '@chakra-ui/react';
 import { MediaCrewSection } from 'lib/components/shared/MediaCrewSection';
-import { MediaRatingPanel } from 'lib/components/shared/MediaRating';
+import { MediaDetailHero } from 'lib/components/shared/MediaDetailHero';
 import { MediaReviews } from 'lib/components/shared/MediaReviews';
 import { PageShell } from 'lib/components/shared/PageShell';
-import PosterImage from 'lib/components/shared/PosterImage';
 import { MediaDetailActions } from 'lib/features/library/media-detail-actions';
 import { RatingInput } from 'lib/features/reviews';
 import CastsWrapper from 'lib/pages/movie/detail/components/casts-wrapper';
@@ -73,36 +70,53 @@ export const MovieDetailPage = ({
   const title = movie.title || movie.original_title || 'Untitled movie';
 
   return (
-    <PageShell>
-      <Stack gap={{ base: 8, md: 10 }} paddingX={{ base: 4, md: 0 }}>
-        {/* The header stays compact — a small poster beside the title and the
-            facts — so adding the movie to the library is the first thing on
-            screen instead of a full-height poster. */}
-        <Grid
-          alignItems="start"
-          gap={{ base: 4, md: 8 }}
-          templateColumns={{
-            base: '7.5rem minmax(0, 1fr)',
-            md: '13rem minmax(0, 1fr)',
-          }}
-        >
-          <AspectRatio ratio={2 / 3} width="full">
-            <PosterImage alt={`${title} poster`} src={movie.poster_path} />
-          </AspectRatio>
-
-          <Stack gap={3}>
-            <Heading as="h1" fontSize={{ base: 'xl', md: '3xl' }}>
-              {title}
-            </Heading>
-
-            {/* The score sits directly under the title, on its own line, so it
-                reads as part of the heading rather than as one more fact. */}
-            <MediaRatingPanel
-              imdbRating={imdbRating}
-              voteAverage={movie.vote_average}
-              voteCount={movie.vote_count}
+    <Box>
+      {/* The header is the movie's own artwork: the backdrop behind, the
+          official poster on the left, and the title, year, and score in the
+          wider column beside it. The personal controls close it, so adding the
+          movie to the library is still the first thing on screen. */}
+      <MediaDetailHero
+        actions={
+          isAuthenticated ? (
+            <MediaDetailActions
+              addLabel="Add Movie"
+              mediaType={MediaType.Movie}
+              removeLabel="Remove Movie"
+              tmdbId={movie.id}
             />
+          ) : (
+            <Stack alignItems="flex-start" gap={3}>
+              <Text>
+                Log in or register to add this movie to your library, mark it as
+                a favourite or rate it.
+              </Text>
+              <Flex gap={3} wrap="wrap">
+                <Button asChild>
+                  <Link href={`/login?callbackUrl=/movie/${movie.id}`}>
+                    Login
+                  </Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href="/register">Register</Link>
+                </Button>
+              </Flex>
+            </Stack>
+          )
+        }
+        backdropPath={movie.backdrop_path}
+        imdbRating={imdbRating}
+        posterPath={movie.poster_path}
+        title={title}
+        voteAverage={movie.vote_average}
+        voteCount={movie.vote_count}
+        year={getReleaseYear(movie.release_date)}
+      />
 
+      <PageShell>
+        <Stack gap={{ base: 8, md: 10 }} paddingX={{ base: 4, md: 0 }}>
+          {/* The facts the header no longer carries stay directly under it, in
+              the order they were read before. */}
+          <Stack as="section" gap={3}>
             <Flex gap={2} wrap="wrap">
               <Badge variant="outline">
                 Release year: {getReleaseYear(movie.release_date)}
@@ -118,78 +132,48 @@ export const MovieDetailPage = ({
               <Text color="fg.muted">Genres unavailable</Text>
             )}
           </Stack>
-        </Grid>
 
-        {/* One row of actions, no panel around it: adding the movie is a single
-            button, and a saved movie carries the heart, the finished toggle,
-            and the X that removes it again. */}
-        {isAuthenticated ? (
-          <Box as="section">
-            <MediaDetailActions
-              addLabel="Add Movie"
-              mediaType={MediaType.Movie}
-              tmdbId={movie.id}
-            />
-          </Box>
-        ) : (
-          <Stack alignItems="flex-start" as="section" gap={3}>
-            <Text>
-              Log in or register to add this movie to your library, mark it as a
-              favourite or rate it.
-            </Text>
-            <Flex gap={3} wrap="wrap">
-              <Button asChild>
-                <Link href={`/login?callbackUrl=/movie/${movie.id}`}>
-                  Login
-                </Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link href="/register">Register</Link>
-              </Button>
-            </Flex>
-          </Stack>
-        )}
+          {isAuthenticated ? (
+            <Box as="section">
+              <Heading fontSize="xl" marginBottom={3}>
+                Rating
+              </Heading>
+              <RatingInput
+                showAverage={false}
+                showReview
+                target={{ mediaType: MediaType.Movie, tmdbId: movie.id }}
+              />
+            </Box>
+          ) : null}
 
-        {isAuthenticated ? (
           <Box as="section">
-            <Heading fontSize="xl" marginBottom={3}>
-              Rating
+            <Heading fontSize="xl" marginBottom={2}>
+              Description
             </Heading>
-            <RatingInput
-              showAverage={false}
-              showReview
-              target={{ mediaType: MediaType.Movie, tmdbId: movie.id }}
-            />
+            <Text color={movie.overview ? undefined : 'fg.muted'}>
+              {movie.overview || 'No description is available from TMDB.'}
+            </Text>
           </Box>
-        ) : null}
 
-        <Box as="section">
-          <Heading fontSize="xl" marginBottom={2}>
-            Description
-          </Heading>
-          <Text color={movie.overview ? undefined : 'fg.muted'}>
-            {movie.overview || 'No description is available from TMDB.'}
-          </Text>
-        </Box>
+          <MovieTrailer trailer={trailer} />
 
-        <MovieTrailer trailer={trailer} />
+          {/* The director leads the people on the page, in the cast's own
+              format, so the credits read top-down from the one name that used
+              to be a stray line in the header. */}
+          <MediaCrewSection
+            emptyMessage="No director information is available from TMDB."
+            people={directors}
+            title="Director"
+          />
 
-        {/* The director leads the people on the page, in the cast's own
-            format, so the credits read top-down from the one name that used to
-            be a stray line in the header. */}
-        <MediaCrewSection
-          emptyMessage="No director information is available from TMDB."
-          people={directors}
-          title="Director"
-        />
+          <CastsWrapper credits={credits} />
 
-        <CastsWrapper credits={credits} />
-
-        <MediaReviews
-          reviews={reviews}
-          seeAllHref={`/movie/${movie.id}/reviews` as Route}
-        />
-      </Stack>
-    </PageShell>
+          <MediaReviews
+            reviews={reviews}
+            seeAllHref={`/movie/${movie.id}/reviews` as Route}
+          />
+        </Stack>
+      </PageShell>
+    </Box>
   );
 };

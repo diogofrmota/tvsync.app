@@ -40,17 +40,18 @@ test('movie details remain public and load required sections independently', asy
 test('movie page renders required metadata and focused sections in a clear hierarchy', async () => {
   const page = await read('src/lib/pages/movie/detail/index.tsx');
 
-  // The header carries the poster, the star rating directly under the title,
-  // and every fact; the personal controls come straight after it, and the
+  // The header is the shared hero — backdrop, poster, title, year, score — and
+  // it closes on the personal controls; the remaining facts follow it, and the
   // longer reading sections — director ahead of the cast — close the page.
   assertInOrder(page, [
-    'poster`}',
-    'as="h1"',
-    '<MediaRatingPanel',
+    '<MediaDetailHero',
+    '<MediaDetailActions',
+    'backdropPath={movie.backdrop_path}',
+    'posterPath={movie.poster_path}',
+    'year={getReleaseYear(movie.release_date)}',
     'Release year:',
     'Status:',
     '<GenreList',
-    '<MediaDetailActions',
     'Rating',
     '<RatingInput',
     'Description',
@@ -244,13 +245,20 @@ test('the movie actions are one Add button that becomes favourite, finished, and
   ]);
 
   assert.match(page, /addLabel="Add Movie"/);
-  // A saved title carries exactly three controls: the heart, the finished
-  // toggle, and the X that removes it again.
-  assert.match(control, /aria-label="Remove from your library"/);
+  assert.match(page, /removeLabel="Remove Movie"/);
+  // A saved title carries exactly three controls: the pill that removes it
+  // again, sitting where the Add pill was, and the round check and heart.
+  assert.match(control, /\{removeLabel\}/);
   assert.match(control, /'Remove from Favourites' : 'Mark as Favourite'/);
   assert.match(control, /isFinished \? 'Finished' : 'Mark as Finished'/);
+  assert.match(control, /FiCheck/);
   assert.match(control, /FiHeart/);
+  assert.match(control, /FiPlus/);
   assert.match(control, /FiX/);
+  // The round controls are icon-only, so each one states itself.
+  assert.match(control, /borderRadius: 'full'/);
+  assert.match(control, /aria-pressed=\{isFinished\}/);
+  assert.match(control, /aria-pressed=\{favorite\}/);
   // The status select is gone; adding and finishing are the only two states.
   assert.doesNotMatch(control, /NativeSelect|Planned to Watch|Library status/);
 
@@ -327,17 +335,37 @@ test('public protected actions lead clearly to Login or Register', async () => {
 });
 
 test('movie detail layout has explicit mobile and desktop compositions', async () => {
-  const [page, cast] = await Promise.all([
-    read('src/lib/pages/movie/detail/index.tsx'),
+  const [hero, cast] = await Promise.all([
+    read('src/lib/components/shared/MediaDetailHero.tsx'),
     read('src/lib/pages/movie/detail/components/casts-wrapper.tsx'),
   ]);
 
   // The poster is a compact column beside the title on every screen size, so
   // the library controls stay above the fold instead of below the artwork.
-  assert.match(page, /base: '7\.5rem minmax\(0, 1fr\)'/);
-  assert.match(page, /md: '13rem minmax\(0, 1fr\)'/);
-  assert.match(page, /base: 'xl', md: '3xl'/);
+  assert.match(hero, /base: '7\.5rem minmax\(0, 1fr\)'/);
+  assert.match(hero, /md: '13rem minmax\(0, 1fr\)'/);
+  assert.match(hero, /base: '2xl', md: '4xl'/);
   assert.match(cast, /base: 'repeat\(2, minmax\(0, 1fr\)\)'/);
   assert.match(cast, /md: 'repeat\(4, minmax\(0, 1fr\)\)'/);
   assert.match(cast, /xl: 'repeat\(6, minmax\(0, 1fr\)\)'/);
+});
+
+test('the detail header is a backdrop behind the poster, the title, and the score', async () => {
+  const hero = await read('src/lib/components/shared/MediaDetailHero.tsx');
+
+  // The title's own backdrop sits behind the header, fading into the page
+  // background so the poster row reads as one surface rather than two blocks.
+  assert.match(hero, /const backdrop = backdropPath \?\? posterPath;/);
+  assert.match(hero, /url\(\$\{IMAGE_URL_ORIGINAL\}\$\{backdrop\}\)/);
+  assert.match(hero, /linear-gradient\(to bottom/);
+  assert.match(hero, /#050606 100%\)/);
+  // Poster on the left, title/year/score in the wider column, actions below.
+  assert.match(hero, /<PosterImage/);
+  assert.match(hero, /alt=\{`\$\{title\} poster`\}/);
+  assert.match(hero, /<Heading\s+as="h1"/);
+  assert.match(hero, /\{year\}/);
+  assert.match(hero, /<MediaRatingPanel/);
+  assert.match(hero, /\{actions\}/);
+  // No backdrop and no poster still renders a surface, not a broken image.
+  assert.match(hero, /<Box background="bg\.surface"/);
 });

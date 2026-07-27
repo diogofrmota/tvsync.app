@@ -1,19 +1,16 @@
 import {
-  AspectRatio,
   Badge,
   Box,
   Button,
   Flex,
-  Grid,
   Heading,
   Stack,
   Text,
 } from '@chakra-ui/react';
 import { MediaCrewSection } from 'lib/components/shared/MediaCrewSection';
-import { MediaRatingPanel } from 'lib/components/shared/MediaRating';
+import { MediaDetailHero } from 'lib/components/shared/MediaDetailHero';
 import { MediaReviews } from 'lib/components/shared/MediaReviews';
 import { PageShell } from 'lib/components/shared/PageShell';
-import PosterImage from 'lib/components/shared/PosterImage';
 import { MediaDetailActions } from 'lib/features/library/media-detail-actions';
 import { RatingInput } from 'lib/features/reviews';
 import { TvCastsWrapper } from 'lib/pages/tv/detail/components/casts-wrapper';
@@ -84,35 +81,53 @@ const TvShowDetailPage = ({
         }));
 
   return (
-    <PageShell>
-      <Stack gap={{ base: 8, md: 10 }} paddingX={{ base: 4, md: 0 }}>
-        {/* The header stays compact — a small poster beside the title and the
-            facts — so the episodes come next, without scrolling. */}
-        <Grid
-          alignItems="start"
-          gap={{ base: 4, md: 8 }}
-          templateColumns={{
-            base: '7.5rem minmax(0, 1fr)',
-            md: '13rem minmax(0, 1fr)',
-          }}
-        >
-          <AspectRatio ratio={2 / 3} width="full">
-            <PosterImage alt={`${title} poster`} src={show.poster_path} />
-          </AspectRatio>
-
-          <Stack gap={3}>
-            <Heading as="h1" fontSize={{ base: 'xl', md: '3xl' }}>
-              {title}
-            </Heading>
-
-            {/* The score sits directly under the title, on its own line, so it
-                reads as part of the heading rather than as one more fact. */}
-            <MediaRatingPanel
-              imdbRating={imdbRating}
-              voteAverage={show.vote_average}
-              voteCount={show.vote_count}
+    <Box>
+      {/* The header is the show's own artwork: the backdrop behind, the
+          official poster on the left, and the title, year, and score in the
+          wider column beside it. The personal controls close it, so the
+          episodes still come next without scrolling far. */}
+      <MediaDetailHero
+        actions={
+          isAuthenticated ? (
+            <MediaDetailActions
+              addLabel="Add TV Show"
+              mediaType={MediaType.Tv}
+              removeLabel="Remove TV Show"
+              tmdbId={show.id}
             />
+          ) : (
+            <Stack alignItems="flex-start" gap={3}>
+              <Text>
+                Log in or register to add this TV Show to your library, track
+                episode progress, mark it as a favourite or rate it.
+              </Text>
+              <Flex gap={3} wrap="wrap">
+                <Button asChild>
+                  <Link href={`/login?callbackUrl=/tv/show/${show.id}`}>
+                    Login
+                  </Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href="/register">Register</Link>
+                </Button>
+              </Flex>
+            </Stack>
+          )
+        }
+        backdropPath={show.backdrop_path}
+        imdbRating={imdbRating}
+        posterPath={show.poster_path}
+        title={title}
+        voteAverage={show.vote_average}
+        voteCount={show.vote_count}
+        year={getReleaseYear(show.first_air_date)}
+      />
 
+      <PageShell>
+        <Stack gap={{ base: 8, md: 10 }} paddingX={{ base: 4, md: 0 }}>
+          {/* The facts the header no longer carries stay directly under it, in
+              the order they were read before. */}
+          <Stack as="section" gap={3}>
             <Flex gap={2} wrap="wrap">
               <Badge variant="outline">
                 Release year: {getReleaseYear(show.first_air_date)}
@@ -146,83 +161,54 @@ const TvShowDetailPage = ({
               <Text color="fg.muted">Genres unavailable</Text>
             )}
           </Stack>
-        </Grid>
 
-        {/* The same one row of actions the movie page carries: add the show,
-            then the heart, the finished toggle, and the X that removes it. */}
-        {isAuthenticated ? (
+          {/* Episodes are the point of a show page, so the seen toggles follow
+              the header: the current season slides left to right and every
+              season opens in place below it. */}
+          <EpisodeTracker seasons={show.seasons} showId={show.id} />
+
+          {isAuthenticated ? (
+            <Box as="section">
+              <Heading fontSize="xl" marginBottom={3}>
+                Rating
+              </Heading>
+              <RatingInput
+                showAverage={false}
+                showReview
+                target={{ mediaType: MediaType.Tv, tmdbId: show.id }}
+              />
+            </Box>
+          ) : null}
+
           <Box as="section">
-            <MediaDetailActions
-              addLabel="Add TV Show"
-              mediaType={MediaType.Tv}
-              tmdbId={show.id}
-            />
-          </Box>
-        ) : (
-          <Stack alignItems="flex-start" as="section" gap={3}>
-            <Text>
-              Log in or register to add this TV Show to your library, track
-              episode progress, mark it as a favourite or rate it.
-            </Text>
-            <Flex gap={3} wrap="wrap">
-              <Button asChild>
-                <Link href={`/login?callbackUrl=/tv/show/${show.id}`}>
-                  Login
-                </Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link href="/register">Register</Link>
-              </Button>
-            </Flex>
-          </Stack>
-        )}
-
-        {/* Episodes are the point of a show page, so the seen toggles follow
-            the actions: the current season slides left to right and every
-            season opens in place below it. */}
-        <EpisodeTracker seasons={show.seasons} showId={show.id} />
-
-        {isAuthenticated ? (
-          <Box as="section">
-            <Heading fontSize="xl" marginBottom={3}>
-              Rating
+            <Heading fontSize="xl" marginBottom={2}>
+              Description
             </Heading>
-            <RatingInput
-              showAverage={false}
-              showReview
-              target={{ mediaType: MediaType.Tv, tmdbId: show.id }}
-            />
+            <Text color={show.overview ? undefined : 'fg.muted'}>
+              {show.overview || 'No description is available from TMDB.'}
+            </Text>
           </Box>
-        ) : null}
 
-        <Box as="section">
-          <Heading fontSize="xl" marginBottom={2}>
-            Description
-          </Heading>
-          <Text color={show.overview ? undefined : 'fg.muted'}>
-            {show.overview || 'No description is available from TMDB.'}
-          </Text>
-        </Box>
+          <TvTrailer trailer={trailer} />
 
-        <TvTrailer trailer={trailer} />
+          {/* The director leads the people on the page, in the cast's own
+              format, and falls back to the creators when TMDB credits no
+              series-level director. */}
+          <MediaCrewSection
+            emptyMessage="No director information is available from TMDB."
+            people={crew}
+            title={crewTitle}
+          />
 
-        {/* The director leads the people on the page, in the cast's own
-            format, and falls back to the creators when TMDB credits no
-            series-level director. */}
-        <MediaCrewSection
-          emptyMessage="No director information is available from TMDB."
-          people={crew}
-          title={crewTitle}
-        />
+          <TvCastsWrapper credits={credits} />
 
-        <TvCastsWrapper credits={credits} />
-
-        <MediaReviews
-          reviews={reviews}
-          seeAllHref={`/tv/show/${show.id}/reviews` as Route}
-        />
-      </Stack>
-    </PageShell>
+          <MediaReviews
+            reviews={reviews}
+            seeAllHref={`/tv/show/${show.id}/reviews` as Route}
+          />
+        </Stack>
+      </PageShell>
+    </Box>
   );
 };
 
