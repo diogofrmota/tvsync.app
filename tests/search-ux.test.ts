@@ -194,6 +194,7 @@ test('Explore omits its redundant heading and offers unified search copy', async
 
   assert.doesNotMatch(discover, /<PageHeading|Discover trending titles/);
   // The field is wide enough to read its own placeholder before typing.
-  assert.match(discover, /placeholder="Search shows, movies and users"/);
-  assert.match(searchBar, /minWidth=\{\{ base: 'auto', md: '26rem' \}\}/);
+  assert.match(discover, /placeholder="Search shows, movies or users"/);
+  assert.match(searchBar, /maxWidth=\{\{ base: 'full', md: '28rem' \}\}/);
+  assert.match(searchBar, /marginX="auto"/);
 });

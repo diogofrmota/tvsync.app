@@ -79,13 +79,6 @@ const ReviewCard = ({ review }: { review: MediaReview }) => {
             {isExpanded ? 'Show less' : 'Read more'}
           </Button>
         ) : null}
-        {review.url ? (
-          <Text asChild color="fg.muted" fontSize="xs">
-            <a href={review.url} rel="noopener noreferrer" target="_blank">
-              Read on TMDB
-            </a>
-          </Text>
-        ) : null}
       </Flex>
     </Stack>
   );

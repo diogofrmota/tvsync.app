@@ -1,12 +1,4 @@
-import {
-  Badge,
-  Box,
-  Button,
-  Flex,
-  Heading,
-  Stack,
-  Text,
-} from '@chakra-ui/react';
+import { Box, Button, Flex, Heading, Stack, Text } from '@chakra-ui/react';
 import { MediaCrewSection } from 'lib/components/shared/MediaCrewSection';
 import { MediaDetailHero } from 'lib/components/shared/MediaDetailHero';
 import { MediaReviews } from 'lib/components/shared/MediaReviews';
@@ -14,7 +6,6 @@ import { PageShell } from 'lib/components/shared/PageShell';
 import { MediaDetailActions } from 'lib/features/library/media-detail-actions';
 import { RatingInput } from 'lib/features/reviews';
 import CastsWrapper from 'lib/pages/movie/detail/components/casts-wrapper';
-import { GenreList } from 'lib/pages/movie/detail/components/genre-list';
 import { MovieTrailer } from 'lib/pages/movie/detail/components/trailer';
 import type { ImdbRating } from 'lib/services/omdb/types';
 import type { MovieCreditsResponse } from 'lib/services/tmdb/movie/credits/types';
@@ -72,7 +63,7 @@ export const MovieDetailPage = ({
   return (
     <Box>
       {/* The header is the movie's own artwork: the backdrop behind, the
-          official poster on the left, and the title, year, and score in the
+          official poster on the left, and the title, score, year, and status in the
           wider column beside it. The personal controls close it, so adding the
           movie to the library is still the first thing on screen. */}
       <MediaDetailHero
@@ -106,6 +97,7 @@ export const MovieDetailPage = ({
         backdropPath={movie.backdrop_path}
         imdbRating={imdbRating}
         posterPath={movie.poster_path}
+        status={movie.status || 'Unavailable'}
         title={title}
         voteAverage={movie.vote_average}
         voteCount={movie.vote_count}
@@ -114,29 +106,10 @@ export const MovieDetailPage = ({
 
       <PageShell>
         <Stack gap={{ base: 8, md: 10 }} paddingX={{ base: 4, md: 0 }}>
-          {/* The facts the header no longer carries stay directly under it, in
-              the order they were read before. */}
-          <Stack as="section" gap={3}>
-            <Flex gap={2} wrap="wrap">
-              <Badge variant="outline">
-                Release year: {getReleaseYear(movie.release_date)}
-              </Badge>
-              <Badge variant="outline">
-                Status: {movie.status || 'Unavailable'}
-              </Badge>
-            </Flex>
-
-            {movie.genres.length > 0 ? (
-              <GenreList data={movie} />
-            ) : (
-              <Text color="fg.muted">Genres unavailable</Text>
-            )}
-          </Stack>
-
           {isAuthenticated ? (
             <Box as="section">
               <Heading fontSize="xl" marginBottom={3}>
-                Rating
+                Review
               </Heading>
               <RatingInput
                 showAverage={false}

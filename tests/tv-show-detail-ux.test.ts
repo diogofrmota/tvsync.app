@@ -54,14 +54,10 @@ test('TV show page renders required metadata and focused sections in a clear hie
     '<MediaDetailActions',
     'backdropPath={show.backdrop_path}',
     'posterPath={show.poster_path}',
+    "status={show.status || 'Unavailable'}",
     'year={getReleaseYear(show.first_air_date)}',
-    'Release year:',
-    'Seasons:',
-    'Episodes:',
-    'Status:',
-    'Genres unavailable',
     '<EpisodeTracker',
-    'Rating',
+    'Review',
     '<RatingInput',
     'Description',
     '<TvTrailer',
@@ -71,7 +67,10 @@ test('TV show page renders required metadata and focused sections in a clear hie
   ]);
   // The personal panel is one row of controls, not a bordered box.
   assert.doesNotMatch(page, /Your TV Show/);
-  assert.doesNotMatch(page, /Runtime/);
+  assert.doesNotMatch(
+    page,
+    /Release year:|Seasons:|Episodes:|Status:|Genres unavailable|Runtime/
+  );
   assert.doesNotMatch(
     page,
     /RecommendForm|Recommended TV shows|WatchlistStateButton|MediaStatusControl/i
@@ -92,7 +91,6 @@ test('missing TV show metadata is represented honestly and every score is labell
   for (const fallback of [
     'Untitled TV show',
     "'Unavailable'",
-    'Genres unavailable',
     'No description is available from TMDB.',
     'No trusted trailer is available.',
     'TMDB does not have season information for this show yet.',
@@ -353,7 +351,7 @@ test('favourite and personal rating mutations authenticate and reconcile for TV 
   assert.match(favoriteActions, /status: 'login_required'/);
   assert.match(rating, /await saveRating/);
   assert.match(rating, /setState\(previousState\)/);
-  assert.match(rating, /<StarRating/);
+  assert.match(rating, /inputMode="decimal"/);
   assert.match(ratingActions, /await getAuthSession\(\)/);
 
   const page = await read('src/lib/pages/tv/detail/index.tsx');

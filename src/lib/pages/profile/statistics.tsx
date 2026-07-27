@@ -11,28 +11,18 @@ import {
 import type { Route } from 'next';
 import Link from 'next/link';
 
-const runtimeDetail = (missingCount: number) =>
-  missingCount > 0
-    ? `Partial total: ${missingCount} ${
-        missingCount === 1 ? 'runtime is' : 'runtimes are'
-      } unavailable.`
-    : undefined;
-
 export const getProfileStatCards = (
   statistics: ProfileStatistics
 ): Array<ProfileStatCard> => [
   { label: 'TV Shows Finished', value: statistics.tvShowsWatched },
   { label: 'Movies Finished', value: statistics.moviesWatched },
-  { label: 'Episodes Watched', value: statistics.episodesWatched },
   {
-    detail: runtimeDetail(statistics.missingTvRuntimeCount),
-    label: 'Time in TV Shows',
-    value: formatWatchTime(statistics.tvMinutesWatched),
-  },
-  {
-    detail: runtimeDetail(statistics.missingMovieRuntimeCount),
-    label: 'Time in Movies',
-    value: formatWatchTime(statistics.movieMinutesWatched),
+    // Titles TMDB has no runtime for are simply not counted. The total never
+    // announces how incomplete it is — that is bookkeeping, not a statistic.
+    label: 'Total Watch Time',
+    value: formatWatchTime(
+      statistics.tvMinutesWatched + statistics.movieMinutesWatched
+    ),
   },
   { label: 'Number of Reviews', value: statistics.reviewsWritten },
 ];

@@ -1,12 +1,4 @@
-import {
-  Badge,
-  Box,
-  Button,
-  Flex,
-  Heading,
-  Stack,
-  Text,
-} from '@chakra-ui/react';
+import { Box, Button, Flex, Heading, Stack, Text } from '@chakra-ui/react';
 import { MediaCrewSection } from 'lib/components/shared/MediaCrewSection';
 import { MediaDetailHero } from 'lib/components/shared/MediaDetailHero';
 import { MediaReviews } from 'lib/components/shared/MediaReviews';
@@ -83,7 +75,7 @@ const TvShowDetailPage = ({
   return (
     <Box>
       {/* The header is the show's own artwork: the backdrop behind, the
-          official poster on the left, and the title, year, and score in the
+          official poster on the left, and the title, score, year, and status in the
           wider column beside it. The personal controls close it, so the
           episodes still come next without scrolling far. */}
       <MediaDetailHero
@@ -117,6 +109,7 @@ const TvShowDetailPage = ({
         backdropPath={show.backdrop_path}
         imdbRating={imdbRating}
         posterPath={show.poster_path}
+        status={show.status || 'Unavailable'}
         title={title}
         voteAverage={show.vote_average}
         voteCount={show.vote_count}
@@ -125,43 +118,6 @@ const TvShowDetailPage = ({
 
       <PageShell>
         <Stack gap={{ base: 8, md: 10 }} paddingX={{ base: 4, md: 0 }}>
-          {/* The facts the header no longer carries stay directly under it, in
-              the order they were read before. */}
-          <Stack as="section" gap={3}>
-            <Flex gap={2} wrap="wrap">
-              <Badge variant="outline">
-                Release year: {getReleaseYear(show.first_air_date)}
-              </Badge>
-              <Badge variant="outline">
-                Seasons:{' '}
-                {show.number_of_seasons > 0
-                  ? show.number_of_seasons
-                  : 'Unavailable'}
-              </Badge>
-              <Badge variant="outline">
-                Episodes:{' '}
-                {show.number_of_episodes > 0
-                  ? show.number_of_episodes
-                  : 'Unavailable'}
-              </Badge>
-              <Badge variant="outline">
-                Status: {show.status || 'Unavailable'}
-              </Badge>
-            </Flex>
-
-            {show.genres.length > 0 ? (
-              <Flex gap={2} wrap="wrap">
-                {show.genres.map((genre) => (
-                  <Badge key={genre.id} variant="subtle">
-                    {genre.name}
-                  </Badge>
-                ))}
-              </Flex>
-            ) : (
-              <Text color="fg.muted">Genres unavailable</Text>
-            )}
-          </Stack>
-
           {/* Episodes are the point of a show page, so the seen toggles follow
               the header: the current season slides left to right and every
               season opens in place below it. */}
@@ -170,7 +126,7 @@ const TvShowDetailPage = ({
           {isAuthenticated ? (
             <Box as="section">
               <Heading fontSize="xl" marginBottom={3}>
-                Rating
+                Review
               </Heading>
               <RatingInput
                 showAverage={false}

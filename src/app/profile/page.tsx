@@ -3,6 +3,11 @@ import type { MediaCardEntry } from 'lib/components/shared/media-item';
 import { loadOwnLibraryPreview } from 'lib/features/library/library-preview.server';
 import type { ProfileFavoriteItem } from 'lib/features/profile/profile-favorites.server';
 import { getOwnProfileFavorites } from 'lib/features/profile/profile-favorites.server';
+import type { ProfileReviewItem } from 'lib/features/profile/profile-reviews.server';
+import {
+  getOwnProfileReviews,
+  PROFILE_REVIEW_PREVIEW_LIMIT,
+} from 'lib/features/profile/profile-reviews.server';
 import type { ProfileStatistics } from 'lib/features/profile/profile-statistics';
 import { getOwnProfileStatistics } from 'lib/features/profile/profile-statistics.server';
 import { ProfileAccessIssue, ProfilePage } from 'lib/pages/profile';
@@ -109,7 +114,7 @@ export default async function Page() {
   }
 
   const ownProfile = profile;
-  const [statistics, favorites, followState, tvShows, movies] =
+  const [statistics, favorites, followState, tvShows, movies, reviews] =
     await Promise.all([
       withFallback<ProfileStatistics>(
         getOwnProfileStatistics,
@@ -145,6 +150,11 @@ export default async function Page() {
         [],
         'movies'
       ),
+      withFallback<Array<ProfileReviewItem>>(
+        () => getOwnProfileReviews(PROFILE_REVIEW_PREVIEW_LIMIT),
+        [],
+        'reviews'
+      ),
     ]);
 
   return (
@@ -156,6 +166,7 @@ export default async function Page() {
       }}
       movies={movies}
       profile={profile}
+      reviews={reviews}
       statistics={statistics}
       tvShows={tvShows}
     />

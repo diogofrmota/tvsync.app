@@ -157,10 +157,6 @@ export const ProfileConnectionsPage = ({
                         value: comparison.moviesWatched,
                       },
                       {
-                        detail:
-                          comparison.missingMovieRuntimeCount > 0
-                            ? 'Partial total; runtime data is unavailable.'
-                            : undefined,
                         label: 'Movie Time',
                         value: formatWatchTime(comparison.movieMinutesWatched),
                       },
@@ -169,10 +165,6 @@ export const ProfileConnectionsPage = ({
                         value: comparison.tvShowsWatched,
                       },
                       {
-                        detail:
-                          comparison.missingTvRuntimeCount > 0
-                            ? 'Partial total; runtime data is unavailable.'
-                            : undefined,
                         label: 'TV Time',
                         value: formatWatchTime(comparison.tvMinutesWatched),
                       },

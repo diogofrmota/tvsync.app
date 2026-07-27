@@ -24,6 +24,7 @@ import {
   getOwnAuthMethods,
   ProfileEmailConflictError,
   setOwnPassword,
+  updateOwnProfileAvatar,
   updateOwnProfileDetails,
   verifyOwnCurrentPassword,
 } from 'lib/services/database/profile.server';
@@ -85,16 +86,59 @@ export const completeOnboarding = async (
     if (await isUsernameTakenByAnotherUser(username)) {
       return { fieldErrors: { username: 'That username is already taken.' } };
     }
-    await updateOwnProfileDetails({
-      bio: '',
-      displayName,
-      profileBackdropPath: '',
-      profileBackdropTitle: '',
-      username,
-    });
+    await updateOwnProfileDetails({ bio: '', displayName, username });
     return { complete: true };
   } catch (error) {
     return mapProfileUpdateError(error);
+  }
+};
+
+type ProfileAvatarState = {
+  error?: string;
+  success?: string;
+};
+
+/**
+ * The circular profile avatar is a poster from a title found in search. Only
+ * the TMDB image path and the title are saved — TvSync stores no uploaded
+ * image, and an empty path clears the avatar back to generated initials.
+ */
+export const updateOwnProfileAvatarSelection = async (input: {
+  posterPath: string;
+  title: string;
+}): Promise<ProfileAvatarState> => {
+  if (!(await getAuthenticatedSession())?.user) {
+    return { error: 'Sign in again before changing your avatar.' };
+  }
+
+  const posterPath =
+    typeof input.posterPath === 'string' ? input.posterPath : '';
+  const title =
+    typeof input.title === 'string'
+      ? input.title.normalize('NFKC').trim().slice(0, 120)
+      : '';
+
+  if (posterPath && !TMDB_IMAGE_PATH_PATTERN.test(posterPath)) {
+    return { error: 'That poster could not be used. Pick another title.' };
+  }
+
+  try {
+    await updateOwnProfileAvatar({
+      posterPath,
+      title: posterPath ? title : '',
+    });
+
+    return {
+      success: posterPath ? 'Avatar updated.' : 'Avatar removed.',
+    };
+  } catch (error) {
+    const databaseIssue = getDatabaseAvailabilityIssue(error);
+
+    return {
+      error: databaseIssue
+        ? `${databaseIssue.title}: ${databaseIssue.description}`
+        : 'Your avatar could not be saved. Please try again.',
+    };
   }
 };
 
@@ -153,8 +197,6 @@ type ValidProfileInput = {
   currentPassword: string;
   displayName: string;
   email: string;
-  profileBackdropPath: string;
-  profileBackdropTitle: string;
   username: string;
 };
 
@@ -168,21 +210,11 @@ const validateProfileInput = (
     currentPassword: readPasswordField(formData, 'currentPassword'),
     displayName: readTextField(formData, 'displayName'),
     email: normalizeEmail(readTextField(formData, 'email')),
-    profileBackdropPath: readTextField(formData, 'profileBackdropPath'),
-    profileBackdropTitle: readTextField(formData, 'profileBackdropTitle'),
     username: normalizeUsername(readTextField(formData, 'username')),
   };
   const fieldErrors: NonNullable<ProfileFormState['fieldErrors']> = {};
   const usernameError = validateUsername(input.username);
   const emailError = validateEmail(input.email);
-
-  if (
-    input.profileBackdropPath &&
-    !TMDB_IMAGE_PATH_PATTERN.test(input.profileBackdropPath)
-  ) {
-    input.profileBackdropPath = '';
-    input.profileBackdropTitle = '';
-  }
 
   if (!input.displayName || input.displayName.length > 80) {
     fieldErrors.displayName = 'Use 1-80 characters for your display name.';

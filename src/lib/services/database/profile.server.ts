@@ -21,6 +21,7 @@ import {
   LIST_OWN_FAVORITES_QUERY,
   LIST_PUBLIC_FAVORITES_QUERY,
   SET_OWN_PASSWORD_QUERY,
+  UPDATE_OWN_PROFILE_AVATAR_QUERY,
   UPDATE_OWN_PROFILE_DETAILS_QUERY,
   UPSERT_OWN_FAVORITE_QUERY,
 } from './profile-queries';
@@ -36,8 +37,8 @@ export type ProfileDetailsRow = {
   display_name: string;
   email: string;
   name: string;
-  profile_backdrop_path: string | null;
-  profile_backdrop_title: string | null;
+  profile_avatar_path: string | null;
+  profile_avatar_title: string | null;
   privacy_setting: PrivacySetting;
   updated_at: string;
   user_id: string;
@@ -114,8 +115,6 @@ export const verifyOwnCurrentPassword = async (password: string) => {
 export const updateOwnProfileDetails = async (input: {
   bio: string;
   displayName: string;
-  profileBackdropPath: string;
-  profileBackdropTitle: string;
   username: string;
 }) => {
   const userId = await getAuthenticatedUserId();
@@ -125,9 +124,31 @@ export const updateOwnProfileDetails = async (input: {
     input.displayName,
     input.username,
     input.bio,
-    input.profileBackdropPath,
-    input.profileBackdropTitle,
   ])) as Array<ProfileDetailsRow>;
+
+  return rows.at(0) ?? null;
+};
+
+/**
+ * The profile avatar is a TMDB poster path plus the title it belongs to —
+ * never an uploaded file — so switching avatars is one row update and no
+ * object storage. An empty path clears it back to the generated initials.
+ */
+export const updateOwnProfileAvatar = async (input: {
+  posterPath: string;
+  title: string;
+}) => {
+  const userId = await getAuthenticatedUserId();
+  const sql = getDatabaseSql();
+  const rows = (await sql.query(UPDATE_OWN_PROFILE_AVATAR_QUERY, [
+    userId,
+    input.posterPath,
+    input.title,
+  ])) as Array<{
+    profile_avatar_path: string | null;
+    profile_avatar_title: string | null;
+    user_id: string;
+  }>;
 
   return rows.at(0) ?? null;
 };
