@@ -6,11 +6,11 @@ import {
 import { FavoriteHeartIcon } from 'lib/components/shared/FavoriteHeart';
 import { MediaRail } from 'lib/components/shared/MediaRail';
 import type { MediaCardItem } from 'lib/components/shared/media-item';
-import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
+import { PageShell } from 'lib/components/shared/PageShell';
 import { SectionHeading, StatePanel } from 'lib/components/shared/Section';
 import type { ProfileFavoriteItem } from 'lib/features/profile/profile-favorites.server';
 import type { ProfileStatistics } from 'lib/features/profile/profile-statistics';
-import { LogoutButton } from 'lib/pages/auth/client-actions';
+import { ProfileHeaderActions } from 'lib/pages/profile/profile-header-actions';
 import type { AuthSessionIssue } from 'lib/services/auth/session-error.server';
 import type { FollowCountsRow } from 'lib/services/database/social.server';
 import type { OwnProfile } from 'lib/services/database/tracking.server';
@@ -18,7 +18,6 @@ import { MediaType } from 'lib/types';
 import type { Route } from 'next';
 import Link from 'next/link';
 import type { ComponentProps, ReactNode } from 'react';
-import { FiEdit3 } from 'react-icons/fi';
 
 export const ProfileAccessIssue = ({ issue }: { issue: AuthSessionIssue }) => (
   <PageShell size="narrow">
@@ -138,14 +137,22 @@ export const ProfilePage = ({
 
   return (
     <PageShell>
-      {/* The route title leads the page exactly like Movies and TV Shows. The
-          identity sits directly underneath as plain centred text — no card, no
-          extra padding — so the first list stays close to the top, and the
-          account actions close the block centred under the biography. */}
       <Stack gap={{ base: 3, md: 4 }}>
-        <PageHeading title="Profile" />
-
-        <Stack align="center" gap={2} textAlign="center">
+        <Stack
+          align="center"
+          aspectRatio={{ base: '16 / 7', md: '16 / 5' }}
+          background="linear-gradient(120deg, gray.900, gray.800 55%, rgba(251, 191, 36, 0.18))"
+          borderRadius="xl"
+          justify="center"
+          overflow="hidden"
+          padding={5}
+          position="relative"
+          textAlign="center"
+          width="full"
+        >
+          <Flex gap={2} left={4} position="absolute" top={4}>
+            <ProfileHeaderActions />
+          </Flex>
           <Stack align="center" gap={0.5}>
             <Heading fontSize={{ base: 'lg', md: 'xl' }}>{displayName}</Heading>
             <Text color="fg.muted" fontSize="sm">
@@ -171,16 +178,6 @@ export const ProfilePage = ({
               {profile.bio}
             </Text>
           ) : null}
-
-          <Flex gap={2} justify="center" paddingTop={1} wrap="wrap">
-            <Button asChild size="sm">
-              <Link href="/profile/edit">
-                <FiEdit3 aria-hidden />
-                Edit Profile
-              </Link>
-            </Button>
-            <LogoutButton />
-          </Flex>
         </Stack>
       </Stack>
 

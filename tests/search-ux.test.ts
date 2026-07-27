@@ -186,18 +186,14 @@ test('Explore discovery drops the recommendation rail and the genre browser', as
   }
 });
 
-test('Explore leads with the reworded subtitle and a readable search field', async () => {
+test('Explore omits its redundant heading and offers unified search copy', async () => {
   const [discover, searchBar] = await Promise.all([
     read('src/lib/pages/explore/discover.server.tsx'),
     read('src/lib/pages/media/media-search-bar.tsx'),
   ]);
 
-  assert.match(
-    discover,
-    /subtitle="Discover trending titles, new releases and all-time highlights across movies and tv shows\."/
-  );
-  assert.doesNotMatch(discover, /all in one place/);
+  assert.doesNotMatch(discover, /<PageHeading|Discover trending titles/);
   // The field is wide enough to read its own placeholder before typing.
-  assert.match(discover, /placeholder="Search movies and TV shows"/);
+  assert.match(discover, /placeholder="Search shows, movies and users"/);
   assert.match(searchBar, /minWidth=\{\{ base: 'auto', md: '26rem' \}\}/);
 });

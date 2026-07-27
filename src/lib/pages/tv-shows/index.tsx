@@ -1,7 +1,7 @@
 'use client';
 
 import { Button, Grid, Stack, Text } from '@chakra-ui/react';
-import { PageHeading, PageShell } from 'lib/components/shared/PageShell';
+import { PageShell } from 'lib/components/shared/PageShell';
 import PosterCard from 'lib/components/shared/PosterCard';
 import { SectionHeading, StatePanel } from 'lib/components/shared/Section';
 import { groupTvLibraryItems } from 'lib/features/library/tv-library-state';
@@ -101,7 +101,6 @@ export const TvShowsPage = ({
 
   return (
     <PageShell>
-      <PageHeading title="TV Shows" />
       <TvLibrarySection
         items={groupedItems[WatchStatus.Watching]}
         sectionKey="watching"

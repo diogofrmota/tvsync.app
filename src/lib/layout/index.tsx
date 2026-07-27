@@ -1,6 +1,7 @@
 'use client';
 
 import { Box, Flex } from '@chakra-ui/react';
+import { Onboarding } from 'lib/pages/auth/onboarding';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 
@@ -36,6 +37,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
     <Flex direction="column" minHeight="100dvh">
       <Header />
+      {isAuthenticated ? <Onboarding /> : null}
       <Box
         as="main"
         flex="1"
