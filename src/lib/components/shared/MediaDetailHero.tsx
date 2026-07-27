@@ -12,6 +12,7 @@ type MediaDetailHeroProps = {
   backdropPath: null | string;
   imdbRating: ImdbRating | null;
   posterPath: null | string;
+  status: string;
   title: string;
   voteAverage: number;
   voteCount: number;
@@ -41,7 +42,7 @@ const posterOffset = {
 /**
  * The header both detail pages share: the title's own backdrop fading into the
  * page background, the official poster overlapping it on the left, and the
- * title, year, and score in the wider column beside it. The personal controls —
+ * title, score, year, and status in the wider column beside it. The personal controls —
  * add to library, mark as finished, favourite — close the header directly under
  * the poster row.
  *
@@ -53,6 +54,7 @@ export const MediaDetailHero = ({
   backdropPath,
   imdbRating,
   posterPath,
+  status,
   title,
   voteAverage,
   voteCount,
@@ -140,14 +142,6 @@ export const MediaDetailHero = ({
               {title}
             </Heading>
 
-            <Text
-              color="fg.muted"
-              fontSize={{ base: 'sm', md: 'md' }}
-              opacity={0.7}
-            >
-              {year}
-            </Text>
-
             {/* The score sits directly under the title, on its own line, so it
                 reads as part of the heading rather than as one more fact. */}
             <MediaRatingPanel
@@ -155,6 +149,13 @@ export const MediaDetailHero = ({
               voteAverage={voteAverage}
               voteCount={voteCount}
             />
+
+            <Text color="fg.muted" fontSize={{ base: 'sm', md: 'md' }}>
+              {year}
+            </Text>
+            <Text color="fg.muted" fontSize={{ base: 'sm', md: 'md' }}>
+              {status}
+            </Text>
           </Stack>
         </Grid>
 

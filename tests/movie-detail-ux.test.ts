@@ -48,11 +48,9 @@ test('movie page renders required metadata and focused sections in a clear hiera
     '<MediaDetailActions',
     'backdropPath={movie.backdrop_path}',
     'posterPath={movie.poster_path}',
+    "status={movie.status || 'Unavailable'}",
     'year={getReleaseYear(movie.release_date)}',
-    'Release year:',
-    'Status:',
-    '<GenreList',
-    'Rating',
+    'Review',
     '<RatingInput',
     'Description',
     '<MovieTrailer',
@@ -60,8 +58,11 @@ test('movie page renders required metadata and focused sections in a clear hiera
     '<CastsWrapper',
     '<MediaReviews',
   ]);
-  // Runtime is no longer one of the facts the header carries.
-  assert.doesNotMatch(page, /Runtime|movie\.runtime/);
+  // Additional release, status, genre, and runtime facts are no longer repeated below the header.
+  assert.doesNotMatch(
+    page,
+    /Release year:|Status:|GenreList|Runtime|movie\.runtime/
+  );
   // The personal panel is one row of controls, not a bordered "Your movie" box.
   assert.doesNotMatch(page, /Your movie/);
   // The director is no longer a line of text stranded in the header.
@@ -85,7 +86,6 @@ test('missing movie metadata is represented honestly and every score is labelled
   for (const fallback of [
     'Untitled movie',
     "'Unavailable'",
-    'Genres unavailable',
     'No description is available from TMDB.',
     'No trusted trailer is available.',
   ]) {
@@ -137,7 +137,7 @@ test('movie member reviews come from TMDB with safe fallbacks and a See All list
   );
   assert.match(reviews, /url\.startsWith\(TMDB_REVIEW_URL\)/);
   assert.match(reviewList, /No TMDB member has reviewed this title yet\./);
-  assert.match(reviewList, /rel="noopener noreferrer"/);
+  assert.doesNotMatch(reviewList, /Read on TMDB|noopener noreferrer/);
 
   // "See All" is the section's one action, exactly as every other rail, and it
   // opens the complete list on its own route.
@@ -297,26 +297,19 @@ test('favourite and personal rating mutations authenticate, reconcile, and suppo
   assert.match(database, /rating = excluded\.rating/);
 });
 
-test('the rating section is ten stars plus a review, on its own subtitle', async () => {
-  const [page, stars, input] = await Promise.all([
+test('the Review section accepts a decimal rating plus a review', async () => {
+  const [page, input] = await Promise.all([
     read('src/lib/pages/movie/detail/index.tsx'),
-    read('src/lib/features/reviews/star-rating.tsx'),
     read('src/lib/features/reviews/rating-input.tsx'),
   ]);
 
-  assert.match(page, /Rating\s*<\/Heading>/);
+  assert.match(page, /Review\s*<\/Heading>/);
   assert.match(page, /<RatingInput/);
-  // Ten stars, each with a half-point hit area, so the stored 0.5 scale stays
-  // reachable from the artwork-free control.
-  assert.match(stars, /STAR_VALUES = \[1, 2, 3, 4, 5, 6, 7, 8, 9, 10\]/);
-  assert.match(
-    stars,
-    /aria-label=\{`Rate \$\{value\.toFixed\(1\)\} out of 10`\}/
-  );
-  assert.match(stars, /FiStar/);
-  assert.match(input, /<StarRating/);
-  // The dropdown the stars replaced is gone.
-  assert.doesNotMatch(input, /NativeSelect|ratingOptions/);
+  assert.match(input, /inputMode="decimal"/);
+  assert.match(input, /replace\(',', '\.'\)/);
+  assert.match(input, /\/ 10 <FiStar/);
+  assert.match(input, /Publish/);
+  assert.doesNotMatch(input, /<StarRating|NativeSelect|ratingOptions/);
   assert.match(input, /Your review/);
   assert.match(input, /await saveReview/);
 });
