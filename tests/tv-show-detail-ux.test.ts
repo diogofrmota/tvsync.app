@@ -44,22 +44,22 @@ test('TV show details remain public and load required sections independently', a
 test('TV show page renders required metadata and focused sections in a clear hierarchy', async () => {
   const page = await read('src/lib/pages/tv/detail/index.tsx');
 
-  // Header first, then the episodes: the slider and the season dropdowns come
-  // straight after the facts, ahead of the personal panel and the reading
-  // sections that close the page.
-  // Actions first, then the episodes to mark as seen, then the ratings, then
-  // the description and the rest — the same order the movie page uses, with
-  // the tracker slotted in where a show needs it.
+  // The shared hero first — backdrop, poster, title, year, score, and the
+  // personal controls it closes on — then the remaining facts, then the
+  // episodes to mark as seen, then the ratings, the description, and the rest:
+  // the same order the movie page uses, with the tracker slotted in where a
+  // show needs it.
   assertInOrder(page, [
-    'poster`}',
-    'as="h1"',
-    '<MediaRatingPanel',
+    '<MediaDetailHero',
+    '<MediaDetailActions',
+    'backdropPath={show.backdrop_path}',
+    'posterPath={show.poster_path}',
+    'year={getReleaseYear(show.first_air_date)}',
     'Release year:',
     'Seasons:',
     'Episodes:',
     'Status:',
     'Genres unavailable',
-    '<MediaDetailActions',
     '<EpisodeTracker',
     'Rating',
     '<RatingInput',
@@ -80,11 +80,12 @@ test('TV show page renders required metadata and focused sections in a clear hie
 });
 
 test('missing TV show metadata is represented honestly and every score is labelled', async () => {
-  const [page, trailer, tracker, ratingPanel] = await Promise.all([
+  const [page, trailer, tracker, ratingPanel, hero] = await Promise.all([
     read('src/lib/pages/tv/detail/index.tsx'),
     read('src/lib/pages/tv/detail/components/trailer.tsx'),
     read('src/lib/pages/tv/detail/components/episode-tracker.tsx'),
     read('src/lib/components/shared/MediaRating.tsx'),
+    read('src/lib/components/shared/MediaDetailHero.tsx'),
   ]);
   const renderedDetailSources = `${page}\n${trailer}\n${tracker}`;
 
@@ -108,7 +109,7 @@ test('missing TV show metadata is represented honestly and every score is labell
   assert.match(ratingPanel, /score\.toFixed\(1\)/);
   assert.match(ratingPanel, /No rating yet/);
   assert.doesNotMatch(ratingPanel, /\/ 10|votes|View on IMDb|certification/);
-  assert.match(page, /<MediaRatingPanel/);
+  assert.match(hero, /<MediaRatingPanel/);
   assert.match(page, /voteAverage=\{show\.vote_average\}/);
 });
 
@@ -300,7 +301,7 @@ test('the TV actions are the same Add, favourite, finished, and remove row as mo
 
   assert.match(control, /'Remove from Favourites' : 'Mark as Favourite'/);
   assert.match(control, /isFinished \? 'Finished' : 'Mark as Finished'/);
-  assert.match(control, /aria-label="Remove from your library"/);
+  assert.match(control, /\{removeLabel\}/);
   // A show that is un-finished goes back to Watching rather than to Planned,
   // because its episode progress is still there.
   assert.match(control, /unfinished: WatchStatus\.Watching/);
@@ -313,6 +314,7 @@ test('the TV actions are the same Add, favourite, finished, and remove row as mo
 
   const page = await read('src/lib/pages/tv/detail/index.tsx');
   assert.match(page, /addLabel="Add TV Show"/);
+  assert.match(page, /removeLabel="Remove TV Show"/);
   assert.doesNotMatch(page, /<WatchlistStateButton/);
 });
 
@@ -376,17 +378,17 @@ test('public protected actions lead clearly to Login or Register', async () => {
 });
 
 test('TV show detail layout has explicit mobile and desktop compositions', async () => {
-  const [page, cast, tracker] = await Promise.all([
-    read('src/lib/pages/tv/detail/index.tsx'),
+  const [hero, cast, tracker] = await Promise.all([
+    read('src/lib/components/shared/MediaDetailHero.tsx'),
     read('src/lib/pages/tv/detail/components/casts-wrapper.tsx'),
     read('src/lib/pages/tv/detail/components/episode-tracker.tsx'),
   ]);
 
   // The poster is a compact column beside the title on every screen size, so
   // the library controls and seasons stay close to the top of the page.
-  assert.match(page, /base: '7\.5rem minmax\(0, 1fr\)'/);
-  assert.match(page, /md: '13rem minmax\(0, 1fr\)'/);
-  assert.match(page, /base: 'xl', md: '3xl'/);
+  assert.match(hero, /base: '7\.5rem minmax\(0, 1fr\)'/);
+  assert.match(hero, /md: '13rem minmax\(0, 1fr\)'/);
+  assert.match(hero, /base: '2xl', md: '4xl'/);
   assert.match(cast, /base: 'repeat\(2, minmax\(0, 1fr\)\)'/);
   assert.match(cast, /md: 'repeat\(4, minmax\(0, 1fr\)\)'/);
   assert.match(cast, /xl: 'repeat\(6, minmax\(0, 1fr\)\)'/);

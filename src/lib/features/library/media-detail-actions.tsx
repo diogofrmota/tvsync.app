@@ -22,12 +22,14 @@ import {
 import type { Route } from 'next';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
-import { FiHeart, FiX } from 'react-icons/fi';
+import { FiCheck, FiHeart, FiPlus, FiX } from 'react-icons/fi';
 
 type MediaDetailActionsProps = {
   /** The label of the single button shown before the title is saved. */
   addLabel: string;
   mediaType: TrackableMediaType;
+  /** The label the same button takes once the title is in the library. */
+  removeLabel: string;
   tmdbId: number;
 };
 
@@ -49,6 +51,22 @@ const trackingStatuses = {
   },
 } as const;
 
+/**
+ * The round controls beside the add/remove pill. They are icon-only by design,
+ * so each one carries its state in `aria-label` and `aria-pressed` rather than
+ * in visible text.
+ */
+const circleButtonProps = {
+  _hover: { background: 'whiteAlpha.300' },
+  background: 'whiteAlpha.200',
+  borderRadius: 'full',
+  color: 'white',
+  height: { base: '2.75rem', md: '3rem' },
+  minWidth: 'auto',
+  variant: 'ghost',
+  width: { base: '2.75rem', md: '3rem' },
+} as const;
+
 const getLoginHref = (pathname: string, searchParams: URLSearchParams) => {
   const query = searchParams.toString();
   const callbackUrl = query ? `${pathname}?${query}` : pathname;
@@ -57,14 +75,17 @@ const getLoginHref = (pathname: string, searchParams: URLSearchParams) => {
 };
 
 /**
- * The whole personal panel of a detail page, in one row: an "Add" button that
- * becomes the three controls a saved title needs — a heart for favourites, the
- * finished toggle, and an X that removes it again. Every mutation is optimistic
- * and rolls back to the previous state when the server rejects it.
+ * The whole personal panel of a detail page, in one row directly under the
+ * header poster: a pill that adds the title to the library and becomes the pill
+ * that removes it again, followed — once the title is saved — by the round
+ * check that marks it finished and the round heart that favourites it. Every
+ * mutation is optimistic and rolls back to the previous state when the server
+ * rejects it.
  */
 export const MediaDetailActions = ({
   addLabel,
   mediaType,
+  removeLabel,
   tmdbId,
 }: MediaDetailActionsProps) => {
   const pathname = usePathname();
@@ -227,10 +248,15 @@ export const MediaDetailActions = ({
       <Flex direction="column" gap={2}>
         <Button
           alignSelf="flex-start"
+          gap={2}
           loading={isPending}
           onClick={() => saveStatus(statuses.initial)}
+          paddingX={6}
+          size="lg"
           type="button"
+          variant="outline"
         >
+          <Icon as={FiPlus} />
           {addLabel}
         </Button>
         {message ? (
@@ -246,37 +272,48 @@ export const MediaDetailActions = ({
 
   return (
     <Flex direction="column" gap={2}>
-      <Flex align="center" gap={2} wrap="wrap">
-        <IconButton
-          aria-label={favorite ? 'Remove from Favourites' : 'Mark as Favourite'}
-          aria-pressed={favorite}
-          color={favorite ? 'red.500' : undefined}
-          disabled={isPending}
-          onClick={toggleFavorite}
-          type="button"
-          variant="outline"
-        >
-          <Icon as={FiHeart} fill={favorite ? 'currentColor' : 'none'} />
-        </IconButton>
+      <Flex align="center" gap={3} wrap="wrap">
+        {/* The pill keeps the place the "Add" button held, so removing a title
+            is the same one click in the same spot that added it. */}
         <Button
+          _hover={{ background: 'whiteAlpha.300' }}
+          background="whiteAlpha.200"
+          color="white"
+          disabled={isPending}
+          gap={2}
+          onClick={remove}
+          paddingX={6}
+          size="lg"
+          type="button"
+          variant="ghost"
+        >
+          <Icon as={FiX} />
+          {removeLabel}
+        </Button>
+        <IconButton
+          aria-label={isFinished ? 'Finished' : 'Mark as Finished'}
           aria-pressed={isFinished}
-          loading={isPending}
+          disabled={isPending}
           onClick={() =>
             saveStatus(isFinished ? statuses.unfinished : statuses.finished)
           }
           type="button"
-          variant={isFinished ? 'solid' : 'outline'}
+          {...circleButtonProps}
+          background={isFinished ? 'gold.400' : circleButtonProps.background}
+          color={isFinished ? 'gray.900' : circleButtonProps.color}
         >
-          {isFinished ? 'Finished' : 'Mark as Finished'}
-        </Button>
+          <Icon as={FiCheck} />
+        </IconButton>
         <IconButton
-          aria-label="Remove from your library"
+          aria-label={favorite ? 'Remove from Favourites' : 'Mark as Favourite'}
+          aria-pressed={favorite}
           disabled={isPending}
-          onClick={remove}
+          onClick={toggleFavorite}
           type="button"
-          variant="outline"
+          {...circleButtonProps}
+          color={favorite ? 'red.500' : circleButtonProps.color}
         >
-          <Icon as={FiX} />
+          <Icon as={FiHeart} fill={favorite ? 'currentColor' : 'none'} />
         </IconButton>
       </Flex>
       {message ? (
