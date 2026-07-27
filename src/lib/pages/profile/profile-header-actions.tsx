@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@chakra-ui/react';
+import { IconButton } from '@chakra-ui/react';
 import Link from 'next/link';
 import { FiSettings, FiShare2 } from 'react-icons/fi';
 
@@ -16,21 +16,24 @@ export const ProfileHeaderActions = () => {
 
   return (
     <>
-      <Button
+      <IconButton
         aria-label="Share profile"
         onClick={shareProfile}
         size="sm"
         variant="solid"
       >
         <FiShare2 />
-        Share
-      </Button>
-      <Button aria-label="Profile settings" asChild size="sm" variant="solid">
+      </IconButton>
+      <IconButton
+        aria-label="Profile settings"
+        asChild
+        size="sm"
+        variant="solid"
+      >
         <Link href="/profile/settings">
           <FiSettings />
-          Settings
         </Link>
-      </Button>
+      </IconButton>
     </>
   );
 };

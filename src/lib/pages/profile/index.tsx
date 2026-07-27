@@ -80,12 +80,14 @@ const FollowCountChip = ({
   value: number;
 }) => (
   <Box
-    _hover={{ borderColor: 'gold.400', color: 'gold.300' }}
+    _hover={{ background: 'gray.100', borderColor: 'gold.400' }}
     alignItems="center"
     asChild
+    background="white"
     borderColor="border"
     borderRadius="full"
     borderWidth="1px"
+    color="black"
     display="inline-flex"
     fontSize="sm"
     gap={1.5}
@@ -99,7 +101,7 @@ const FollowCountChip = ({
       <Text as="span" fontWeight="bold">
         {value}
       </Text>
-      <Text as="span" color="fg.muted">
+      <Text as="span" color="gray.600">
         {label}
       </Text>
     </Link>
@@ -158,9 +160,12 @@ export const ProfilePage = ({
           textAlign="center"
           width="full"
         >
-          <Flex gap={2} left={4} position="absolute" top={4}>
+          <Flex gap={2} position="absolute" right={4} top={4}>
             <ProfileHeaderActions />
           </Flex>
+        </Stack>
+
+        <Stack align="center" gap={2} textAlign="center">
           <Stack align="center" gap={0.5}>
             <Heading fontSize={{ base: 'lg', md: 'xl' }}>{displayName}</Heading>
             <Text color="fg.muted" fontSize="sm">
