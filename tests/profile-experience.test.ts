@@ -198,9 +198,12 @@ test('Profile renders exact information, social navigation, non-scrolling stats,
   }
 
   assert.match(page, /<ProfileHeaderActions \/>/);
+  assert.match(page, /<ProfileSettingsAction \/>/);
   assert.match(page, /\/following/);
   assert.match(page, /\/followers/);
   assert.match(headerActions, /aria-label="Profile settings"/);
+  assert.match(headerActions, /Edit profile/);
+  assert.match(headerActions, /\/profile\/settings\/profile/);
   assert.doesNotMatch(
     headerActions,
     /Share profile|View statistics|FiShare2|FiBarChart2/
@@ -422,10 +425,12 @@ test('Profile and Settings include explicit mobile and desktop layouts', async (
     read('src/lib/pages/profile/profile-form.tsx'),
   ]);
 
-  // Profile leads with the avatar and keeps account actions in settings.
+  // Profile leads with a cover-style identity header and keeps account actions
+  // in settings, with the common edit path available directly beside it.
   assertProfileHeaderOrder(profile);
   assert.match(profile, /<FollowCountChip/);
-  assert.match(profile, /textAlign="center"/);
+  assert.match(profile, /linear-gradient/);
+  assert.match(profile, /textAlign="left"/);
   assert.match(edit, /padding=\{\{ base: 5, md: 6 \}\}/);
   assert.match(form, /maxLength=\{BIO_MAX_LENGTH\}/);
   assert.match(form, /autoComplete="current-password"/);

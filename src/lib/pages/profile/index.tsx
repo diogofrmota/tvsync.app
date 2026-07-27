@@ -10,7 +10,10 @@ import type { ProfileFavoriteItem } from 'lib/features/profile/profile-favorites
 import type { ProfileReviewItem } from 'lib/features/profile/profile-reviews.server';
 import type { ProfileStatistics } from 'lib/features/profile/profile-statistics';
 import { ProfileAvatarPicker } from 'lib/pages/profile/profile-avatar-picker';
-import { ProfileHeaderActions } from 'lib/pages/profile/profile-header-actions';
+import {
+  ProfileHeaderActions,
+  ProfileSettingsAction,
+} from 'lib/pages/profile/profile-header-actions';
 import { getProfileStatCards } from 'lib/pages/profile/statistics';
 import type { AuthSessionIssue } from 'lib/services/auth/session-error.server';
 import type { FollowCountsRow } from 'lib/services/database/social.server';
@@ -68,8 +71,8 @@ const ProfileRail = ({
   />
 );
 
-// Follow counts read as compact, obviously tappable chips so the identity
-// header stays one short block instead of a stacked number/label column.
+// Follow counts mirror the compact number-and-label treatment in the profile
+// reference while remaining proper links to the full connection lists.
 const FollowCountChip = ({
   href,
   label,
@@ -80,28 +83,22 @@ const FollowCountChip = ({
   value: number;
 }) => (
   <Box
-    _hover={{ background: 'gray.100', borderColor: 'gold.400' }}
+    _hover={{ color: 'gold.400' }}
     alignItems="center"
     asChild
-    background="white"
-    borderColor="border"
-    borderRadius="full"
-    borderWidth="1px"
-    color="black"
+    color="fg"
     display="inline-flex"
     fontSize="sm"
     gap={1.5}
-    paddingX={3}
-    paddingY={1}
-    transitionDuration="fast"
-    transitionProperty="border-color, color"
+    transitionDuration="faster"
+    transitionProperty="color"
     transitionTimingFunction="ease-out"
   >
     <Link href={href}>
       <Text as="span" fontWeight="bold">
         {value}
       </Text>
-      <Text as="span" color="gray.600">
+      <Text as="span" color="fg.muted">
         {label}
       </Text>
     </Link>
@@ -136,46 +133,73 @@ export const ProfilePage = ({
 
   return (
     <PageShell>
-      <Stack gap={{ base: 3, md: 4 }}>
-        <Flex justify="flex-end">
-          <ProfileHeaderActions />
-        </Flex>
+      <Stack gap={0}>
+        <Box
+          background="linear-gradient(135deg, {colors.gray.950} 0%, {colors.gray.800} 52%, {colors.gold.900} 140%)"
+          borderColor="border"
+          borderRadius={{ base: 'xl', md: '2xl' }}
+          borderWidth="1px"
+          height={{ base: '9rem', md: '13rem' }}
+          overflow="hidden"
+          position="relative"
+        >
+          <Box
+            position="absolute"
+            right={{ base: 3, md: 5 }}
+            top={{ base: 3, md: 5 }}
+          >
+            <ProfileSettingsAction />
+          </Box>
+        </Box>
 
-        <Stack align="center" gap={3} textAlign="center">
-          {/* The avatar is a poster the user picks in search, so it opens the
-              picker dialog on click instead of an upload control. */}
-          <ProfileAvatarPicker
-            avatarPath={profile.profile_avatar_path}
-            avatarTitle={profile.profile_avatar_title}
-            displayName={displayName}
-          />
-
-          <Stack align="center" gap={0.5}>
-            <Heading fontSize={{ base: 'lg', md: 'xl' }}>{displayName}</Heading>
-            <Text color="fg.muted" fontSize="sm">
-              @{profile.username}
-            </Text>
-          </Stack>
-
-          <Flex gap={2} justify="center" wrap="wrap">
-            <FollowCountChip
-              href={`${baseProfilePath}/following` as Route}
-              label="Following"
-              value={followCounts.following_count}
+        <Box paddingX={{ base: 3, md: 7 }}>
+          <Flex
+            align="end"
+            justify="space-between"
+            marginTop={{ base: '-3.25rem', md: '-4rem' }}
+          >
+            {/* The avatar is a poster the user picks in search, so it opens the
+                picker dialog on click instead of an upload control. */}
+            <ProfileAvatarPicker
+              avatarPath={profile.profile_avatar_path}
+              avatarTitle={profile.profile_avatar_title}
+              displayName={displayName}
             />
-            <FollowCountChip
-              href={`${baseProfilePath}/followers` as Route}
-              label="Followers"
-              value={followCounts.follower_count}
-            />
+            <Box marginBottom={2}>
+              <ProfileHeaderActions />
+            </Box>
           </Flex>
 
-          {profile.bio ? (
-            <Text color="fg.muted" fontSize="sm" maxWidth="42rem">
-              {profile.bio}
-            </Text>
-          ) : null}
-        </Stack>
+          <Stack align="start" gap={3} marginTop={3} textAlign="left">
+            <Stack gap={0.5}>
+              <Heading fontSize={{ base: 'xl', md: '2xl' }}>
+                {displayName}
+              </Heading>
+              <Text color="fg.muted" fontSize="sm">
+                @{profile.username}
+              </Text>
+            </Stack>
+
+            {profile.bio ? (
+              <Text color="fg.muted" fontSize="sm" maxWidth="42rem">
+                {profile.bio}
+              </Text>
+            ) : null}
+
+            <Flex gap={5} wrap="wrap">
+              <FollowCountChip
+                href={`${baseProfilePath}/following` as Route}
+                label="Following"
+                value={followCounts.following_count}
+              />
+              <FollowCountChip
+                href={`${baseProfilePath}/followers` as Route}
+                label="Followers"
+                value={followCounts.follower_count}
+              />
+            </Flex>
+          </Stack>
+        </Box>
       </Stack>
 
       <Stack as="section" gap={5}>
