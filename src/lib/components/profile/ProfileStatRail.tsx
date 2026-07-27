@@ -30,7 +30,10 @@ export const ProfileStatRail = ({
     columnGap={4}
     role="list"
     rowGap={4}
-    templateColumns="minmax(0, 1fr)"
+    templateColumns={{
+      base: 'repeat(2, minmax(0, 1fr))',
+      md: 'repeat(4, minmax(0, 1fr))',
+    }}
   >
     {cards.map((card) => (
       <Box
@@ -39,25 +42,24 @@ export const ProfileStatRail = ({
         borderRadius="lg"
         borderWidth="1px"
         key={card.label}
-        padding={5}
+        padding={{ base: 3, md: 4 }}
         role="listitem"
         transitionDuration="fast"
         transitionProperty="border-color"
         transitionTimingFunction="ease-out"
       >
-        <Box alignItems="center" display="flex" gap={3}>
+        <Box alignItems="center" display="flex" gap={{ base: 2, md: 3 }}>
           <Icon as={getStatIcon(card.label)} boxSize={5} color="gold.400" />
-          <Text color="fg.muted" fontSize="sm" fontWeight="medium">
-            {card.label}
+          <Text
+            color="gold.300"
+            fontSize={{ base: 'xl', md: '2xl' }}
+            fontWeight="bold"
+          >
+            {card.value}
           </Text>
         </Box>
-        <Text
-          color="gold.300"
-          fontSize={{ base: '2xl', md: '3xl' }}
-          fontWeight="bold"
-          marginTop={2}
-        >
-          {card.value}
+        <Text color="fg.muted" fontSize="sm" fontWeight="medium" marginTop={2}>
+          {card.label}
         </Text>
         {card.detail ? (
           <Text color="fg.muted" fontSize="xs" marginTop={2}>

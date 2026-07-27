@@ -1,14 +1,15 @@
 import { Box, Button, Flex, Heading, Stack, Text } from '@chakra-ui/react';
-import { ProfilePosterStats } from 'lib/components/profile/ProfilePosterStats';
+import { ProfileStatRail } from 'lib/components/profile/ProfileStatRail';
 import { FavoriteHeartIcon } from 'lib/components/shared/FavoriteHeart';
 import { MediaRail } from 'lib/components/shared/MediaRail';
 import type { MediaCardItem } from 'lib/components/shared/media-item';
 import { PageShell } from 'lib/components/shared/PageShell';
-import { StatePanel } from 'lib/components/shared/Section';
+import { SectionHeading, StatePanel } from 'lib/components/shared/Section';
 import { IMAGE_URL_ORIGINAL } from 'lib/components/shared/tmdb-image-urls';
 import type { ProfileFavoriteItem } from 'lib/features/profile/profile-favorites.server';
 import type { ProfileStatistics } from 'lib/features/profile/profile-statistics';
 import { ProfileHeaderActions } from 'lib/pages/profile/profile-header-actions';
+import { getProfileStatCards } from 'lib/pages/profile/statistics';
 import type { AuthSessionIssue } from 'lib/services/auth/session-error.server';
 import type { FollowCountsRow } from 'lib/services/database/social.server';
 import type { OwnProfile } from 'lib/services/database/tracking.server';
@@ -154,7 +155,6 @@ export const ProfilePage = ({
           <Flex gap={2} position="absolute" right={4} top={4}>
             <ProfileHeaderActions />
           </Flex>
-          <ProfilePosterStats statistics={statistics} />
         </Stack>
 
         <Stack align="center" gap={2} textAlign="center">
@@ -184,6 +184,14 @@ export const ProfilePage = ({
             </Text>
           ) : null}
         </Stack>
+      </Stack>
+
+      <Stack as="section" gap={5}>
+        <SectionHeading
+          seeAllHref={'/profile/statistics' as Route}
+          title="Statistics"
+        />
+        <ProfileStatRail cards={getProfileStatCards(statistics)} />
       </Stack>
 
       <ProfileRail
