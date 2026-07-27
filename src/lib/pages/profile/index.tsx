@@ -8,6 +8,7 @@ import { MediaRail } from 'lib/components/shared/MediaRail';
 import type { MediaCardItem } from 'lib/components/shared/media-item';
 import { PageShell } from 'lib/components/shared/PageShell';
 import { SectionHeading, StatePanel } from 'lib/components/shared/Section';
+import { IMAGE_URL_ORIGINAL } from 'lib/components/shared/tmdb-image-urls';
 import type { ProfileFavoriteItem } from 'lib/features/profile/profile-favorites.server';
 import type { ProfileStatistics } from 'lib/features/profile/profile-statistics';
 import { ProfileHeaderActions } from 'lib/pages/profile/profile-header-actions';
@@ -142,6 +143,13 @@ export const ProfilePage = ({
           align="center"
           aspectRatio={{ base: '16 / 7', md: '16 / 5' }}
           background="linear-gradient(120deg, gray.900, gray.800 55%, rgba(251, 191, 36, 0.18))"
+          backgroundImage={
+            profile.profile_backdrop_path
+              ? `linear-gradient(rgba(0, 0, 0, 0.38), rgba(0, 0, 0, 0.78)), url(${IMAGE_URL_ORIGINAL}${profile.profile_backdrop_path})`
+              : undefined
+          }
+          backgroundPosition="center"
+          backgroundSize="cover"
           borderRadius="xl"
           justify="center"
           overflow="hidden"

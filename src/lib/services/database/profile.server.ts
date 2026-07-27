@@ -36,6 +36,8 @@ export type ProfileDetailsRow = {
   display_name: string;
   email: string;
   name: string;
+  profile_backdrop_path: string | null;
+  profile_backdrop_title: string | null;
   privacy_setting: PrivacySetting;
   updated_at: string;
   user_id: string;
@@ -112,6 +114,8 @@ export const verifyOwnCurrentPassword = async (password: string) => {
 export const updateOwnProfileDetails = async (input: {
   bio: string;
   displayName: string;
+  profileBackdropPath: string;
+  profileBackdropTitle: string;
   username: string;
 }) => {
   const userId = await getAuthenticatedUserId();
@@ -121,6 +125,8 @@ export const updateOwnProfileDetails = async (input: {
     input.displayName,
     input.username,
     input.bio,
+    input.profileBackdropPath,
+    input.profileBackdropTitle,
   ])) as Array<ProfileDetailsRow>;
 
   return rows.at(0) ?? null;

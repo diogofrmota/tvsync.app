@@ -56,6 +56,7 @@ export type OnboardingFormState = {
 };
 
 const BIO_MAX_LENGTH = 100;
+const TMDB_IMAGE_PATH_PATTERN = /^\/[\w.-]+$/;
 
 export const completeOnboarding = async (
   _previousState: OnboardingFormState,
@@ -84,7 +85,13 @@ export const completeOnboarding = async (
     if (await isUsernameTakenByAnotherUser(username)) {
       return { fieldErrors: { username: 'That username is already taken.' } };
     }
-    await updateOwnProfileDetails({ bio: '', displayName, username });
+    await updateOwnProfileDetails({
+      bio: '',
+      displayName,
+      profileBackdropPath: '',
+      profileBackdropTitle: '',
+      username,
+    });
     return { complete: true };
   } catch (error) {
     return mapProfileUpdateError(error);
@@ -146,6 +153,8 @@ type ValidProfileInput = {
   currentPassword: string;
   displayName: string;
   email: string;
+  profileBackdropPath: string;
+  profileBackdropTitle: string;
   username: string;
 };
 
@@ -159,11 +168,21 @@ const validateProfileInput = (
     currentPassword: readPasswordField(formData, 'currentPassword'),
     displayName: readTextField(formData, 'displayName'),
     email: normalizeEmail(readTextField(formData, 'email')),
+    profileBackdropPath: readTextField(formData, 'profileBackdropPath'),
+    profileBackdropTitle: readTextField(formData, 'profileBackdropTitle'),
     username: normalizeUsername(readTextField(formData, 'username')),
   };
   const fieldErrors: NonNullable<ProfileFormState['fieldErrors']> = {};
   const usernameError = validateUsername(input.username);
   const emailError = validateEmail(input.email);
+
+  if (
+    input.profileBackdropPath &&
+    !TMDB_IMAGE_PATH_PATTERN.test(input.profileBackdropPath)
+  ) {
+    input.profileBackdropPath = '';
+    input.profileBackdropTitle = '';
+  }
 
   if (!input.displayName || input.displayName.length > 80) {
     fieldErrors.displayName = 'Use 1-80 characters for your display name.';
