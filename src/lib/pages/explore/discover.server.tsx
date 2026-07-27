@@ -38,7 +38,7 @@ export const ExploreDiscover = async () => {
       <Stack gap={{ base: 6, md: 8 }}>
         <MediaSearchBar
           mediaType={MediaType.Movie}
-          placeholder="Search shows, movies and users"
+          placeholder="Search shows, movies or users"
         />
         {heroSlides.length > 0 ? <ExploreHero slides={heroSlides} /> : null}
       </Stack>

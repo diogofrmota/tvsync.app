@@ -63,11 +63,11 @@ const isRatingTarget = (target: RatingTarget) => {
   );
 };
 
-const normalizeRating = (rating: number) => Math.round(rating * 2) / 2;
+const normalizeRating = (rating: number) => Math.round(rating * 10) / 10;
 
 const isValidRating = (rating: number) =>
   Number.isFinite(rating) &&
-  rating >= 1 &&
+  rating >= 0 &&
   rating <= 10 &&
   normalizeRating(rating) === rating;
 
